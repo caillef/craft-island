@@ -5,7 +5,7 @@ using System.IO;
 
 public class Dojo : ModuleRules
 {
-    protected readonly string Version = "1.3.1";
+    protected readonly string Version = "1.2.2";
     protected string VersionPath { get => Path.Combine(ModuleDirectory, Version); }
     protected string LibraryPath { get => Path.Combine(VersionPath, "lib"); }
 
@@ -39,7 +39,7 @@ public class Dojo : ModuleRules
             RuntimeDependencies.Add("$(PluginDir)/Source/Dojo/" + Version + "/lib/Mac/libdojo_c.dylib");
             
             // Delay load the dylib
-            PublicDelayLoadDLLs.Add("libdojo_c.dylib");
+            PublicDelayLoadDLLs.Add(Path.Combine(LibraryPath, "Mac", "libdojo_c.dylib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.IOS)
         {

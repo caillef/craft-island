@@ -1,0 +1,1 @@
+rm -rf "client/Saved" "client/Intermediate" "client/Binaries" && /Users/Shared/Epic\ Games/UE_5.5/Engine/Build/BatchFiles/Mac/GenerateProjectFiles.sh -project="`pwd`/client/CraftIslandPocket3.uproject" -game
