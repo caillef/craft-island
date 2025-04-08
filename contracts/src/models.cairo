@@ -1,170 +1,67 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect, PartialEq)]
-enum Direction {
-    None,
-    Left,
-    Right,
-    Up,
-    Down,
-}
-
-impl DirectionIntoFelt252 of Into<Direction, felt252> {
-    fn into(self: Direction) -> felt252 {
-        match self {
-            Direction::None => 0,
-            Direction::Left => 1,
-            Direction::Right => 2,
-            Direction::Up => 3,
-            Direction::Down => 4,
-        }
-    }
+#[derive(Drop, Serde)]
+#[dojo::model]
+pub struct PlayerData {
+    #[key]
+    pub player: ContractAddress,
+    pub onboarding_step: u8,
+    pub coins: u32,
+    pub current_island: felt252
 }
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct Message {
+pub struct PlayerStats {
     #[key]
-    identity: ContractAddress,
-    #[key]
-    channel: felt252,
-    message: ByteArray,
-    #[key]
-    salt: felt252
-}
-
-#[derive(Copy, Drop, Serde)]
-#[dojo::model]
-struct Block {
-    #[key]
-    x: u32,
-    #[key]
-    y: u32,
-    #[key]
-    z: u32,
-    blockType: u32
-}
-
-#[derive(Copy, Drop, Serde)]
-#[dojo::model]
-struct Chunk {
-    #[key]
-    player: ContractAddress,
-    #[key]
-    x: u32,
-    #[key]
-    y: u32,
-    #[key]
-    z: u32,
-    area0: felt252,
-    area1: felt252,
-    area2: felt252,
-    area3: felt252,
-    area4: felt252,
-    area5: felt252,
-    area6: felt252,
-    area7: felt252,
-    area8: felt252,
-    area9: felt252,
-    area10: felt252,
-    area11: felt252,
-}
-
-#[derive(Copy, Drop, Serde)]
-#[dojo::model]
-struct Moves {
-    #[key]
-    player: ContractAddress,
-    remaining: u8,
-    last_direction: Direction
-}
-
-#[derive(Copy, Drop, Serde)]
-#[dojo::model]
-struct MockToken {
-    #[key]
-    account: ContractAddress,
-    amount: u128,
-}
-
-#[derive(Copy, Drop, Serde, IntrospectPacked)]
-struct Vec2 {
-    x: u32,
-    y: u32
-}
-
-// If `Vec2` wasn't packed, the `Position` would be invalid,
-// and a runtime error would be thrown.
-// Any field that is a custom type into a `IntrospectPacked` type
-// must be packed.
-#[derive(Copy, Drop, Serde, IntrospectPacked)]
-#[dojo::model]
-struct Position {
-    #[key]
-    player: ContractAddress,
-    vec: Vec2,
-}
-
-// Every field inside a model must derive `Introspect` or `IntrospectPacked`.
-// `IntrospectPacked` can also be used into models that are only using `Introspect`.
-#[derive(Copy, Drop, Serde, Introspect)]
-struct PlayerItem {
-    item_id: u32,
-    quantity: u32,
+    pub player: ContractAddress,
+    pub miner_level: u8,
+    pub lumberjack_level: u8,
+    pub farmer_level: u8,
+    pub miner_xp: u32,
+    pub lumberjack_xp: u32,
+    pub farmer_xp: u32,
 }
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct PlayerConfig {
+pub struct IslandChunk {
     #[key]
-    player: ContractAddress,
-    name: ByteArray,
-    items: Array<PlayerItem>,
-    favorite_item: Option<u32>,
+    pub island_id: felt252,
+    #[key]
+    pub chunk_id: u128, // pos x y z & 42 mask bits
+    pub blocks1: u128,
+    pub blocks2: u128,
 }
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct ServerProfile {
+pub struct Inventory {
     #[key]
-    player: ContractAddress,
+    pub owner: ContractAddress,
     #[key]
-    server_id: u32,
-    name: ByteArray,
+    pub id: u16,
+    pub inventory_type: u8, // 0 for main inventory, 1 for storage
+    pub slots1: felt252, // 9 * 28 bits, 10 for resource type, 8 for qty, 10 rest
+    pub slots2: felt252, // 9 * 28 bits, 10 for resource type, 8 for qty, 10 rest
+    pub slots3: felt252, // 9 * 28 bits, 10 for resource type, 8 for qty, 10 rest
+    pub slots4: felt252, // 9 * 28 bits, 10 for resource type, 8 for qty, 10 rest
 }
 
-trait Vec2Trait {
-    fn is_zero(self: Vec2) -> bool;
-    fn is_equal(self: Vec2, b: Vec2) -> bool;
-}
-
-impl Vec2Impl of Vec2Trait {
-    fn is_zero(self: Vec2) -> bool {
-        if self.x - self.y == 0 {
-            return true;
-        }
-        false
-    }
-
-    fn is_equal(self: Vec2, b: Vec2) -> bool {
-        self.x == b.x && self.y == b.y
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Position, Vec2, Vec2Trait};
-
-    #[test]
-    #[available_gas(100000)]
-    fn test_vec_is_zero() {
-        assert(Vec2Trait::is_zero(Vec2 { x: 0, y: 0 }), 'not zero');
-    }
-
-    #[test]
-    #[available_gas(100000)]
-    fn test_vec_is_equal() {
-        let position = Vec2 { x: 420, y: 0 };
-        assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
-    }
+#[derive(Drop, Serde)]
+#[dojo::model]
+pub struct GatherableResource {
+    #[key]
+    pub island_id: felt252,
+    #[key]
+    pub chunk_id: u128,
+    #[key]
+    pub position: u8,
+    pub resource_id: u32,
+    pub planted_at: u64, // timestamp
+    pub next_harvest_at: u64, // timestamp
+    pub harvested_at: u64, // timestamp
+    pub max_harvest: u8, // if 0, destroyed when harvested
+    pub remained_harvest: u8, // if 0, destroyed when gathered
+    pub destroyed: bool,
 }

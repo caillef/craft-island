@@ -1,0 +1,36 @@
+[world]
+name = "Dojo starter"
+description = "The official Dojo Starter guide, the quickest and most streamlined way to get your Dojo Autonomous World up and running. This guide will assist you with the initial setup, from cloning the repository to deploying your world."
+cover_uri = "file://assets/cover.png"
+icon_uri = "file://assets/icon.png"
+website = "https://github.com/dojoengine/dojo-starter"
+seed = "craft_island_pocket"
+
+[world.socials]
+x = "https://x.com/ohayo_dojo"
+discord = "https://discord.gg/FB2wR6uF"
+github = "https://github.com/dojoengine/dojo-starter"
+telegram = "https://t.me/dojoengine"
+
+[namespace]
+default = "craft_island_pocket"
+
+[env]
+#rpc_url = "http://localhost:5050/"
+rpc_url = "https://api.cartridge.gg/x/craftislandpocket/katana"
+# Default account for katana with seed = 0
+account_address = "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
+private_key = "0x00c5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
+# world_address = "0x05c27776d077741956c6c664dcfd130afc4655b610619b082c02fb6cbf47756f"
+
+# rpc_url = "https://api.cartridge.gg/x/craft-island-pocket/katana"
+# account_address = "0x657e5f424dc6dee0c5a305361ea21e93781fea133d83efa410b771b7f92b"
+# private_key = "0xcd93de85d43988b9492bfaaff930c129fc3edbc513bb0c2b81577291848007"
+# world_address = "0xbbacc886d0554806f77e6917fa22cf7d45a2899ef7db4ff8e1d846c36ff1c7"
+
+[profile.second]
+account_address = "0x13d9ee239f33fea4f8785b9e3870ade909e20a9599ae7cd62c1c292b73af1b7"
+private_key = "0x1c9053c053edf324aec366a34c6901b1095b07af69495bffec7d7fe21effb1b"
+
+[writers]
+"craft_island_pocket" = ["craft_island_pocket-actions"]
