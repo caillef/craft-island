@@ -177,7 +177,32 @@ mod actions {
                 blocks2: 1229782938247303441,
             };
 
+            let starter_chunk2 = IslandChunk {
+                island_id: player.into(),
+                chunk_id: 0x000000080000000008010000000800, // offset 2048,2048,2048
+                blocks1: 0,
+                blocks2: 1229782938247303441,
+            };
+
+
+            let starter_chunk3 = IslandChunk {
+                island_id: player.into(),
+                chunk_id: 0x000000080100000008000000000800, // offset 2048,2048,2048
+                blocks1: 0,
+                blocks2: 1229782938247303441,
+            };
+
+            let starter_chunk4 = IslandChunk {
+                island_id: player.into(),
+                chunk_id: 0x000000080100000008010000000800, // offset 2048,2048,2048
+                blocks1: 0,
+                blocks2: 1229782938247303441,
+            };
+
             world.write_model(@starter_chunk);
+            world.write_model(@starter_chunk2);
+            world.write_model(@starter_chunk3);
+            world.write_model(@starter_chunk4);
         }
 
         fn place(ref self: ContractState, x: u64, y: u64, z: u64, resource_id: u32) {
