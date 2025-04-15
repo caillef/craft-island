@@ -20,7 +20,7 @@ trait IActions<T> {
 mod actions {
     use super::{IActions, get_position_id, get_block_at_pos};
     use starknet::{get_caller_address};
-    use craft_island_pocket::models::{
+    use craft_island_pocket::models::common::{
         IslandChunk, GatherableResource
     };
     use craft_island_pocket::helpers::math::{fast_power_2};

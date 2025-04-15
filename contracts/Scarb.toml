@@ -1,5 +1,5 @@
 [package]
-cairo-version = "=2.9.2"
+#cairo-version = "=2.9.2"
 name = "craft_island_pocket"
 version = "0.1.0"
 edition = "2024_07"
@@ -23,4 +23,5 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 allowed-libfuncs-list.name = "experimental"
 
 [dev-dependencies]
+cairo_test = "*"
 dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.3.1" }
