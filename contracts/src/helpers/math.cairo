@@ -2,9 +2,12 @@
 
 const POWER_0: u128 = 1;
 const POWER_8: u128 = 256;
+const POWER_10: u128 = 1024;
 const POWER_12: u128 = 4096;
 const POWER_16: u128 = 65536;
+const POWER_18: u128 = 262144;
 const POWER_24: u128 = 16777216;
+const POWER_28: u128 = 268435456;
 const POWER_32: u128 = 4294967296;
 const POWER_36: u128 = 68719476736;
 const POWER_40: u128 = 1099511627776;
@@ -22,15 +25,24 @@ const POWER_108: u128 = 324518553658426726783156020576256;
 const POWER_112: u128 = 5192296858534827628530496329220096;
 const POWER_120: u128 = 1329227995784915872903807060280344576;
 
+const POWER_140: u256 = 1393796574908163946345982392040522594123776;
+const POWER_168: u256 = 374144419156711147060143317175368453031918731001856;
+const POWER_196: u256 = 100433627766186892221372630771322662657637687111424552206336;
+const POWER_224: u256 = 26959946667150639794667015087019630673637144422540572481103610249216;
+
 pub fn fast_power_2(power: u128) -> u128 {
     if power == 0 {
         POWER_0
     } else if power == 8 {
         POWER_8
+    } else if power == 10 {
+        POWER_10
     } else if power == 12 {
         POWER_12
     } else if power == 16 {
         POWER_16
+    } else if power == 18 {
+        POWER_18
     } else if power == 24 {
         POWER_24
     } else if power == 32 {
@@ -65,6 +77,68 @@ pub fn fast_power_2(power: u128) -> u128 {
         POWER_112
     } else if power == 120 {
         POWER_120
+    } else {
+        fast_power(2, power)
+    }
+}
+
+pub fn fast_power_2_u256(power: u256) -> u256 {
+    if power == 0 {
+        POWER_0.into()
+    } else if power == 8 {
+        POWER_8.into()
+    } else if power == 10 {
+        POWER_10.into()
+    } else if power == 12 {
+        POWER_12.into()
+    } else if power == 16 {
+        POWER_16.into()
+    } else if power == 18 {
+        POWER_18.into()
+    } else if power == 24 {
+        POWER_24.into()
+    } else if power == 28 {
+        POWER_28.into()
+    } else if power == 32 {
+        POWER_32.into()
+    } else if power == 36 {
+        POWER_36.into()
+    } else if power == 40 {
+        POWER_40.into()
+    } else if power == 48 {
+        POWER_48.into()
+    } else if power == 56 {
+        POWER_56.into()
+    } else if power == 60 {
+        POWER_60.into()
+    } else if power == 64 {
+        POWER_64.into()
+    } else if power == 72 {
+        POWER_72.into()
+    } else if power == 80 {
+        POWER_80.into()
+    } else if power == 84 {
+        POWER_84.into()
+    } else if power == 88 {
+        POWER_88.into()
+    } else if power == 96 {
+        POWER_96.into()
+    } else if power == 104 {
+        POWER_104.into()
+    } else if power == 108 {
+        POWER_108.into()
+    } else if power == 112 {
+        POWER_112.into()
+    } else if power == 120 {
+        POWER_120.into()
+    } else if power == 140 {
+        POWER_140
+    } else if power == 168 {
+        POWER_168
+    } else if power == 196 {
+        POWER_196
+    } else if power == 224 {
+        POWER_224
     } else {
         fast_power(2, power)
     }
