@@ -5,13 +5,10 @@ trait IActions<T> {
     fn spawn(ref self: T);
     //fn buy(ref self: T, resource_id: u32, quantity: u32);
     //fn sell(ref self: T, resource_id: u32, quantity: u32);
-    //fn plant(ref self: T, x: u64, y: u64, z: u64, resource_id: u32);
-    //fn harvest(ref self: T, x: u64, y: u64, z: u64);
-    //fn place_block(ref self: T, x: u64, y: u64, z: u64, block_id: u32);
-    //fn remove_block(ref self: T, x: u64, y: u64, z: u64);
     fn place(ref self: T, x: u64, y: u64, z: u64, resource_id: u32);
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
     fn add_chunk(ref self: T, x: u64, y: u64, z: u64);
+    fn test_get_nb_dirt(ref self: T);
     //fn craft(ref self: T);
 }
 
@@ -22,6 +19,9 @@ mod actions {
     use starknet::{get_caller_address};
     use craft_island_pocket::models::common::{
         IslandChunk, GatherableResource
+    };
+    use craft_island_pocket::models::inventory::{
+        Inventory, InventoryTrait
     };
     use craft_island_pocket::helpers::math::{fast_power_2};
 
@@ -88,6 +88,11 @@ mod actions {
         println!("Raw Position {} {} {}", x, y, z);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+//inventory.remove_resources(1, 1);
+        world.write_model(@inventory);
+
         //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
         if z % 4 < 2 {
             let block_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2);
@@ -199,6 +204,10 @@ mod actions {
                 blocks2: 1229782938247303441,
             };
 
+            let inventory: Inventory = InventoryTrait::new(0, 9, player);
+            //inventory.add_resources(1, 20);
+            world.write_model(@inventory);
+
             world.write_model(@starter_chunk);
             world.write_model(@starter_chunk2);
             world.write_model(@starter_chunk3);
@@ -239,6 +248,14 @@ mod actions {
             if !remove_block(ref self, x, y, z) {
                 harvest(ref self, x, y, z);
             }
+        }
+
+        fn test_get_nb_dirt(ref self: ContractState) {
+            let player = get_caller_address();
+            let mut world = self.world(@"craft_island_pocket");
+            let inventory: Inventory = world.read_model((player, 0));
+            let amount = inventory.get_resource_amount(1);
+            println!("Amount: {}", amount);
         }
     }
 }
