@@ -1312,8 +1312,8 @@
   },
   "contracts": [
     {
-      "address": "0x10a531f9ee2e029468aa6cbea109db43cb50f35186bfcd38902d91e8d81e686",
-      "class_hash": "0x61f68cbbf55c1760bcb782aa353e3f5e3a2f5666a7b11e091ec5086dc858c73",
+      "address": "0x1a88a215d53bf29d794d87170e570b8b93bd8cec1d3b244e6ee85ca7ee2dbb5",
+      "class_hash": "0x329873a8ef4a07cd6d4e6e0b828410f1809898b9bed556adb49d3b8b2ad94ed",
       "abi": [
         {
           "type": "impl",
@@ -1448,6 +1448,13 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_get_nb_dirt",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1574,6 +1581,7 @@
         "place",
         "hit_block",
         "add_chunk",
+        "test_get_nb_dirt",
         "upgrade"
       ]
     }
@@ -1582,31 +1590,31 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x4fae2ad4e711e17742477cb813cd2fea1b8edbb0e7fb23152a6024caa68e32e",
+      "class_hash": "0x37173e2857775e245df49195934f304134720cfdf773ba02a1948c2d771af6f",
       "tag": "craft_island_pocket-GatherableResource",
       "selector": "0x724f6e93d1c79ee556934629fac544529f95a96cf9b19eccf2cec9afb77b6b5"
     },
     {
       "members": [],
-      "class_hash": "0x42136d41d13bb6030d61eed5c54c33ab123e35d8e9cb2ad64e32d486d6216a6",
+      "class_hash": "0x427661693385b5a55dca4e09c7b5ba6da7aa5a7402f33941888a2517ecf5ce5",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },
     {
       "members": [],
-      "class_hash": "0x5178ee13e685e62cff9b016ac6eb0c494f4ce4820e3f5b9b689dee0a8081bcc",
+      "class_hash": "0x588a97678f293570685f491c4b2f18c45e37b78ce6297862325da60671ceca",
       "tag": "craft_island_pocket-IslandChunk",
       "selector": "0x33bcf22997bb979a42ca224a7d3738a796f91d705065fbd52011d91a9ed402"
     },
     {
       "members": [],
-      "class_hash": "0x71a5ed29e47e53cd9ad97bf5549d0b646f5d733874a44e9d2f6503939a85273",
+      "class_hash": "0x792f3789a8bea1eccba47d1c88d17e7d4a5dd7e2fdac1f9c3f599050de97d94",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
     {
       "members": [],
-      "class_hash": "0x2c70bf29aa02cef38c8787a8f4ea6e13a5a75d7285ca33f43c50d15d8d022f9",
+      "class_hash": "0x10664ad7149ab7329cc21e97d425eba40b71079052a32bb2e3fd493d1473cd1",
       "tag": "craft_island_pocket-PlayerStats",
       "selector": "0x2a92edae62771b960421a6c25f61baa8bcb4274809be50f39a103b47ef97fad"
     }

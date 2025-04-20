@@ -250,6 +250,31 @@ pub impl InventoryImpl of InventoryTrait {
         true
     }
 
+    fn remove_resources(ref self: Inventory, resource_type: u16, quantity: u32) -> bool {
+        let mut remaining_quantity = quantity;
+        let mut slot: u8 = 0;
+
+        // First find slots with the resource and remove from them
+        while slot < self.inventory_size && remaining_quantity > 0 {
+            let slot_data = self.get_slot_data(slot);
+            if slot_data.resource_type == resource_type {
+                let amount_to_remove = if remaining_quantity > slot_data.quantity.into() {
+                    slot_data.quantity
+                } else {
+                    remaining_quantity.try_into().unwrap()
+                };
+
+                self.remove_resource(slot, amount_to_remove);
+                remaining_quantity -= amount_to_remove.into();
+            }
+            slot += 1;
+        };
+
+        // Check if we were able to remove all requested resources
+        assert(remaining_quantity == 0, 'Not enough resources');
+        true
+    }
+
     // Keep track of selected slot
     fn get_selected_slot(self: Inventory) -> u8 {
         self.selected_slot

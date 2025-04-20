@@ -90,7 +90,7 @@ mod actions {
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
 
         let mut inventory: Inventory = world.read_model((player, 0));
-//inventory.remove_resources(1, 1);
+        inventory.remove_resources(1, 1);
         world.write_model(@inventory);
 
         //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
@@ -204,8 +204,8 @@ mod actions {
                 blocks2: 1229782938247303441,
             };
 
-            let inventory: Inventory = InventoryTrait::new(0, 9, player);
-            //inventory.add_resources(1, 20);
+            let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
+            inventory.add_resources(1, 20);
             world.write_model(@inventory);
 
             world.write_model(@starter_chunk);
