@@ -30,6 +30,7 @@ pub struct IslandChunk {
     pub island_id: felt252,
     #[key]
     pub chunk_id: u128, // pos x y z & 42 mask bits
+    pub version: u8,
     pub blocks1: u128,
     pub blocks2: u128,
 }

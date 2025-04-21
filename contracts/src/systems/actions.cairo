@@ -90,7 +90,7 @@ mod actions {
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
 
         let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.remove_resources(1, 1);
+        inventory.remove_resources(block_id.try_into().unwrap(), 1);
         world.write_model(@inventory);
 
         //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
@@ -178,6 +178,7 @@ mod actions {
             let starter_chunk = IslandChunk {
                 island_id: player.into(),
                 chunk_id: 0x000000080000000008000000000800, // offset 2048,2048,2048
+                version: 0,
                 blocks1: 0,
                 blocks2: 1229782938247303441,
             };
@@ -185,6 +186,7 @@ mod actions {
             let starter_chunk2 = IslandChunk {
                 island_id: player.into(),
                 chunk_id: 0x000000080000000008010000000800, // offset 2048,2048,2048
+                version: 0,
                 blocks1: 0,
                 blocks2: 1229782938247303441,
             };
@@ -193,6 +195,7 @@ mod actions {
             let starter_chunk3 = IslandChunk {
                 island_id: player.into(),
                 chunk_id: 0x000000080100000008000000000800, // offset 2048,2048,2048
+                version: 0,
                 blocks1: 0,
                 blocks2: 1229782938247303441,
             };
@@ -200,12 +203,17 @@ mod actions {
             let starter_chunk4 = IslandChunk {
                 island_id: player.into(),
                 chunk_id: 0x000000080100000008010000000800, // offset 2048,2048,2048
+                version: 0,
                 blocks1: 0,
                 blocks2: 1229782938247303441,
             };
 
             let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
             inventory.add_resources(1, 20);
+            inventory.add_resources(2, 20);
+            //inventory.add_resources(3, 20);
+            //inventory.add_resources(4, 3);
+            //inventory.add_resources(5, 3);
             world.write_model(@inventory);
 
             world.write_model(@starter_chunk);
@@ -237,9 +245,10 @@ mod actions {
             let new_chunk = IslandChunk {
                 island_id: player.into(),
                 chunk_id: chunk_id,
+                version: 0,
                 blocks1: 0,
                 blocks2: 1229782938247303441,
-            };
+             };
             world.write_model(@new_chunk);
         }
 
