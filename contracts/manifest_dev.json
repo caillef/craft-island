@@ -1312,8 +1312,8 @@
   },
   "contracts": [
     {
-      "address": "0x7b0ba07ff42d05acbdb18d1b852f6406daf9f0e89dc272fba86cdb89fb618e0",
-      "class_hash": "0x19e5766b756274133eec7af64353fbba79ed65bc58e779d66b406ccc6e296bb",
+      "address": "0x7e73bf26402fc43a5aff890f38ce383806b9296c9d6bbd6c5036dc1ab793fdd",
+      "class_hash": "0x173b0245d8a2678dff758c93de61ca814a339a5d546f1f9b3b63aac7f51e147",
       "abi": [
         {
           "type": "impl",
@@ -1398,7 +1398,7 @@
                   "type": "core::integer::u64"
                 },
                 {
-                  "name": "resource_id",
+                  "name": "item_id",
                   "type": "core::integer::u32"
                 }
               ],
@@ -1426,33 +1426,6 @@
                   "type": "core::integer::u32"
                 }
               ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "add_chunk",
-              "inputs": [
-                {
-                  "name": "x",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "y",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "z",
-                  "type": "core::integer::u64"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_get_nb_dirt",
-              "inputs": [],
               "outputs": [],
               "state_mutability": "external"
             }
@@ -1580,8 +1553,6 @@
         "spawn",
         "place",
         "hit_block",
-        "add_chunk",
-        "test_get_nb_dirt",
         "upgrade"
       ]
     }

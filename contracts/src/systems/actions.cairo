@@ -3,12 +3,10 @@ use craft_island_pocket::helpers::math::{fast_power_2};
 #[starknet::interface]
 trait IActions<T> {
     fn spawn(ref self: T);
-    //fn buy(ref self: T, resource_id: u32, quantity: u32);
-    //fn sell(ref self: T, resource_id: u32, quantity: u32);
-    fn place(ref self: T, x: u64, y: u64, z: u64, resource_id: u32);
+    //fn buy(ref self: T, item_id: u32, quantity: u32);
+    //fn sell(ref self: T, item_id: u32, quantity: u32);
+    fn place(ref self: T, x: u64, y: u64, z: u64, item_id: u32);
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
-    fn add_chunk(ref self: T, x: u64, y: u64, z: u64);
-    fn test_get_nb_dirt(ref self: T);
     //fn craft(ref self: T);
 }
 
@@ -16,7 +14,7 @@ trait IActions<T> {
 #[dojo::contract]
 mod actions {
     use super::{IActions, get_position_id, get_block_at_pos};
-    use starknet::{get_caller_address};
+    use starknet::{get_caller_address, ContractAddress};
     use craft_island_pocket::models::common::{
         IslandChunk, GatherableResource
     };
@@ -27,7 +25,7 @@ mod actions {
 
     use dojo::model::{ModelStorage};
 
-    fn plant(ref self: ContractState, x: u64, y: u64, z: u64, resource_id: u32) {
+    fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u32) {
         let mut world = self.world(@"craft_island_pocket");
         let player = get_caller_address();
         let island_id: felt252 = player.into();
@@ -36,7 +34,7 @@ mod actions {
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
         let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
-        resource.resource_id = resource_id;
+        resource.resource_id = item_id;
 
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         resource.planted_at = timestamp;
@@ -72,12 +70,12 @@ mod actions {
     }
 
     fn buy(
-        ref self: ContractState, resource_id: u32, quantity: u32
+        ref self: ContractState, item_id: u32, quantity: u32
     ) { //let player = get_caller_address();
     }
 
     fn sell(
-        ref self: ContractState, resource_id: u32, quantity: u32
+        ref self: ContractState, item_id: u32, quantity: u32
     ) { //let player = get_caller_address();
     }
 
@@ -90,7 +88,7 @@ mod actions {
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
 
         let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.remove_resources(block_id.try_into().unwrap(), 1);
+        inventory.remove_items(block_id.try_into().unwrap(), 1);
         world.write_model(@inventory);
 
         //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
@@ -168,88 +166,74 @@ mod actions {
         // Add block to inventory
     }
 
+    fn init_island(ref self: ContractState, player: ContractAddress) {
+        let mut world = self.world(@"craft_island_pocket");
+
+        let starter_chunk = IslandChunk {
+            island_id: player.into(),
+            chunk_id: 0x000000080000000008000000000800, // offset 2048,2048,2048
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+
+        let starter_chunk2 = IslandChunk {
+            island_id: player.into(),
+            chunk_id: 0x000000080000000008010000000800, // offset 2048,2048,2048
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+
+
+        let starter_chunk3 = IslandChunk {
+            island_id: player.into(),
+            chunk_id: 0x000000080100000008000000000800, // offset 2048,2048,2048
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+
+        let starter_chunk4 = IslandChunk {
+            island_id: player.into(),
+            chunk_id: 0x000000080100000008010000000800, // offset 2048,2048,2048
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+        world.write_model(@starter_chunk);
+        world.write_model(@starter_chunk2);
+        world.write_model(@starter_chunk3);
+        world.write_model(@starter_chunk4);
+    }
+
+    fn init_inventory(ref self: ContractState, player: ContractAddress) {
+        let mut world = self.world(@"craft_island_pocket");
+
+        let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
+        inventory.add_items(1, 20);
+        inventory.add_items(2, 20);
+        inventory.add_items(3, 20);
+        inventory.add_items(4, 3);
+        inventory.add_items(5, 3);
+        world.write_model(@inventory);
+    }
+
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
         fn spawn(ref self: ContractState) {
-            let mut world = self.world(@"craft_island_pocket");
-
             let player = get_caller_address();
-
-            let starter_chunk = IslandChunk {
-                island_id: player.into(),
-                chunk_id: 0x000000080000000008000000000800, // offset 2048,2048,2048
-                version: 0,
-                blocks1: 0,
-                blocks2: 1229782938247303441,
-            };
-
-            let starter_chunk2 = IslandChunk {
-                island_id: player.into(),
-                chunk_id: 0x000000080000000008010000000800, // offset 2048,2048,2048
-                version: 0,
-                blocks1: 0,
-                blocks2: 1229782938247303441,
-            };
-
-
-            let starter_chunk3 = IslandChunk {
-                island_id: player.into(),
-                chunk_id: 0x000000080100000008000000000800, // offset 2048,2048,2048
-                version: 0,
-                blocks1: 0,
-                blocks2: 1229782938247303441,
-            };
-
-            let starter_chunk4 = IslandChunk {
-                island_id: player.into(),
-                chunk_id: 0x000000080100000008010000000800, // offset 2048,2048,2048
-                version: 0,
-                blocks1: 0,
-                blocks2: 1229782938247303441,
-            };
-
-            let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
-            inventory.add_resources(1, 20);
-            inventory.add_resources(2, 20);
-            //inventory.add_resources(3, 20);
-            //inventory.add_resources(4, 3);
-            //inventory.add_resources(5, 3);
-            world.write_model(@inventory);
-
-            world.write_model(@starter_chunk);
-            world.write_model(@starter_chunk2);
-            world.write_model(@starter_chunk3);
-            world.write_model(@starter_chunk4);
+            init_island(ref self, player);
+            init_inventory(ref self, player);
         }
 
-        fn place(ref self: ContractState, x: u64, y: u64, z: u64, resource_id: u32) {
-            assert(resource_id > 0, 'Error: resource id is zero');
-            if resource_id <= 3 {
-                place_block(ref self, x, y, z, resource_id);
+        fn place(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u32) {
+            assert(item_id > 0, 'Error: item id is zero');
+            if item_id <= 3 {
+                place_block(ref self, x, y, z, item_id);
             } else {
-                plant(ref self, x, y, z, resource_id);
+                plant(ref self, x, y, z, item_id);
             }
-        }
-
-        // x,y,z must be offsetted with 2048. 0,0,0 in the world is 2048,2048,2048 here
-        fn add_chunk(ref self: ContractState, x: u64, y: u64, z: u64) {
-            let mut world = self.world(@"craft_island_pocket");
-
-            let player = get_caller_address();
-
-            let chunk_id = x.into() * fast_power_2(80) + y.into() * fast_power_2(40) + z.into();
-            let existing_chunk: IslandChunk = world.read_model((player, chunk_id));
-
-            assert(existing_chunk.blocks1 + existing_chunk.blocks2 == 0, 'Error: chunk already exists');
-
-            let new_chunk = IslandChunk {
-                island_id: player.into(),
-                chunk_id: chunk_id,
-                version: 0,
-                blocks1: 0,
-                blocks2: 1229782938247303441,
-             };
-            world.write_model(@new_chunk);
         }
 
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
@@ -257,14 +241,6 @@ mod actions {
             if !remove_block(ref self, x, y, z) {
                 harvest(ref self, x, y, z);
             }
-        }
-
-        fn test_get_nb_dirt(ref self: ContractState) {
-            let player = get_caller_address();
-            let mut world = self.world(@"craft_island_pocket");
-            let inventory: Inventory = world.read_model((player, 0));
-            let amount = inventory.get_resource_amount(1);
-            println!("Amount: {}", amount);
         }
     }
 }

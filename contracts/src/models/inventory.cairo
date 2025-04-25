@@ -46,7 +46,7 @@ pub struct Inventory {
 
 #[derive(Copy, Drop)]
 struct SlotData {
-    resource_type: u16,
+    item_type: u16,
     quantity: u8,
     extra: u16
 }
@@ -54,7 +54,7 @@ struct SlotData {
 #[generate_trait]
 impl SlotDataImpl of SlotDataTrait {
     fn is_empty(self: SlotData) -> bool {
-        self.resource_type == 0 && self.quantity == 0
+        self.item_type == 0 && self.quantity == 0
     }
 }
 
@@ -89,17 +89,17 @@ pub impl InventoryImpl of InventoryTrait {
         }
     }
 
-    fn add_resource(ref self: Inventory, slot: u8, resource_type: u16, quantity: u8) -> bool {
+    fn add_item(ref self: Inventory, slot: u8, item_type: u16, quantity: u8) -> bool {
         assert(slot < self.inventory_size, 'Invalid slot index');
         let slot_data = self.get_slot_data(slot);
-        if slot_data.is_empty() || slot_data.resource_type == resource_type {
-            self.set_slot_data(slot, resource_type, quantity, 0);
+        if slot_data.is_empty() || slot_data.item_type == item_type {
+            self.set_slot_data(slot, item_type, quantity, 0);
             return true;
         }
         false
     }
 
-    fn remove_resource(ref self: Inventory, slot: u8, quantity: u8) -> bool {
+    fn remove_item(ref self: Inventory, slot: u8, quantity: u8) -> bool {
         assert(slot < self.inventory_size, 'Invalid slot index');
         let slot_data = self.get_slot_data(slot);
         if !slot_data.is_empty() && slot_data.quantity >= quantity {
@@ -107,27 +107,27 @@ pub impl InventoryImpl of InventoryTrait {
             if new_quantity == 0 {
                 self.clear_slot(slot);
             } else {
-                self.set_slot_data(slot, slot_data.resource_type, new_quantity, slot_data.extra);
+                self.set_slot_data(slot, slot_data.item_type, new_quantity, slot_data.extra);
             }
             return true;
         }
         false
     }
 
-    fn move_resource(ref self: Inventory, from_slot: u8, to_slot: u8) -> bool {
+    fn move_item(ref self: Inventory, from_slot: u8, to_slot: u8) -> bool {
         assert(from_slot < self.inventory_size && to_slot < self.inventory_size, 'Invalid slot index');
         let from_data = self.get_slot_data(from_slot);
         let to_data = self.get_slot_data(to_slot);
 
         if !from_data.is_empty() && to_data.is_empty() {
-            self.set_slot_data(to_slot, from_data.resource_type, from_data.quantity, from_data.extra);
+            self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.clear_slot(from_slot);
             return true;
         }
         false
     }
 
-    fn get_resource_amount(self: Inventory, resource_type: u16) -> u32 {
+    fn get_item_amount(self: Inventory, item_type: u16) -> u32 {
         let mut total: u32 = 0;
         let mut slot: u8 = 0;
         loop {
@@ -135,7 +135,7 @@ pub impl InventoryImpl of InventoryTrait {
                 break;
             }
             let slot_data = self.get_slot_data(slot);
-            if slot_data.resource_type == resource_type {
+            if slot_data.item_type == item_type {
                 total += slot_data.quantity.into();
             }
             slot += 1;
@@ -159,18 +159,18 @@ pub impl InventoryImpl of InventoryTrait {
         let power_val = fast_power_2_u256(shift);
         let slot_data: felt252 = (felt_value / power_val.try_into().unwrap()) & 0xFFFFFFF;
 
-        let resource_type = (slot_data / fast_power_2(18).try_into().unwrap()) & 0x3FF;
+        let item_type = (slot_data / fast_power_2(18).try_into().unwrap()) & 0x3FF;
         let quantity = (slot_data / fast_power_2(10).try_into().unwrap()) & 0xFF;
         let extra = slot_data & 0x3FF;
 
         SlotData {
-            resource_type: resource_type.try_into().unwrap(),
+            item_type: item_type.try_into().unwrap(),
             quantity: quantity.try_into().unwrap(),
             extra: extra.try_into().unwrap()
         }
     }
 
-    fn set_slot_data(ref self: Inventory, slot: u8, resource_type: u16, quantity: u8, extra: u16) {
+    fn set_slot_data(ref self: Inventory, slot: u8, item_type: u16, quantity: u8, extra: u16) {
         assert(slot < self.inventory_size, 'Invalid slot index');
         let felt_index = slot / 9;
         let slot_in_felt = slot % 9;
@@ -189,7 +189,7 @@ pub impl InventoryImpl of InventoryTrait {
 
         // Pack the new slot data
         let slot_data: felt252 = (
-            ((resource_type.into() & 0x3FF) * fast_power_2(18).try_into().unwrap()) |
+            ((item_type.into() & 0x3FF) * fast_power_2(18).try_into().unwrap()) |
             ((quantity.into() & 0xFF) * fast_power_2(10).try_into().unwrap()) |
             (extra.into() & 0x3FF)
         ).into();
@@ -211,19 +211,19 @@ pub impl InventoryImpl of InventoryTrait {
         self.set_slot_data(slot, 0, 0, 0)
     }
 
-    fn add_resources(ref self: Inventory, resource_type: u16, mut quantity: u32) -> bool {
-        // First try to fill existing slots of same resource type that aren't full
+    fn add_items(ref self: Inventory, item_type: u16, mut quantity: u32) -> bool {
+        // First try to fill existing slots of same item type that aren't full
         let mut slot: u8 = 0;
         while slot < self.inventory_size && quantity > 0 {
             let slot_data = self.get_slot_data(slot);
-            if slot_data.resource_type == resource_type && slot_data.quantity < MAX_SLOTS_SIZE {
+            if slot_data.item_type == item_type && slot_data.quantity < MAX_SLOTS_SIZE {
                 let space_available = MAX_SLOTS_SIZE - slot_data.quantity;
                 let amount_to_add = if quantity > space_available.into() {
                     space_available
                 } else {
                     quantity.try_into().unwrap()
                 };
-                self.set_slot_data(slot, resource_type, slot_data.quantity + amount_to_add, slot_data.extra);
+                self.set_slot_data(slot, item_type, slot_data.quantity + amount_to_add, slot_data.extra);
                 quantity -= amount_to_add.into();
             }
             slot += 1;
@@ -239,7 +239,7 @@ pub impl InventoryImpl of InventoryTrait {
                 } else {
                     quantity.try_into().unwrap()
                 };
-                self.set_slot_data(slot, resource_type, amount_to_add, 0);
+                self.set_slot_data(slot, item_type, amount_to_add, 0);
                 quantity -= amount_to_add.into();
             }
             slot += 1;
@@ -250,28 +250,28 @@ pub impl InventoryImpl of InventoryTrait {
         true
     }
 
-    fn remove_resources(ref self: Inventory, resource_type: u16, quantity: u32) -> bool {
+    fn remove_items(ref self: Inventory, item_type: u16, quantity: u32) -> bool {
         let mut remaining_quantity = quantity;
         let mut slot: u8 = 0;
 
-        // First find slots with the resource and remove from them
+        // First find slots with the item and remove from them
         while slot < self.inventory_size && remaining_quantity > 0 {
             let slot_data = self.get_slot_data(slot);
-            if slot_data.resource_type == resource_type {
+            if slot_data.item_type == item_type {
                 let amount_to_remove = if remaining_quantity > slot_data.quantity.into() {
                     slot_data.quantity
                 } else {
                     remaining_quantity.try_into().unwrap()
                 };
 
-                self.remove_resource(slot, amount_to_remove);
+                self.remove_item(slot, amount_to_remove);
                 remaining_quantity -= amount_to_remove.into();
             }
             slot += 1;
         };
 
-        // Check if we were able to remove all requested resources
-        assert(remaining_quantity == 0, 'Not enough resources');
+        // Check if we were able to remove all requested items
+        assert(remaining_quantity == 0, 'Not enough items');
         true
     }
 
@@ -299,7 +299,7 @@ pub impl InventoryImpl of InventoryTrait {
         if to_data.is_empty() {
             self.set_slot_data(
                 to_slot,
-                from_data.resource_type,
+                from_data.item_type,
                 from_data.quantity,
                 from_data.extra
             );
@@ -308,13 +308,13 @@ pub impl InventoryImpl of InventoryTrait {
             // Swap the slots
             self.set_slot_data(
                 from_slot,
-                to_data.resource_type,
+                to_data.item_type,
                 to_data.quantity,
                 to_data.extra
             );
             self.set_slot_data(
                 to_slot,
-                from_data.resource_type,
+                from_data.item_type,
                 from_data.quantity,
                 from_data.extra
             );
@@ -331,109 +331,109 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_add_resource_to_empty_slot() {
+    fn test_add_item_to_empty_slot() {
         let mut inventory = InventoryTrait::default(9);
-        assert!(inventory.add_resource(0, 1, 5));
+    assert!(inventory.add_item(0, 1, 5));
         let data = inventory.get_slot_data(0);
-        assert_eq!(data.resource_type, 1);
+    assert_eq!(data.item_type, 1);
         assert_eq!(data.quantity, 5);
     }
 
     #[test]
-    fn test_add_resource_to_occupied_slot() {
+    fn test_add_item_to_occupied_slot() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        assert!(!inventory.add_resource(0, 2, 3));
+    inventory.add_item(0, 1, 5);
+    assert!(!inventory.add_item(0, 2, 3));
     }
 
     #[test]
-    fn test_remove_resource_partial() {
+    fn test_remove_item_partial() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        assert!(inventory.remove_resource(0, 3));
+    inventory.add_item(0, 1, 5);
+    assert!(inventory.remove_item(0, 3));
         let data = inventory.get_slot_data(0);
         assert_eq!(data.quantity, 2);
     }
 
     #[test]
-    fn test_remove_resource_complete() {
+    fn test_remove_item_complete() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        assert!(inventory.remove_resource(0, 5));
+    inventory.add_item(0, 1, 5);
+    assert!(inventory.remove_item(0, 5));
         let data = inventory.get_slot_data(0);
         assert!(data.is_empty());
     }
 
     #[test]
-    fn test_remove_resource_insufficient() {
+    fn test_remove_item_insufficient() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        assert!(!inventory.remove_resource(0, 6));
+    inventory.add_item(0, 1, 5);
+    assert!(!inventory.remove_item(0, 6));
     }
 
     #[test]
-    fn test_move_resource_success() {
+    fn test_move_item_success() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        assert!(inventory.move_resource(0, 1));
+    inventory.add_item(0, 1, 5);
+    assert!(inventory.move_item(0, 1));
         let from_data = inventory.get_slot_data(0);
         let to_data = inventory.get_slot_data(1);
         assert!(from_data.is_empty());
-        assert_eq!(to_data.resource_type, 1);
+        assert_eq!(to_data.item_type, 1);
         assert_eq!(to_data.quantity, 5);
     }
 
     #[test]
-    fn test_move_resource_to_occupied() {
+    fn test_move_item_to_occupied() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        inventory.add_resource(1, 2, 3);
-        assert!(!inventory.move_resource(0, 1));
+    inventory.add_item(0, 1, 5);
+    inventory.add_item(1, 2, 3);
+    assert!(!inventory.move_item(0, 1));
     }
 
     #[test]
     fn test_slot_data_empty() {
-        let data = SlotData { resource_type: 0, quantity: 0, extra: 0 };
+        let data = SlotData { item_type: 0, quantity: 0, extra: 0 };
         assert!(data.is_empty());
     }
 
     #[test]
     fn test_slot_data_not_empty() {
-        let data = SlotData { resource_type: 1, quantity: 5, extra: 0 };
+        let data = SlotData { item_type: 1, quantity: 5, extra: 0 };
         assert!(!data.is_empty());
     }
 
     #[test]
     fn test_clear_slot() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
+        inventory.add_item(0, 1, 5);
         inventory.clear_slot(0);
         let data = inventory.get_slot_data(0);
         assert!(data.is_empty());
     }
 
     #[test]
-    fn test_get_resource_amount() {
+    fn test_get_item_amount() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        inventory.add_resource(1, 1, 3);
-        inventory.add_resource(2, 2, 4);
-        assert_eq!(inventory.get_resource_amount(1), 8);
-        assert_eq!(inventory.get_resource_amount(2), 4);
-        assert_eq!(inventory.get_resource_amount(3), 0);
+    inventory.add_item(0, 1, 5);
+    inventory.add_item(1, 1, 3);
+    inventory.add_item(2, 2, 4);
+    assert_eq!(inventory.get_item_amount(1), 8);
+        assert_eq!(inventory.get_item_amount(2), 4);
+        assert_eq!(inventory.get_item_amount(3), 0);
     }
 
     #[test]
     #[should_panic(expected: ('Invalid slot index',))]
     fn test_invalid_slot_index() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(10, 1, 5);
+        inventory.add_item(10, 1, 5);
     }
 
     #[test]
-    fn test_add_resources_split() {
+    fn test_add_items_split() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resources(1, 400);
+    inventory.add_items(1, 400);
 
         let slot0 = inventory.get_slot_data(0);
         assert_eq!(slot0.quantity, MAX_SLOTS_SIZE);
@@ -443,32 +443,32 @@ mod tests {
     }
 
     #[test]
-    fn test_add_resources_to_existing() {
+    fn test_add_items_to_existing() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 100);
-        inventory.add_resources(1, 200);
+    inventory.add_item(0, 1, 100);
+    inventory.add_items(1, 200);
 
         let slot0 = inventory.get_slot_data(0);
-        assert_eq!(slot0.resource_type, 1);
+    assert_eq!(slot0.item_type, 1);
         assert_eq!(slot0.quantity, 255);
 
         let slot1 = inventory.get_slot_data(1);
-        assert_eq!(slot1.resource_type, 1);
+    assert_eq!(slot1.item_type, 1);
         assert_eq!(slot1.quantity, 45);
     }
 
     #[test]
     #[should_panic(expected: ('Not enough space in inventory',))]
-    fn test_add_resources_insufficient_space() {
+    fn test_add_items_insufficient_space() {
         let mut inventory = InventoryTrait::default(1);
-        inventory.add_resources(1, 300);
+    inventory.add_items(1, 300);
     }
 
     #[test]
     fn test_select_and_place() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        inventory.add_resource(1, 2, 3);
+        inventory.add_item(0, 1, 5);
+    inventory.add_item(1, 2, 3);
 
         inventory.select_slot(0);
         assert_eq!(inventory.get_selected_slot(), 0);
@@ -479,25 +479,25 @@ mod tests {
         assert!(slot0.is_empty());
 
         let slot2 = inventory.get_slot_data(2);
-        assert_eq!(slot2.resource_type, 1);
+        assert_eq!(slot2.item_type, 1);
         assert_eq!(slot2.quantity, 5);
     }
 
     #[test]
     fn test_select_and_swap() {
         let mut inventory = InventoryTrait::default(9);
-        inventory.add_resource(0, 1, 5);
-        inventory.add_resource(1, 2, 3);
+        inventory.add_item(0, 1, 5);
+    inventory.add_item(1, 2, 3);
 
         inventory.select_slot(0);
         inventory.place_selected(1);
 
         let slot0 = inventory.get_slot_data(0);
-        assert_eq!(slot0.resource_type, 2);
+        assert_eq!(slot0.item_type, 2);
         assert_eq!(slot0.quantity, 3);
 
         let slot1 = inventory.get_slot_data(1);
-        assert_eq!(slot1.resource_type, 1);
+        assert_eq!(slot1.item_type, 1);
         assert_eq!(slot1.quantity, 5);
     }
 }
