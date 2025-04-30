@@ -1,0 +1,200 @@
+{
+  "1": {
+    "name": "Grass",
+    "type": "block"
+  },
+  "2": {
+    "name": "Dirt",
+    "type": "block"
+  },
+  "3": {
+    "name": "Stone",
+    "type": "block"
+  },
+  "31": {
+    "name": "Oak Tree",
+    "type": "tree",
+    "tree": {
+      "growth": 10,
+      "harvest": {
+        "32": [1, 3],
+        "44": [3, 5]
+      }
+    }
+  },
+  "32": {
+    "name": "Wooden Stick",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "33": {
+    "name": "Rock",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "34": {
+    "name": "Stone Axe Head",
+    "type": "item",
+    "maxStackSize": 1
+  },
+  "35": {
+    "name": "Stone Axe",
+    "type": "tool",
+    "tool": {
+      "type": "axe",
+      "durability": 20
+    },
+    "craft": [
+      {
+        "ingredients": [
+          {
+            "itemId": "34",
+            "amount": 1
+          },
+          {
+            "itemId": "32",
+            "amount": 1
+          }
+        ],
+        "result": {
+          "itemId": "35",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  "36": {
+    "name": "Stone Pickaxe Head",
+    "type": "item"
+  },
+  "37": {
+    "name": "Stone Pickaxe",
+    "type": "tool",
+    "tool": {
+      "type": "pickaxe",
+      "durability": 20,
+      "damage": 1
+    },
+    "craft": [
+      {
+        "ingredients": [
+          {
+            "itemId": "36",
+            "amount": 1
+          },
+          {
+            "itemId": "32",
+            "amount": 1
+          }
+        ],
+        "result": {
+          "itemId": "37",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  "38": {
+    "name": "Stone Shovel Head",
+    "type": "item"
+  },
+  "39": {
+    "name": "Stone Shovel",
+    "type": "tool",
+    "tool": {
+      "type": "shovel",
+      "durability": 20,
+      "damage": 1
+    },
+    "craft": [
+      {
+        "ingredients": [
+          {
+            "itemId": "38",
+            "amount": 1
+          },
+          {
+            "itemId": "32",
+            "amount": 1
+          }
+        ],
+        "result": {
+          "itemId": "39",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  "40": {
+    "name": "Stone Hoe Head",
+    "type": "item"
+  },
+  "41": {
+    "name": "Stone Hoe",
+    "type": "tool",
+    "tool": {
+      "type": "hoe",
+      "durability": 20,
+      "damage": 1
+    },
+    "craft": [
+      {
+        "ingredients": [
+          {
+            "itemId": "40",
+            "amount": 1
+          },
+          {
+            "itemId": "32",
+            "amount": 1
+          }
+        ],
+        "result": {
+          "itemId": "41",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  "42": {
+    "name": "Stone Hammer Head",
+    "type": "item"
+  },
+  "43": {
+    "name": "Stone Hammer",
+    "type": "tool",
+    "tool": {
+      "type": "hammer",
+      "durability": 20,
+      "damage": 1
+    },
+    "craft": [
+      {
+        "ingredients": [
+          {
+            "itemId": "42",
+            "amount": 1
+          },
+          {
+            "itemId": "32",
+            "amount": 1
+          }
+        ],
+        "result": {
+          "itemId": "43",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  "44": {
+    "name": "Oak Log",
+    "type": "item",
+    "maxStackSize": 16
+  },
+  "45": {
+    "name": "Oak Plank",
+    "type": "item",
+    "maxStackSize": 64
+  }
+}
