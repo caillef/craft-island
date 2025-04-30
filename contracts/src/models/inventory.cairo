@@ -41,7 +41,8 @@ pub struct Inventory {
     pub slots2: felt252,
     pub slots3: felt252,
     pub slots4: felt252,
-    pub selected_slot: u8,
+    pub selected_slot: u8, // used when moving items in the inventory
+    pub hotbar_selected_slot: u8, // used when a slot is selected in the hotbar
 }
 
 #[derive(Copy, Drop)]
@@ -71,7 +72,21 @@ pub impl InventoryImpl of InventoryTrait {
             slots3: 0,
             slots4: 0,
             selected_slot: NO_SELECTION,
+            hotbar_selected_slot: 0,
         }
+    }
+
+    fn get_hotbar_selected_item_type(self: Inventory) -> u16 {
+        let slot = self.hotbar_selected_slot;
+        let slot_data = self.get_slot_data(slot);
+        slot_data.item_type
+    }
+
+    fn select_hotbar_slot(ref self: Inventory, slot: u8) {
+        assert(slot < 9, 'Invalid hotbar slot index');
+        let slot_data = self.get_slot_data(slot);
+        assert(!slot_data.is_empty(), 'Cannot select empty hotbar slot');
+        self.hotbar_selected_slot = slot;
     }
 
     fn new(inventory_type: u8, inventory_size: u8, owner: ContractAddress) -> Inventory {
@@ -86,6 +101,7 @@ pub impl InventoryImpl of InventoryTrait {
             slots3: 0,
             slots4: 0,
             selected_slot: NO_SELECTION,
+            hotbar_selected_slot: 0,
         }
     }
 
@@ -342,15 +358,15 @@ mod tests {
     #[test]
     fn test_add_item_to_occupied_slot() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    assert!(!inventory.add_item(0, 2, 3));
+        inventory.add_item(0, 1, 5);
+        assert!(!inventory.add_item(0, 2, 3));
     }
 
     #[test]
     fn test_remove_item_partial() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    assert!(inventory.remove_item(0, 3));
+        inventory.add_item(0, 1, 5);
+        assert!(inventory.remove_item(0, 3));
         let data = inventory.get_slot_data(0);
         assert_eq!(data.quantity, 2);
     }
@@ -358,8 +374,8 @@ mod tests {
     #[test]
     fn test_remove_item_complete() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    assert!(inventory.remove_item(0, 5));
+        inventory.add_item(0, 1, 5);
+        assert!(inventory.remove_item(0, 5));
         let data = inventory.get_slot_data(0);
         assert!(data.is_empty());
     }
@@ -367,15 +383,15 @@ mod tests {
     #[test]
     fn test_remove_item_insufficient() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    assert!(!inventory.remove_item(0, 6));
+        inventory.add_item(0, 1, 5);
+        assert!(!inventory.remove_item(0, 6));
     }
 
     #[test]
     fn test_move_item_success() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    assert!(inventory.move_item(0, 1));
+        inventory.add_item(0, 1, 5);
+        assert!(inventory.move_item(0, 1));
         let from_data = inventory.get_slot_data(0);
         let to_data = inventory.get_slot_data(1);
         assert!(from_data.is_empty());
@@ -386,9 +402,9 @@ mod tests {
     #[test]
     fn test_move_item_to_occupied() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    inventory.add_item(1, 2, 3);
-    assert!(!inventory.move_item(0, 1));
+        inventory.add_item(0, 1, 5);
+        inventory.add_item(1, 2, 3);
+        assert!(!inventory.move_item(0, 1));
     }
 
     #[test]
@@ -415,10 +431,10 @@ mod tests {
     #[test]
     fn test_get_item_amount() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 5);
-    inventory.add_item(1, 1, 3);
-    inventory.add_item(2, 2, 4);
-    assert_eq!(inventory.get_item_amount(1), 8);
+        inventory.add_item(0, 1, 5);
+        inventory.add_item(1, 1, 3);
+        inventory.add_item(2, 2, 4);
+        assert_eq!(inventory.get_item_amount(1), 8);
         assert_eq!(inventory.get_item_amount(2), 4);
         assert_eq!(inventory.get_item_amount(3), 0);
     }
@@ -445,15 +461,15 @@ mod tests {
     #[test]
     fn test_add_items_to_existing() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_item(0, 1, 100);
-    inventory.add_items(1, 200);
+        inventory.add_item(0, 1, 100);
+        inventory.add_items(1, 200);
 
         let slot0 = inventory.get_slot_data(0);
-    assert_eq!(slot0.item_type, 1);
+        assert_eq!(slot0.item_type, 1);
         assert_eq!(slot0.quantity, 255);
 
         let slot1 = inventory.get_slot_data(1);
-    assert_eq!(slot1.item_type, 1);
+        assert_eq!(slot1.item_type, 1);
         assert_eq!(slot1.quantity, 45);
     }
 
@@ -461,14 +477,14 @@ mod tests {
     #[should_panic(expected: ('Not enough space in inventory',))]
     fn test_add_items_insufficient_space() {
         let mut inventory = InventoryTrait::default(1);
-    inventory.add_items(1, 300);
+        inventory.add_items(1, 300);
     }
 
     #[test]
     fn test_select_and_place() {
         let mut inventory = InventoryTrait::default(9);
         inventory.add_item(0, 1, 5);
-    inventory.add_item(1, 2, 3);
+        inventory.add_item(1, 2, 3);
 
         inventory.select_slot(0);
         assert_eq!(inventory.get_selected_slot(), 0);
@@ -487,7 +503,7 @@ mod tests {
     fn test_select_and_swap() {
         let mut inventory = InventoryTrait::default(9);
         inventory.add_item(0, 1, 5);
-    inventory.add_item(1, 2, 3);
+        inventory.add_item(1, 2, 3);
 
         inventory.select_slot(0);
         inventory.place_selected(1);

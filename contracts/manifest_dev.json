@@ -1312,8 +1312,8 @@
   },
   "contracts": [
     {
-      "address": "0x7e73bf26402fc43a5aff890f38ce383806b9296c9d6bbd6c5036dc1ab793fdd",
-      "class_hash": "0x173b0245d8a2678dff758c93de61ca814a339a5d546f1f9b3b63aac7f51e147",
+      "address": "0xd964fc51395c9b6d916e1d69a718105e97c54f0a8938033775d08ba9a0186f",
+      "class_hash": "0x7b4394b587d8cb74a4ccf7c9e6f5d542f9b86d8ee8c140c255b48d43ac07e7d",
       "abi": [
         {
           "type": "impl",
@@ -1399,7 +1399,7 @@
                 },
                 {
                   "name": "item_id",
-                  "type": "core::integer::u32"
+                  "type": "core::integer::u16"
                 }
               ],
               "outputs": [],
@@ -1424,6 +1424,38 @@
                 {
                   "name": "hp",
                   "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "use_item",
+              "inputs": [
+                {
+                  "name": "x",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "y",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "z",
+                  "type": "core::integer::u64"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "select_hotbar_slot",
+              "inputs": [
+                {
+                  "name": "slot",
+                  "type": "core::integer::u8"
                 }
               ],
               "outputs": [],
@@ -1553,6 +1585,8 @@
         "spawn",
         "place",
         "hit_block",
+        "use_item",
+        "select_hotbar_slot",
         "upgrade"
       ]
     }
@@ -1561,13 +1595,13 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x37173e2857775e245df49195934f304134720cfdf773ba02a1948c2d771af6f",
+      "class_hash": "0x13a2e7c0551548d2ae94d31319f427b00037d04bd51b695027c3f702a981b27",
       "tag": "craft_island_pocket-GatherableResource",
       "selector": "0x724f6e93d1c79ee556934629fac544529f95a96cf9b19eccf2cec9afb77b6b5"
     },
     {
       "members": [],
-      "class_hash": "0x427661693385b5a55dca4e09c7b5ba6da7aa5a7402f33941888a2517ecf5ce5",
+      "class_hash": "0x33353b58df9d5ac0320f6a132120ec4820a986f2cc80d8d8d26fc313a6b5f48",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },

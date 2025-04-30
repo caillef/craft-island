@@ -44,7 +44,7 @@ pub struct GatherableResource {
     pub chunk_id: u128,
     #[key]
     pub position: u8,
-    pub resource_id: u32,
+    pub resource_id: u16,
     pub planted_at: u64, // timestamp
     pub next_harvest_at: u64, // timestamp
     pub harvested_at: u64, // timestamp

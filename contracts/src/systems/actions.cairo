@@ -5,8 +5,10 @@ trait IActions<T> {
     fn spawn(ref self: T);
     //fn buy(ref self: T, item_id: u32, quantity: u32);
     //fn sell(ref self: T, item_id: u32, quantity: u32);
-    fn place(ref self: T, x: u64, y: u64, z: u64, item_id: u32);
+    fn place(ref self: T, x: u64, y: u64, z: u64, item_id: u16);
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
+    fn use_item(ref self: T, x: u64, y: u64, z: u64);
+    fn select_hotbar_slot(ref self: T, slot: u8);
     //fn craft(ref self: T);
 }
 
@@ -25,8 +27,8 @@ mod actions {
 
     use dojo::model::{ModelStorage};
 
-    fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u32) {
-        let mut world = self.world(@"craft_island_pocket");
+    fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
+        let mut world = get_world(ref self);
         let player = get_caller_address();
         let island_id: felt252 = player.into();
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
@@ -35,6 +37,10 @@ mod actions {
         let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
         resource.resource_id = item_id;
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+        inventory.remove_items(item_id, 1);
+        world.write_model(@inventory);
 
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         resource.planted_at = timestamp;
@@ -47,7 +53,7 @@ mod actions {
     }
 
     fn harvest(ref self: ContractState, x: u64, y: u64, z: u64) {
-        let mut world = self.world(@"craft_island_pocket");
+        let mut world = get_world(ref self);
         let player = get_caller_address();
         let island_id: felt252 = player.into();
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
@@ -79,8 +85,8 @@ mod actions {
     ) { //let player = get_caller_address();
     }
 
-    fn place_block(ref self: ContractState, x: u64, y: u64, z: u64, block_id: u32) {
-        let mut world = self.world(@"craft_island_pocket");
+    fn place_block(ref self: ContractState, x: u64, y: u64, z: u64, block_id: u16) {
+        let mut world = get_world(ref self);
         let player = get_caller_address();
         let island_id: felt252 = player.into();
         println!("Raw Position {} {} {}", x, y, z);
@@ -137,7 +143,7 @@ mod actions {
     }
 
     fn remove_block(ref self: ContractState, x: u64, y: u64, z: u64) -> bool {
-        let mut world = self.world(@"craft_island_pocket");
+        let mut world = get_world(ref self);
         let player = get_caller_address();
         let island_id: felt252 = player.into();
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
@@ -166,8 +172,40 @@ mod actions {
         // Add block to inventory
     }
 
+    fn update_block(ref self: ContractState, x: u64, y: u64, z: u64, tool: u16) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+        let island_id: felt252 = player.into();
+        println!("Raw Position {} {} {}", x, y, z);
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
+
+        //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
+        if z % 4 < 2 {
+            let block_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2);
+            assert(block_info > 0, 'Error: block does not exist');
+            let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
+                .into();
+            if tool == 18 && block_info == 1 {
+                chunk.blocks2 -= block_info.into() * shift.into();
+                chunk.blocks2 += 2 * shift.into();
+            }
+        } else {
+            let block_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2);
+            assert(block_info == 0, 'Error: block exists');
+            let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
+                .into();
+            if tool == 18 && block_info == 1 {
+                chunk.blocks1 -= block_info.into() * shift.into();
+                chunk.blocks1 += 2 * shift.into();
+            }
+        }
+        world.write_model(@chunk);
+        // Remove block from inventory
+    }
+
     fn init_island(ref self: ContractState, player: ContractAddress) {
-        let mut world = self.world(@"craft_island_pocket");
+        let mut world = get_world(ref self);
 
         let starter_chunk = IslandChunk {
             island_id: player.into(),
@@ -207,15 +245,19 @@ mod actions {
         world.write_model(@starter_chunk4);
     }
 
+    fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
+        self.world(@"craft_island_pocket")
+    }
+
     fn init_inventory(ref self: ContractState, player: ContractAddress) {
-        let mut world = self.world(@"craft_island_pocket");
+        let mut world = get_world(ref self);
 
         let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
         inventory.add_items(1, 20);
         inventory.add_items(2, 20);
-        inventory.add_items(3, 20);
         inventory.add_items(4, 3);
         inventory.add_items(5, 3);
+        inventory.add_items(18, 1);
         world.write_model(@inventory);
     }
 
@@ -227,7 +269,7 @@ mod actions {
             init_inventory(ref self, player);
         }
 
-        fn place(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u32) {
+        fn place(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
             assert(item_id > 0, 'Error: item id is zero');
             if item_id <= 3 {
                 place_block(ref self, x, y, z, item_id);
@@ -237,10 +279,50 @@ mod actions {
         }
 
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
+            let world = get_world(ref self);
+            let player = get_caller_address();
+            // get inventory and get current slot item id
+            let mut inventory: Inventory = world.read_model((player, 0));
+            let itemType: u16 = inventory.get_hotbar_selected_item_type();
+
+            if (itemType == 18) {
+                // hoe, transform grass to dirt
+                update_block(ref self, x, y, z, itemType);
+                return;
+            }
             // handle hp
             if !remove_block(ref self, x, y, z) {
                 harvest(ref self, x, y, z);
             }
+        }
+
+        fn use_item(ref self: ContractState, x: u64, y: u64, z: u64) {
+            let world = get_world(ref self);
+            let player = get_caller_address();
+            // get inventory and get current slot item id
+            let mut inventory: Inventory = world.read_model((player, 0));
+            let itemType: u16 = inventory.get_hotbar_selected_item_type();
+
+            if (itemType == 18) {
+                // hoe, transform grass to dirt
+                update_block(ref self, x, y, z, itemType);
+            } else {
+                assert(itemType > 0, 'Error: item id is zero');
+                if itemType <= 15 {
+                    place_block(ref self, x, y, z, itemType);
+                } else {
+                    plant(ref self, x, y, z, itemType);
+                }
+            }
+        }
+
+        fn select_hotbar_slot(ref self: ContractState, slot: u8) {
+            let mut world = get_world(ref self);
+
+            let player = get_caller_address();
+            let mut inventory: Inventory = world.read_model((player, 0));
+            inventory.select_hotbar_slot(slot);
+            world.write_model(@inventory);
         }
     }
 }
