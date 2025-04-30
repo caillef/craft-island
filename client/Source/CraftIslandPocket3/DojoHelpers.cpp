@@ -695,3 +695,16 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsHitBlock(const FControl
                      TEXT("hit_block"), FString::Join(args, TEXT(",")));
 }
 
+void ADojoHelpers::CallCraftIslandPocketActionsSelectHotbarSlot(const FAccount& account, int slot) {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(slot, "u32"));
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("select_hotbar_slot"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsSelectHotbarSlot(const FControllerAccount& account, int slot) {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(slot, "u32"));
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("select_hotbar_slot"), FString::Join(args, TEXT(",")));
+}

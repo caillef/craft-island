@@ -287,4 +287,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsHitBlock(const FControllerAccount& account, int64 x, int64 y, int64 z, int hp);
 
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsSelectHotbarSlot(const FAccount& account, int slot);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsSelectHotbarSlot(const FControllerAccount& account, int slot);
 };
