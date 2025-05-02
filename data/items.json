@@ -205,5 +205,20 @@
     "name": "Oak Plank",
     "type": "item",
     "maxStackSize": 64
+  },
+  "46": {
+    "name": "Oak Sapling",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "47": {
+    "name": "Wheat Seed",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "48": {
+    "name": "Wheat",
+    "type": "item",
+    "maxStackSize": 64
   }
 }
