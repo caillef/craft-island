@@ -192,7 +192,7 @@ mod actions {
             }
         } else {
             let block_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2);
-            assert(block_info == 0, 'Error: block exists');
+            assert(block_info > 0, 'Error: block does not exist');
             let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
                 .into();
             if tool == 18 && block_info == 1 {
@@ -253,11 +253,11 @@ mod actions {
         let mut world = get_world(ref self);
 
         let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
-        inventory.add_items(1, 20);
-        inventory.add_items(2, 20);
-        inventory.add_items(4, 3);
-        inventory.add_items(5, 3);
-        inventory.add_items(18, 1);
+        inventory.add_items(1, 19);
+        inventory.add_items(2, 23);
+        inventory.add_items(46, 8);
+        inventory.add_items(47, 12);
+        inventory.add_items(41, 1);
         world.write_model(@inventory);
     }
 
@@ -297,6 +297,8 @@ mod actions {
         }
 
         fn use_item(ref self: ContractState, x: u64, y: u64, z: u64) {
+            println!("Raw Position {} {} {}", x, y, z);
+
             let world = get_world(ref self);
             let player = get_caller_address();
             // get inventory and get current slot item id
@@ -308,7 +310,7 @@ mod actions {
                 update_block(ref self, x, y, z, itemType);
             } else {
                 assert(itemType > 0, 'Error: item id is zero');
-                if itemType <= 15 {
+                if itemType < 32 {
                     place_block(ref self, x, y, z, itemType);
                 } else {
                     plant(ref self, x, y, z, itemType);
