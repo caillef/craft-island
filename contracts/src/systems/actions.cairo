@@ -5,7 +5,6 @@ trait IActions<T> {
     fn spawn(ref self: T);
     //fn buy(ref self: T, item_id: u32, quantity: u32);
     //fn sell(ref self: T, item_id: u32, quantity: u32);
-    fn place(ref self: T, x: u64, y: u64, z: u64, item_id: u16);
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
     fn use_item(ref self: T, x: u64, y: u64, z: u64);
     fn select_hotbar_slot(ref self: T, slot: u8);
@@ -186,7 +185,7 @@ mod actions {
             assert(block_info > 0, 'Error: block does not exist');
             let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
                 .into();
-            if tool == 18 && block_info == 1 {
+            if tool == 41 && block_info == 1 {
                 chunk.blocks2 -= block_info.into() * shift.into();
                 chunk.blocks2 += 2 * shift.into();
             }
@@ -269,15 +268,6 @@ mod actions {
             init_inventory(ref self, player);
         }
 
-        fn place(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
-            assert(item_id > 0, 'Error: item id is zero');
-            if item_id <= 3 {
-                place_block(ref self, x, y, z, item_id);
-            } else {
-                plant(ref self, x, y, z, item_id);
-            }
-        }
-
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
             let world = get_world(ref self);
             let player = get_caller_address();
@@ -305,7 +295,7 @@ mod actions {
             let mut inventory: Inventory = world.read_model((player, 0));
             let itemType: u16 = inventory.get_hotbar_selected_item_type();
 
-            if (itemType == 18) {
+            if (itemType == 41) {
                 // hoe, transform grass to dirt
                 update_block(ref self, x, y, z, itemType);
             } else {
@@ -313,7 +303,7 @@ mod actions {
                 if itemType < 32 {
                     place_block(ref self, x, y, z, itemType);
                 } else {
-                    plant(ref self, x, y, z, itemType);
+                    plant(ref self, x, y, z + 1, itemType);
                 }
             }
         }

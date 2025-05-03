@@ -1313,7 +1313,7 @@
   "contracts": [
     {
       "address": "0x15cdccf92dcdc5ad688cd6fd3fab46d6392da13314e09f371c64be95ddd47e7",
-      "class_hash": "0x5f30d04266eaaa07f7073cac82355feee3a8aa2c77b9541fc74a11f78ce2f32",
+      "class_hash": "0x1763f29f5b286d19621913d5b00576bb30d79de877c512da6dd6c6176f84f8d",
       "abi": [
         {
           "type": "impl",
@@ -1378,30 +1378,6 @@
               "type": "function",
               "name": "spawn",
               "inputs": [],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "place",
-              "inputs": [
-                {
-                  "name": "x",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "y",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "z",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "item_id",
-                  "type": "core::integer::u16"
-                }
-              ],
               "outputs": [],
               "state_mutability": "external"
             },
@@ -1583,7 +1559,6 @@
       "selector": "0x2421825019faf473c80afccd4a206fb7d24b2e1e0203119018ea28e4bf653aa",
       "systems": [
         "spawn",
-        "place",
         "hit_block",
         "use_item",
         "select_hotbar_slot",
