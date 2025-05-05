@@ -1,0 +1,20 @@
+---
+title: Island Chunk
+---
+
+Craft Island world is divided into chunks. Each chunk is a 4x4x4 block cube.
+
+The chunk at position 0,0,0 extends from blocks 0,0,0 to 3,3,3.
+
+Each block is stored in 4 bits, so we use two 128-bit numbers to store all blocks in a chunk.
+
+The bottom layer (from 0,0,0 to 3,3,1) is stored first, using 32*4=128 bits, and there is another 128 bits for the top layer (from 0,0,2 to 3,3,3)
+
+In hexadecimal, one character represents one block. We can write something like 0x00000000000000000000000000000000,0x00000000000000001111111111111111 to represent a 4x4x4 grid of blocks with ID 1 at the bottom.
+
+For block ordering, the rightmost block at the bottom of the chunk is ID 0. For the first layer, the IDs are arranged like:
+
+15 14 13 12
+11 10 09 08
+07 06 05 04
+03 02 01 00
