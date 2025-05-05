@@ -43,7 +43,11 @@ mod actions {
 
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         resource.planted_at = timestamp;
-        resource.next_harvest_at = timestamp + 10;
+        if item_id == 32 || item_id == 33 {
+            resource.next_harvest_at = 0; // instant
+        } else {
+            resource.next_harvest_at = timestamp + 10;
+        }
         resource.harvested_at = 0;
         resource.max_harvest = 1;
         resource.remained_harvest = resource.max_harvest;
@@ -65,6 +69,11 @@ mod actions {
         println!("Harvested {}", resource.resource_id);
         resource.harvested_at = timestamp;
         resource.remained_harvest -= 1;
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+        inventory.add_items(resource.resource_id.try_into().unwrap(), 1);
+        world.write_model(@inventory);
+
         if resource.max_harvest > 0 && resource.remained_harvest < resource.max_harvest {
             resource.destroyed = true;
             resource.resource_id = 0;
@@ -400,8 +409,8 @@ mod actions {
                 return;
             }
             // handle hp
-            if !remove_block(ref self, x, y, z) {
-                harvest(ref self, x, y, z);
+            if !remove_block(ref self, x, y, z + 1) {
+                harvest(ref self, x, y, z + 1);
             }
         }
 
