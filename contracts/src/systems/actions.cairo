@@ -206,42 +206,159 @@ mod actions {
     fn init_island(ref self: ContractState, player: ContractAddress) {
         let mut world = get_world(ref self);
 
-        let starter_chunk = IslandChunk {
-            island_id: player.into(),
-            chunk_id: 0x000000080000000008000000000800, // offset 2048,2048,2048
-            version: 0,
-            blocks1: 0,
-            blocks2: 1229782938247303441,
-        };
+    let starter_chunk0 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080100000007ff0000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 76842741656518657,
+      };
+      world.write_model(@starter_chunk0);
 
-        let starter_chunk2 = IslandChunk {
-            island_id: player.into(),
-            chunk_id: 0x000000080000000008010000000800, // offset 2048,2048,2048
-            version: 0,
-            blocks1: 0,
-            blocks2: 1229782938247303441,
-        };
+    let starter_chunk1 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080100000008000000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 4785147619639313,
+      };
+      world.write_model(@starter_chunk1);
 
+    let starter_chunk2 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080100000008010000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 281547992268817,
+      };
+      world.write_model(@starter_chunk2);
 
-        let starter_chunk3 = IslandChunk {
-            island_id: player.into(),
-            chunk_id: 0x000000080100000008000000000800, // offset 2048,2048,2048
-            version: 0,
-            blocks1: 0,
-            blocks2: 1229782938247303441,
-        };
+    let starter_chunk3 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080000000008000000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1229782938247303441,
+      };
+      world.write_model(@starter_chunk3);
 
-        let starter_chunk4 = IslandChunk {
-            island_id: player.into(),
-            chunk_id: 0x000000080100000008010000000800, // offset 2048,2048,2048
-            version: 0,
-            blocks1: 0,
-            blocks2: 1229782938247303441,
-        };
-        world.write_model(@starter_chunk);
-        world.write_model(@starter_chunk2);
-        world.write_model(@starter_chunk3);
-        world.write_model(@starter_chunk4);
+    let starter_chunk4 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080000000008010000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1229782938247303441,
+      };
+      world.write_model(@starter_chunk4);
+
+    let starter_chunk5 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080000000008020000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 4296085777,
+      };
+      world.write_model(@starter_chunk5);
+
+    let starter_chunk6 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x000000080000000007ff0000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1229782938247303440,
+      };
+      world.write_model(@starter_chunk6);
+
+    let starter_chunk7 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007ff00000008000000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1229782938247303441,
+      };
+      world.write_model(@starter_chunk7);
+
+    let starter_chunk8 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007ff00000008010000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1234568085865828625,
+      };
+      world.write_model(@starter_chunk8);
+
+    let starter_chunk9 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007ff00000008020000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 18760703480098,
+      };
+      world.write_model(@starter_chunk9);
+
+    let starter_chunk10 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007ff00000007ff0000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1224997790610882560,
+      };
+      world.write_model(@starter_chunk10);
+
+    let starter_chunk11 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007fe00000008000000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1152939097061326848,
+      };
+      world.write_model(@starter_chunk11);
+
+    let starter_chunk12 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007fe00000008010000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 1224997790627664128,
+      };
+      world.write_model(@starter_chunk12);
+
+    let starter_chunk13 = IslandChunk {
+          island_id: player.into(),
+          chunk_id: 0x00000007fe00000008020000000800,
+          version: 0,
+          blocks1: 0,
+          blocks2: 268439552,
+      };
+      world.write_model(@starter_chunk13);
+
+    let resource0 = GatherableResource {
+        island_id: player.into(),
+        chunk_id: 0x000000080000000008000000000800,
+        position: 17,
+        resource_id: 32,
+        planted_at: 0,
+        next_harvest_at: 0,
+        harvested_at: 0,
+        max_harvest: 1,
+        remained_harvest: 1,
+        destroyed: false,
+    };
+    world.write_model(@resource0);
+
+    let resource0 = GatherableResource {
+        island_id: player.into(),
+        chunk_id: 0x000000080000000008000000000800,
+        position: 23,
+        resource_id: 33,
+        planted_at: 0,
+        next_harvest_at: 0,
+        harvested_at: 0,
+        max_harvest: 1,
+        remained_harvest: 1,
+        destroyed: false,
+    };
+    world.write_model(@resource0);
     }
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
@@ -253,10 +370,12 @@ mod actions {
 
         let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
         inventory.add_items(1, 19);
-        inventory.add_items(2, 23);
+        //inventory.add_items(2, 23);
         inventory.add_items(46, 8);
-        inventory.add_items(47, 12);
+        //inventory.add_items(47, 12);
         inventory.add_items(41, 1);
+        inventory.add_items(32, 4);
+        inventory.add_items(33, 7);
         world.write_model(@inventory);
     }
 
