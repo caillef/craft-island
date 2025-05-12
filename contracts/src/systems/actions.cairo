@@ -8,7 +8,7 @@ trait IActions<T> {
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
     fn use_item(ref self: T, x: u64, y: u64, z: u64);
     fn select_hotbar_slot(ref self: T, slot: u8);
-    //fn craft(ref self: T);
+    fn craft(ref self: T, item: u32);
 }
 
 // dojo decorator
@@ -156,6 +156,7 @@ mod actions {
         let island_id: felt252 = player.into();
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
+        let mut block_id = 0;
         //println!("Removing block: {} {}", chunk.blocks1, chunk.blocks2);
         if z % 4 < 2 {
             let block_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2);
@@ -165,6 +166,7 @@ mod actions {
             let index: u128 = (((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into();
             let mut shift: u128 = fast_power_2(index).into();
             chunk.blocks2 -= (block_info.into() * shift.into());
+            block_id = block_info;
         } else {
             let block_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2);
             if block_info == 0 {
@@ -173,8 +175,14 @@ mod actions {
             let index: u128 = (((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into();
             let mut shift: u128 = fast_power_2(index).into();
             chunk.blocks1 -= (block_info.into() * shift.into());
+            block_id = block_info;
         }
         //println!("Removed block: {} {}", chunk.blocks1, chunk.blocks2);
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+        inventory.add_items(block_id.try_into().unwrap(), 1);
+        world.write_model(@inventory);
+
         world.write_model(@chunk);
         return true;
         // Add block to inventory
@@ -210,6 +218,21 @@ mod actions {
         }
         world.write_model(@chunk);
         // Remove block from inventory
+    }
+
+    fn try_craft(ref self: ContractState, item: u16) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+
+        if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
+            if inventory.get_item_amount(33) >= 2 {
+                inventory.remove_items(33, 2);
+                inventory.add_items(item, 1);
+            }
+        }
+        world.write_model(@inventory);
     }
 
     fn init_island(ref self: ContractState, player: ContractAddress) {
@@ -380,9 +403,9 @@ mod actions {
         let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
         inventory.add_items(1, 19);
         //inventory.add_items(2, 23);
-        inventory.add_items(46, 8);
+        //inventory.add_items(46, 8);
         //inventory.add_items(47, 12);
-        inventory.add_items(41, 1);
+        //inventory.add_items(41, 1);
         inventory.add_items(32, 4);
         inventory.add_items(33, 7);
         world.write_model(@inventory);
@@ -443,6 +466,11 @@ mod actions {
             let mut inventory: Inventory = world.read_model((player, 0));
             inventory.select_hotbar_slot(slot);
             world.write_model(@inventory);
+        }
+
+        fn craft(ref self: ContractState, item: u32) {
+            println!("Crafting {}", item);
+            try_craft(ref self, item.try_into().unwrap());
         }
     }
 }

@@ -1313,7 +1313,7 @@
   "contracts": [
     {
       "address": "0x15cdccf92dcdc5ad688cd6fd3fab46d6392da13314e09f371c64be95ddd47e7",
-      "class_hash": "0x239f7d63e41bcfa1f2a3643cae79d2c79cf1b24196e84c30e625a194f1677eb",
+      "class_hash": "0x421aafa43f14dae1c20663addfb7abe7760ae844a7e6beb711e37e4359a4437",
       "abi": [
         {
           "type": "impl",
@@ -1432,6 +1432,18 @@
                 {
                   "name": "slot",
                   "type": "core::integer::u8"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "craft",
+              "inputs": [
+                {
+                  "name": "item",
+                  "type": "core::integer::u32"
                 }
               ],
               "outputs": [],
@@ -1562,6 +1574,7 @@
         "hit_block",
         "use_item",
         "select_hotbar_slot",
+        "craft",
         "upgrade"
       ]
     }
