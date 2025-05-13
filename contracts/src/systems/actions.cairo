@@ -8,7 +8,7 @@ trait IActions<T> {
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
     fn use_item(ref self: T, x: u64, y: u64, z: u64);
     fn select_hotbar_slot(ref self: T, slot: u8);
-    fn craft(ref self: T, item: u32);
+    fn craft(ref self: T, item: u32, x: u64, y:u64, z: u64);
 }
 
 // dojo decorator
@@ -220,15 +220,25 @@ mod actions {
         // Remove block from inventory
     }
 
-    fn try_craft(ref self: ContractState, item: u16) {
+    fn try_craft(ref self: ContractState, item: u16, x: u64, y: u64, z: u64) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
 
         let mut inventory: Inventory = world.read_model((player, 0));
 
+        // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
-            if inventory.get_item_amount(33) >= 2 {
-                inventory.remove_items(33, 2);
+            let island_id: felt252 = player.into();
+            let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+            let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+            let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
+            assert!(resource.resource_id == 33 && !resource.destroyed, "Error: No rock");
+            resource.destroyed = true;
+            resource.resource_id = 0;
+            world.write_model(@resource);
+
+            if inventory.get_hotbar_selected_item_type() == 33 {
+                inventory.remove_items(33, 1);
                 inventory.add_items(item, 1);
             }
         }
@@ -468,9 +478,9 @@ mod actions {
             world.write_model(@inventory);
         }
 
-        fn craft(ref self: ContractState, item: u32) {
+        fn craft(ref self: ContractState, item: u32, x: u64, y: u64, z: u64) {
             println!("Crafting {}", item);
-            try_craft(ref self, item.try_into().unwrap());
+            try_craft(ref self, item.try_into().unwrap(), x, y, z);
         }
     }
 }

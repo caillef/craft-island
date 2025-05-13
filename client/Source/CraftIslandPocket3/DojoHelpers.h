@@ -298,9 +298,9 @@ public:
     void CallControllerCraftIslandPocketActionsSelectHotbarSlot(const FControllerAccount& account, int slot);
 
     UFUNCTION(BlueprintCallable, Category = "Calls")
-    void CallCraftIslandPocketActionsCraft(const FAccount& account, int item);
+    void CallCraftIslandPocketActionsCraft(const FAccount& account, int item, int64 x, int64 y, int64 z);
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
-    void CallControllerCraftIslandPocketActionsCraft(const FControllerAccount& account, int item);
+    void CallControllerCraftIslandPocketActionsCraft(const FControllerAccount& account, int item, int64 x, int64 y, int64 z);
 
 };

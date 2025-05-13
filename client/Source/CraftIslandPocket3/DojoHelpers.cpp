@@ -725,16 +725,28 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsSelectHotbarSlot(const 
                      TEXT("select_hotbar_slot"), FString::Join(args, TEXT(",")));
 }
 
-void ADojoHelpers::CallCraftIslandPocketActionsCraft(const FAccount& account, int item) {
+void ADojoHelpers::CallCraftIslandPocketActionsCraft(const FAccount& account, int item, int64 x, int64 y, int64 z) {
     TArray<FString> args;
     args.Append(ConvertToFeltHexa<int>(item, "u32"));
+    args.Append(ConvertToFeltHexa<int64>(x, \
+                                 "u64"));
+    args.Append(ConvertToFeltHexa<int64>(y, \
+                                 "u64"));
+    args.Append(ConvertToFeltHexa<int64>(z, \
+                                 "u64"));
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("craft"), FString::Join(args, TEXT(",")));
 }
 
-void ADojoHelpers::CallControllerCraftIslandPocketActionsCraft(const FControllerAccount& account, int item) {
+void ADojoHelpers::CallControllerCraftIslandPocketActionsCraft(const FControllerAccount& account, int item, int64 x, int64 y, int64 z) {
     TArray<FString> args;
     args.Append(ConvertToFeltHexa<int>(item, "u32"));
+    args.Append(ConvertToFeltHexa<int64>(x, \
+                                 "u64"));
+    args.Append(ConvertToFeltHexa<int64>(y, \
+                                 "u64"));
+    args.Append(ConvertToFeltHexa<int64>(z, \
+                                 "u64"));
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("craft"), FString::Join(args, TEXT(",")));
 

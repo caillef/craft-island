@@ -79,6 +79,9 @@ pub impl InventoryImpl of InventoryTrait {
     fn get_hotbar_selected_item_type(self: Inventory) -> u16 {
         let slot = self.hotbar_selected_slot;
         let slot_data = self.get_slot_data(slot);
+        if slot_data.quantity == 0 {
+            return 0;
+        }
         slot_data.item_type
     }
 
