@@ -410,14 +410,24 @@ mod actions {
     fn init_inventory(ref self: ContractState, player: ContractAddress) {
         let mut world = get_world(ref self);
 
-        let mut inventory: Inventory = InventoryTrait::new(0, 9, player);
-        inventory.add_items(1, 19);
+        let mut hotbar: Inventory = InventoryTrait::new(0, 0, 9, player);
+        hotbar.add_items(1, 19);
         //inventory.add_items(2, 23);
         //inventory.add_items(46, 8);
         //inventory.add_items(47, 12);
         //inventory.add_items(41, 1);
-        inventory.add_items(32, 4);
-        inventory.add_items(33, 7);
+        hotbar.add_items(32, 4);
+        hotbar.add_items(33, 7);
+        world.write_model(@hotbar);
+
+        let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
+        inventory.add_items(1, 19);
+        inventory.add_items(2, 23);
+        //inventory.add_items(46, 8);
+        //inventory.add_items(47, 12);
+        //inventory.add_items(41, 1);
+        //inventory.add_items(32, 4);
+        //inventory.add_items(33, 7);
         world.write_model(@inventory);
     }
 
