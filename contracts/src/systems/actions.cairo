@@ -9,6 +9,7 @@ trait IActions<T> {
     fn use_item(ref self: T, x: u64, y: u64, z: u64);
     fn select_hotbar_slot(ref self: T, slot: u8);
     fn craft(ref self: T, item: u32, x: u64, y:u64, z: u64);
+    fn inventory_move_item(ref self: T, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8);
 }
 
 // dojo decorator
@@ -423,6 +424,7 @@ mod actions {
         let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
         inventory.add_items(1, 19);
         inventory.add_items(2, 23);
+        inventory.add_item(10, 32, 4);
         //inventory.add_items(46, 8);
         //inventory.add_items(47, 12);
         //inventory.add_items(41, 1);
@@ -491,6 +493,22 @@ mod actions {
         fn craft(ref self: ContractState, item: u32, x: u64, y: u64, z: u64) {
             println!("Crafting {}", item);
             try_craft(ref self, item.try_into().unwrap(), x, y, z);
+        }
+
+        fn inventory_move_item(ref self: ContractState, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8) {
+            let mut world = get_world(ref self);
+
+            let player = get_caller_address();
+            let mut inventory: Inventory = world.read_model((player, from_inventory));
+            let mut to_inventory: Inventory = world.read_model((player, to_inventory_id));
+
+            if from_inventory == to_inventory_id {
+                inventory.move_item(from_slot, to_slot);
+            } else {
+                inventory.move_item_between_inventories(from_slot, ref to_inventory, to_slot);
+                world.write_model(@to_inventory);
+            }
+            world.write_model(@inventory);
         }
     }
 }

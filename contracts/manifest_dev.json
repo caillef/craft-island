@@ -1313,7 +1313,7 @@
   "contracts": [
     {
       "address": "0x15cdccf92dcdc5ad688cd6fd3fab46d6392da13314e09f371c64be95ddd47e7",
-      "class_hash": "0x7c87d9dbc17c31e981e8473a56a33c13be66ec080f6a67a6ed5f0ce53604bf3",
+      "class_hash": "0x2b15f9c94eef13d07e988d3a1528d94425cde2604a2539794985653b7e3dd4b",
       "abi": [
         {
           "type": "impl",
@@ -1460,6 +1460,30 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "inventory_move_item",
+              "inputs": [
+                {
+                  "name": "from_inventory",
+                  "type": "core::integer::u16"
+                },
+                {
+                  "name": "from_slot",
+                  "type": "core::integer::u8"
+                },
+                {
+                  "name": "to_inventory_id",
+                  "type": "core::integer::u16"
+                },
+                {
+                  "name": "to_slot",
+                  "type": "core::integer::u8"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1587,6 +1611,7 @@
         "use_item",
         "select_hotbar_slot",
         "craft",
+        "inventory_move_item",
         "upgrade"
       ]
     }

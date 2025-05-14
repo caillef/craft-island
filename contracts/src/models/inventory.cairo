@@ -133,6 +133,35 @@ pub impl InventoryImpl of InventoryTrait {
         false
     }
 
+    fn move_item_between_inventories(ref self: Inventory, from_slot: u8, ref to_inventory: Inventory, to_slot: u8) -> bool {
+        assert(from_slot < self.inventory_size && to_slot < to_inventory.inventory_size, 'Invalid slot index');
+        let from_data = self.get_slot_data(from_slot);
+        let to_data = to_inventory.get_slot_data(to_slot);
+
+        if !from_data.is_empty() && to_data.is_empty() {
+            to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
+            self.clear_slot(from_slot);
+            return true;
+        } else if !from_data.is_empty() && !to_data.is_empty() {
+            // check if can merge and not a tool or a tool head
+            if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
+                let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
+                if sum > 255 {
+                    let rest: u16 = sum - 255;
+                    to_inventory.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
+                    self.set_slot_data(from_slot, to_data.item_type, rest.try_into().unwrap(), to_data.extra);
+                } else {
+                    to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
+                    self.clear_slot(from_slot);
+                }
+            }
+            to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
+            self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
+            return true;
+        }
+        false
+    }
+
     fn move_item(ref self: Inventory, from_slot: u8, to_slot: u8) -> bool {
         assert(from_slot < self.inventory_size && to_slot < self.inventory_size, 'Invalid slot index');
         let from_data = self.get_slot_data(from_slot);
@@ -141,6 +170,23 @@ pub impl InventoryImpl of InventoryTrait {
         if !from_data.is_empty() && to_data.is_empty() {
             self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.clear_slot(from_slot);
+            return true;
+        } else if !from_data.is_empty() && !to_data.is_empty() {
+            // check if can merge and not a tool or a tool head
+            if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
+                let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
+                if sum > 255 {
+                    let rest: u8 = (sum - 255).try_into().unwrap();
+                    self.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
+                    self.set_slot_data(from_slot, to_data.item_type, rest, to_data.extra);
+                } else {
+                    self.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
+                    self.clear_slot(from_slot);
+                }
+                return true;
+            }
+            self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
+            self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
             return true;
         }
         false
@@ -403,11 +449,73 @@ mod tests {
     }
 
     #[test]
+    fn test_move_item_merge() {
+        let mut inventory = InventoryTrait::default(9);
+        inventory.add_item(0, 1, 5);
+        inventory.add_item(1, 1, 10);
+        assert!(inventory.move_item(0, 1));
+        let from_data = inventory.get_slot_data(0);
+        let to_data = inventory.get_slot_data(1);
+        assert!(from_data.is_empty());
+        assert_eq!(to_data.item_type, 1);
+        assert_eq!(to_data.quantity, 15);
+    }
+
+    #[test]
+    fn test_move_item_merge_max() {
+        let mut inventory = InventoryTrait::default(9);
+        inventory.add_item(0, 1, 10);
+        inventory.add_item(1, 1, 251);
+        assert!(inventory.move_item(0, 1));
+        let from_data = inventory.get_slot_data(0);
+        let to_data = inventory.get_slot_data(1);
+        assert_eq!(from_data.item_type, 1);
+        assert_eq!(from_data.quantity, 6);
+        assert_eq!(to_data.item_type, 1);
+        assert_eq!(to_data.quantity, 255);
+    }
+
+    #[test]
+    fn test_move_item_no_merge_for_tools() {
+        let mut inventory = InventoryTrait::default(9);
+        inventory.add_item(0, 34, 1);
+        inventory.add_item(1, 34, 1);
+        assert!(inventory.move_item(0, 1));
+        let from_data = inventory.get_slot_data(0);
+        let to_data = inventory.get_slot_data(1);
+        assert_eq!(from_data.item_type, 34);
+        assert_eq!(from_data.quantity, 1);
+        assert_eq!(to_data.item_type, 34);
+        assert_eq!(to_data.quantity, 1);
+    }
+
+    #[test]
     fn test_move_item_to_occupied() {
         let mut inventory = InventoryTrait::default(9);
         inventory.add_item(0, 1, 5);
         inventory.add_item(1, 2, 3);
-        assert!(!inventory.move_item(0, 1));
+        assert!(inventory.move_item(0, 1));
+        let from_data = inventory.get_slot_data(0);
+        let to_data = inventory.get_slot_data(1);
+        assert_eq!(from_data.item_type, 2);
+        assert_eq!(from_data.quantity, 3);
+        assert_eq!(to_data.item_type, 1);
+        assert_eq!(to_data.quantity, 5);
+    }
+
+    #[test]
+    fn test_move_item_to_other_inventory_occupied() {
+        let mut inventory = InventoryTrait::default(9);
+        let mut inventory2 = InventoryTrait::default(27);
+        inventory.add_item(0, 1, 5);
+        inventory2.add_item(1, 2, 3);
+        assert!(inventory.move_item_between_inventories(0, ref inventory2, 1));
+        let from_data = inventory.get_slot_data(0);
+        let to_data = inventory2.get_slot_data(1);
+        assert_eq!(from_data.item_type, 2);
+        assert_eq!(from_data.quantity, 3);
+        assert_eq!(to_data.item_type, 1);
+        assert_eq!(to_data.quantity, 5);
     }
 
     #[test]
