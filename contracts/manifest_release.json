@@ -1312,8 +1312,8 @@
   },
   "contracts": [
     {
-      "address": "0x1a88a215d53bf29d794d87170e570b8b93bd8cec1d3b244e6ee85ca7ee2dbb5",
-      "class_hash": "0x329873a8ef4a07cd6d4e6e0b828410f1809898b9bed556adb49d3b8b2ad94ed",
+      "address": "0x6c1cbcab81b40a4ed7699de0731cfb93a6c60da9dcb11433e7647786a420e93",
+      "class_hash": "0x6062823e39a8aeb5994da549d99db21730ec31dc520c82439b64e179011742",
       "abi": [
         {
           "type": "impl",
@@ -1383,30 +1383,6 @@
             },
             {
               "type": "function",
-              "name": "place",
-              "inputs": [
-                {
-                  "name": "x",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "y",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "z",
-                  "type": "core::integer::u64"
-                },
-                {
-                  "name": "resource_id",
-                  "type": "core::integer::u32"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
               "name": "hit_block",
               "inputs": [
                 {
@@ -1431,7 +1407,7 @@
             },
             {
               "type": "function",
-              "name": "add_chunk",
+              "name": "use_item",
               "inputs": [
                 {
                   "name": "x",
@@ -1451,8 +1427,61 @@
             },
             {
               "type": "function",
-              "name": "test_get_nb_dirt",
-              "inputs": [],
+              "name": "select_hotbar_slot",
+              "inputs": [
+                {
+                  "name": "slot",
+                  "type": "core::integer::u8"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "craft",
+              "inputs": [
+                {
+                  "name": "item",
+                  "type": "core::integer::u32"
+                },
+                {
+                  "name": "x",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "y",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "z",
+                  "type": "core::integer::u64"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "inventory_move_item",
+              "inputs": [
+                {
+                  "name": "from_inventory",
+                  "type": "core::integer::u16"
+                },
+                {
+                  "name": "from_slot",
+                  "type": "core::integer::u8"
+                },
+                {
+                  "name": "to_inventory_id",
+                  "type": "core::integer::u16"
+                },
+                {
+                  "name": "to_slot",
+                  "type": "core::integer::u8"
+                }
+              ],
               "outputs": [],
               "state_mutability": "external"
             }
@@ -1578,10 +1607,11 @@
       "selector": "0x2421825019faf473c80afccd4a206fb7d24b2e1e0203119018ea28e4bf653aa",
       "systems": [
         "spawn",
-        "place",
         "hit_block",
-        "add_chunk",
-        "test_get_nb_dirt",
+        "use_item",
+        "select_hotbar_slot",
+        "craft",
+        "inventory_move_item",
         "upgrade"
       ]
     }
@@ -1590,19 +1620,19 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x37173e2857775e245df49195934f304134720cfdf773ba02a1948c2d771af6f",
+      "class_hash": "0x13a2e7c0551548d2ae94d31319f427b00037d04bd51b695027c3f702a981b27",
       "tag": "craft_island_pocket-GatherableResource",
       "selector": "0x724f6e93d1c79ee556934629fac544529f95a96cf9b19eccf2cec9afb77b6b5"
     },
     {
       "members": [],
-      "class_hash": "0x427661693385b5a55dca4e09c7b5ba6da7aa5a7402f33941888a2517ecf5ce5",
+      "class_hash": "0x33353b58df9d5ac0320f6a132120ec4820a986f2cc80d8d8d26fc313a6b5f48",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },
     {
       "members": [],
-      "class_hash": "0x588a97678f293570685f491c4b2f18c45e37b78ce6297862325da60671ceca",
+      "class_hash": "0x7202861754f734113dd849e1d1f1815afa720cef18907c7fe2bc5672fe979d3",
       "tag": "craft_island_pocket-IslandChunk",
       "selector": "0x33bcf22997bb979a42ca224a7d3738a796f91d705065fbd52011d91a9ed402"
     },

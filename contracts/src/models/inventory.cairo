@@ -147,13 +147,14 @@ pub impl InventoryImpl of InventoryTrait {
             if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
                 let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
                 if sum > 255 {
-                    let rest: u16 = sum - 255;
+                    let rest: u8 = (sum - 255).try_into().unwrap();
                     to_inventory.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
-                    self.set_slot_data(from_slot, to_data.item_type, rest.try_into().unwrap(), to_data.extra);
+                    self.set_slot_data(from_slot, to_data.item_type, rest, to_data.extra);
                 } else {
                     to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
                     self.clear_slot(from_slot);
                 }
+                return true;
             }
             to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
