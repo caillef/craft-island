@@ -749,5 +749,25 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsCraft(const FController
                                  "u64"));
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("craft"), FString::Join(args, TEXT(",")));
-
 }
+
+void ADojoHelpers::CallCraftIslandPocketActionsInventoryMoveItem(const FAccount& account, int from_inventory, int from_slot, int to_inventory, int to_slot)  {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(from_inventory, "u16"));
+    args.Append(ConvertToFeltHexa<int>(from_slot, "u8"));
+    args.Append(ConvertToFeltHexa<int>(to_inventory, "u16"));
+    args.Append(ConvertToFeltHexa<int>(to_slot, "u8"));
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("inventory_move_item"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsInventoryMoveItem(const FControllerAccount& account, int from_inventory, int from_slot, int to_inventory, int to_slot)  {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(from_inventory, "u16"));
+    args.Append(ConvertToFeltHexa<int>(from_slot, "u8"));
+    args.Append(ConvertToFeltHexa<int>(to_inventory, "u16"));
+    args.Append(ConvertToFeltHexa<int>(to_slot, "u8"));
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("inventory_move_item"), FString::Join(args, TEXT(",")));
+}
+

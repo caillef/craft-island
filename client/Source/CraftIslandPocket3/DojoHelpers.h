@@ -303,4 +303,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsCraft(const FControllerAccount& account, int item, int64 x, int64 y, int64 z);
 
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsInventoryMoveItem(const FAccount& account, int from_inventory, int from_slot, int to_inventory, int to_slot);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsInventoryMoveItem(const FControllerAccount& account, int from_inventory, int from_slot, int to_inventory, int to_slot);
+
 };
