@@ -109,12 +109,12 @@ void AGeneratedHelpers::GetAllEntities()
         TArray<FModelIslandChunk> IslandChunks;
         TArray<FModelGatherableResource> GatherableResources;
         
-        ResultCArrayEntity resEntities = FDojoModule::GetEntities(toriiClient, "{ not used }");
-        if (resEntities.tag == ErrCArrayEntity) {
+        ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, "{ not used }");
+        if (resEntities.tag == ErrPageEntity) {
             UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), resEntities.err.message);
             return;
         }
-        CArrayEntity *entities = &resEntities.ok;
+        CArrayEntity *entities = &resEntities.ok.items;
         
         UE_LOG(LogTemp, Log, TEXT("NB ENTITIES FETCH: %d"), entities->data_len);
         for (int i = 0; i < entities->data_len; i++) {

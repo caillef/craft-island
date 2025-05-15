@@ -28,7 +28,7 @@ public:
     
     static ToriiClient *CreateToriiClient(const char *torii_url, const char *world_str);
     
-    static ResultCArrayEntity GetEntities(ToriiClient *client, const char *query);
+    static ResultPageEntity GetEntities(ToriiClient *client, const char *query);
     
     static struct ResultSubscription OnEntityUpdate(ToriiClient *client, const char *query_str, void *user_data, EntityUpdateCallback callback);
     

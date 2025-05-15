@@ -89,22 +89,48 @@ ToriiClient *FDojoModule::CreateToriiClient(const char *torii_url, const char *w
     return client;
 }
 
-ResultCArrayEntity FDojoModule::GetEntities(ToriiClient *client, const char *query_str)
+ResultPageEntity FDojoModule::GetEntities(ToriiClient *client, const char *query_str)
 {
     // TODO: handle query
-    struct Query query;
-    memset(&query, 0, sizeof(query));
-    query.limit = 100;
-    query.offset = 0;
-    query.clause.tag = NoneClause;
-    query.dont_include_hashed_keys = true;
+    struct Query query = {
+        .pagination = {
+            .cursor = {
+                .tag = Nonec_char,
+            },
+            .limit = 100,
+            .direction = PaginationDirection::Forward,
+            .order_by = {
+                .data = nullptr,
+                .data_len = 0,
+            }
+        },
+        .clause = {
+            .tag = NoneClause,
+            .some = {
+                .tag = Composite,
+                .composite = {
+                    .operator_ = Or,
+                    .clauses = {
+                        .data = nullptr,
+                        .data_len = 0,
+                    }
+                }
+            }
+        },
+        .no_hashed_keys = true,
+        .models = {
+            .data_len = 0,
+            .data = nullptr,
+        },
+        .historical = true,
+    };
     if (client == nullptr) {
-        ResultCArrayEntity array;
-        array.tag = OkCArrayEntity;
-        array.ok.data_len = 0;
+        ResultPageEntity array;
+        array.tag = OkPageEntity;
+        array.ok.items.data_len = 0;
         return array;
     }
-    return client_entities(client, &query, false);
+    return client_entities(client, query);
 }
 //
 //void FDojoModule::ControllerGetAccountOrConnectMobile(const char* rpc_url, const char* chain_id, const struct Policy *policies, size_t nb_policies, ControllerAccountCallback callback, ControllerUrlCallback url_callback)
@@ -272,7 +298,10 @@ FString FDojoModule::ControllerAccountAddress(ControllerAccount *account)
 
 struct ResultSubscription FDojoModule::OnEntityUpdate(ToriiClient *client, const char *query_str, void *user_data, EntityUpdateCallback callback)
 {
-    return client_on_entity_state_update(client, nullptr, 0, callback);
+    COptionClause clause = {
+        .tag = NoneClause
+    };
+    return client_on_entity_state_update(client, clause, callback);
 }
 
 void FDojoModule::SubscriptionCancel(struct Subscription *subscription)

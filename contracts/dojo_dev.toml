@@ -21,7 +21,7 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
 private_key = "0x00c5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
-# world_address = "0x05c27776d077741956c6c664dcfd130afc4655b610619b082c02fb6cbf47756f"
+# world_address = "0x402183d2b1bdb5cdcb086f2df21bd334451d6e27f8defb67fa97c8ec6cc93c7"
 
 # rpc_url = "https://api.cartridge.gg/x/craft-island-pocket/katana"
 # account_address = "0x657e5f424dc6dee0c5a305361ea21e93781fea133d83efa410b771b7f92b"

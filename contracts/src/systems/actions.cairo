@@ -496,6 +496,7 @@ mod actions {
         }
 
         fn inventory_move_item(ref self: ContractState, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8) {
+            assert(from_inventory != to_inventory_id || from_slot != to_slot, 'Error: same slot');
             let mut world = get_world(ref self);
 
             let player = get_caller_address();

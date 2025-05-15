@@ -8,15 +8,10 @@ edition = "2024_07"
 sierra-replace-ids = true
 
 [scripts]
-migrate = "sozo build && sozo migrate apply"
-spawn = "./scripts/spawn.sh"
+migrate = "sozo build && sozo migrate"
 
 [dependencies]
-dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.3.1" }
-
-[profile.second]
-account_address = "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
-private_key = "0x14d6672dcb4b77ca36a887e9a11cd9d637d5012468175829e9c6e770c61642"
+dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.5.0" }
 
 [[target.starknet-contract]]
 build-external-contracts = ["dojo::world::world_contract::world"]
@@ -24,4 +19,4 @@ allowed-libfuncs-list.name = "experimental"
 
 [dev-dependencies]
 cairo_test = "*"
-dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.3.1" }
+dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.5.0" }
