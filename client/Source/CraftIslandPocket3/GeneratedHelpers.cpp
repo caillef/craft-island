@@ -103,94 +103,94 @@ void AGeneratedHelpers::ExecuteRaw(const FAccount& account, const FString& to, c
 
 void AGeneratedHelpers::GetAllEntities()
 {
-    // Run the heavy computation on a separate thread
-    Async(EAsyncExecution::Thread, [this]()
-          {
-        TArray<FModelIslandChunk> IslandChunks;
-        TArray<FModelGatherableResource> GatherableResources;
-        
-        ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, "{ not used }");
-        if (resEntities.tag == ErrPageEntity) {
-            UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), resEntities.err.message);
-            return;
-        }
-        CArrayEntity *entities = &resEntities.ok.items;
-        
-        UE_LOG(LogTemp, Log, TEXT("NB ENTITIES FETCH: %d"), entities->data_len);
-        for (int i = 0; i < entities->data_len; i++) {
-            CArrayStruct* models = &entities->data[i].models;
-            
-            for (int j = 0; j < models->data_len; j++) {
-                const char* name = models->data[j].name;
-                
-                if (strcmp(name, "craft_island_pocket-IslandChunk") == 0) {
-                    FModelIslandChunk chunk;
-                    CArrayMember* members = &models->data[j].children;
-                    FString blocks1;
-                    FString blocks2;
-                    
-                    for (int k = 0; k < members->data_len; k++) {
-                        Member* member = &members->data[k];
-                        if (strcmp("island_id", member->name) == 0) {
-                            chunk.island_id = bytes_to_fstring(member->ty->primitive.felt252.data, 32);
-                        } else if (strcmp("chunk_id", member->name) == 0) {
-                            chunk.chunk_id = bytes_to_fstring(member->ty->primitive.u128, 16);
-                        } else if (strcmp("blocks1", member->name) == 0) {
-                            blocks1 = bytes_to_fstring(member->ty->primitive.u128, 16);
-                        } else if (strcmp("blocks2", member->name) == 0) {
-                            blocks2 = bytes_to_fstring(member->ty->primitive.u128, 16, false);
-                        }
-                    }
-                    chunk.blocks = blocks1 + blocks2;
-                    IslandChunks.Add(chunk);
-                }
-                
-                if (strcmp(name, "craft_island_pocket-GatherableResource") == 0) {
-                    FModelGatherableResource resource;
-                    CArrayMember* members = &models->data[j].children;
-                    
-                    for (int k = 0; k < members->data_len; k++) {
-                        Member* member = &members->data[k];
-                        if (strcmp("island_id", member->name) == 0) {
-                            resource.island_id = bytes_to_fstring(member->ty->primitive.felt252.data, 32);
-                        } else if (strcmp("chunk_id", member->name) == 0) {
-                            resource.chunk_id = bytes_to_fstring(member->ty->primitive.u128, 16);
-                        } else if (strcmp("position", member->name) == 0) {
-                            resource.position = member->ty->primitive.u8;
-                        } else if (strcmp("resource_id", member->name) == 0) {
-                            resource.resource_id = member->ty->primitive.u32;
-                        } else if (strcmp("planted_at", member->name) == 0) {
-                            resource.planted_at = member->ty->primitive.u64;
-                        } else if (strcmp("next_harvest_at", member->name) == 0) {
-                            resource.next_harvest_at = member->ty->primitive.u64;
-                        } else if (strcmp("harvested_at", member->name) == 0) {
-                            resource.harvested_at = member->ty->primitive.u64;
-                        } else if (strcmp("max_harvest", member->name) == 0) {
-                            resource.max_harvest = member->ty->primitive.u8;
-                        } else if (strcmp("remained_harvest", member->name) == 0) {
-                            resource.remained_harvest = member->ty->primitive.u8;
-                        } else if (strcmp("destroyed", member->name) == 0) {
-                            resource.destroyed = member->ty->primitive.u8 == 1;
-                        }
-                    }
-                    GatherableResources.Add(resource);
-                }
-            }
-        }
-        
-        // Send results back to the game thread
-        Async(EAsyncExecution::TaskGraphMainThread, [this, IslandChunks, GatherableResources]()
-              {
-            for (const FModelIslandChunk& Chunk : IslandChunks) {
-                OnIslandChunkUpdated.Broadcast(Chunk);
-            }
-            for (const FModelGatherableResource& Resource : GatherableResources) {
-                OnGatherableResourceUpdated.Broadcast(Resource);
-            }
-        });
-    });
-    
-    
+//    // Run the heavy computation on a separate thread
+//    Async(EAsyncExecution::Thread, [this]()
+//          {
+//        TArray<FModelIslandChunk> IslandChunks;
+//        TArray<FModelGatherableResource> GatherableResources;
+//        
+//        ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, "{ not used }");
+//        if (resEntities.tag == ErrPageEntity) {
+//            UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), resEntities.err.message);
+//            return;
+//        }
+//        CArrayEntity *entities = &resEntities.ok.items;
+//        
+//        UE_LOG(LogTemp, Log, TEXT("NB ENTITIES FETCH: %d"), entities->data_len);
+//        for (int i = 0; i < entities->data_len; i++) {
+//            CArrayStruct* models = &entities->data[i].models;
+//            
+//            for (int j = 0; j < models->data_len; j++) {
+//                const char* name = models->data[j].name;
+//                
+//                if (strcmp(name, "craft_island_pocket-IslandChunk") == 0) {
+//                    FModelIslandChunk chunk;
+//                    CArrayMember* members = &models->data[j].children;
+//                    FString blocks1;
+//                    FString blocks2;
+//                    
+//                    for (int k = 0; k < members->data_len; k++) {
+//                        Member* member = &members->data[k];
+//                        if (strcmp("island_id", member->name) == 0) {
+//                            chunk.island_id = bytes_to_fstring(member->ty->primitive.felt252.data, 32);
+//                        } else if (strcmp("chunk_id", member->name) == 0) {
+//                            chunk.chunk_id = bytes_to_fstring(member->ty->primitive.u128, 16);
+//                        } else if (strcmp("blocks1", member->name) == 0) {
+//                            blocks1 = bytes_to_fstring(member->ty->primitive.u128, 16);
+//                        } else if (strcmp("blocks2", member->name) == 0) {
+//                            blocks2 = bytes_to_fstring(member->ty->primitive.u128, 16, false);
+//                        }
+//                    }
+//                    chunk.blocks = blocks1 + blocks2;
+//                    IslandChunks.Add(chunk);
+//                }
+//                
+//                if (strcmp(name, "craft_island_pocket-GatherableResource") == 0) {
+//                    FModelGatherableResource resource;
+//                    CArrayMember* members = &models->data[j].children;
+//                    
+//                    for (int k = 0; k < members->data_len; k++) {
+//                        Member* member = &members->data[k];
+//                        if (strcmp("island_id", member->name) == 0) {
+//                            resource.island_id = bytes_to_fstring(member->ty->primitive.felt252.data, 32);
+//                        } else if (strcmp("chunk_id", member->name) == 0) {
+//                            resource.chunk_id = bytes_to_fstring(member->ty->primitive.u128, 16);
+//                        } else if (strcmp("position", member->name) == 0) {
+//                            resource.position = member->ty->primitive.u8;
+//                        } else if (strcmp("resource_id", member->name) == 0) {
+//                            resource.resource_id = member->ty->primitive.u32;
+//                        } else if (strcmp("planted_at", member->name) == 0) {
+//                            resource.planted_at = member->ty->primitive.u64;
+//                        } else if (strcmp("next_harvest_at", member->name) == 0) {
+//                            resource.next_harvest_at = member->ty->primitive.u64;
+//                        } else if (strcmp("harvested_at", member->name) == 0) {
+//                            resource.harvested_at = member->ty->primitive.u64;
+//                        } else if (strcmp("max_harvest", member->name) == 0) {
+//                            resource.max_harvest = member->ty->primitive.u8;
+//                        } else if (strcmp("remained_harvest", member->name) == 0) {
+//                            resource.remained_harvest = member->ty->primitive.u8;
+//                        } else if (strcmp("destroyed", member->name) == 0) {
+//                            resource.destroyed = member->ty->primitive.u8 == 1;
+//                        }
+//                    }
+//                    GatherableResources.Add(resource);
+//                }
+//            }
+//        }
+//        
+//        // Send results back to the game thread
+//        Async(EAsyncExecution::TaskGraphMainThread, [this, IslandChunks, GatherableResources]()
+//              {
+//            for (const FModelIslandChunk& Chunk : IslandChunks) {
+//                OnIslandChunkUpdated.Broadcast(Chunk);
+//            }
+//            for (const FModelGatherableResource& Resource : GatherableResources) {
+//                OnGatherableResourceUpdated.Broadcast(Resource);
+//            }
+//        });
+//    });
+//    
+//    
     
     
     

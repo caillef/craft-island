@@ -176,7 +176,7 @@ void ADojoHelpers::FetchExistingModels()
     Async(EAsyncExecution::Thread, [this]()
             {
         ResultPageEntity resEntities =
-            FDojoModule::GetEntities(toriiClient, "{ not used }");
+            FDojoModule::GetEntities(toriiClient, 2, nullptr);
         if (resEntities.tag == ErrPageEntity) {
             UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
              resEntities.err.message);
@@ -188,9 +188,30 @@ void ADojoHelpers::FetchExistingModels()
             CArrayStruct* models = &entities->data[i].models;
             this->ParseModelsAndSend(models);
         }
+        
+        UE_LOG(LogTemp, Log, TEXT("Check if more entities"));
+        if (resEntities.ok.next_cursor.tag == Somec_char) {
+            UE_LOG(LogTemp, Log, TEXT("Found more entities, using next_cursor"));
+            resEntities =
+                FDojoModule::GetEntities(toriiClient, 2, resEntities.ok.next_cursor.some);
+            if (resEntities.tag == ErrPageEntity) {
+                UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
+                 resEntities.err.message);
+                return;
+            }
+            entities = &resEntities.ok.items;
+
+            for (int i = 0; i < entities->data_len; i++) {
+                CArrayStruct* models = &entities->data[i].models;
+                this->ParseModelsAndSend(models);
+            }
+            
+            UE_LOG(LogTemp, Log, TEXT("Check if more entities %d"), resEntities.ok.next_cursor.tag == Somec_char ? 1 : 0);
+
+        }
         FDojoModule::CArrayFree(entities->data, entities->data_len);
     });
-    }
+}
 
 void ADojoHelpers::SubscribeOnDojoModelUpdate()
 {

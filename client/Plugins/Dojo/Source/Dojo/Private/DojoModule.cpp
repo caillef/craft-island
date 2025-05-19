@@ -89,47 +89,22 @@ ToriiClient *FDojoModule::CreateToriiClient(const char *torii_url, const char *w
     return client;
 }
 
-ResultPageEntity FDojoModule::GetEntities(ToriiClient *client, const char *query_str)
+ResultPageEntity FDojoModule::GetEntities(ToriiClient *client, int limit, const char *cursor)
 {
-    // TODO: handle query
-    struct Query query = {
-        .pagination = {
-            .cursor = {
-                .tag = Nonec_char,
-            },
-            .limit = 100,
-            .direction = PaginationDirection::Forward,
-            .order_by = {
-                .data = nullptr,
-                .data_len = 0,
-            }
-        },
-        .clause = {
-            .tag = NoneClause,
-            .some = {
-                .tag = Composite,
-                .composite = {
-                    .operator_ = Or,
-                    .clauses = {
-                        .data = nullptr,
-                        .data_len = 0,
-                    }
-                }
-            }
-        },
-        .no_hashed_keys = true,
-        .models = {
-            .data_len = 0,
-            .data = nullptr,
-        },
-        .historical = true,
-    };
     if (client == nullptr) {
         ResultPageEntity array;
         array.tag = OkPageEntity;
         array.ok.items.data_len = 0;
         return array;
     }
+    Query query;
+    memset(&query, 0, sizeof(query));
+    query.pagination.cursor.tag = cursor == nullptr ? Nonec_char : Somec_char;
+    if (cursor) {
+        query.pagination.cursor.some = cursor;
+    }
+    query.pagination.limit = limit;
+    query.historical = true;
     return client_entities(client, query);
 }
 //

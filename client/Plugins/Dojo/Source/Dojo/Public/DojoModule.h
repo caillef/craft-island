@@ -28,8 +28,8 @@ public:
     
     static ToriiClient *CreateToriiClient(const char *torii_url, const char *world_str);
     
-    static ResultPageEntity GetEntities(ToriiClient *client, const char *query);
-    
+    static ResultPageEntity GetEntities(ToriiClient *client, int limit, const char *cursor);
+
     static struct ResultSubscription OnEntityUpdate(ToriiClient *client, const char *query_str, void *user_data, EntityUpdateCallback callback);
     
     static void ExecuteRaw(Account *account, const char *to, const char *selector, const std::vector<std::string> &feltsStr);
