@@ -55,7 +55,7 @@ struct SlotData {
 #[generate_trait]
 impl SlotDataImpl of SlotDataTrait {
     fn is_empty(self: SlotData) -> bool {
-        self.item_type == 0 && self.quantity == 0
+        self.item_type == 0 || self.quantity == 0
     }
 }
 
@@ -138,29 +138,28 @@ pub impl InventoryImpl of InventoryTrait {
         let from_data = self.get_slot_data(from_slot);
         let to_data = to_inventory.get_slot_data(to_slot);
 
-        if !from_data.is_empty() && to_data.is_empty() {
+        assert(!from_data.is_empty(), 'From slot empty');
+        if to_data.is_empty() {
             to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.clear_slot(from_slot);
             return true;
-        } else if !from_data.is_empty() && !to_data.is_empty() {
-            // check if can merge and not a tool or a tool head
-            if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
-                let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
-                if sum > 255 {
-                    let rest: u8 = (sum - 255).try_into().unwrap();
-                    to_inventory.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
-                    self.set_slot_data(from_slot, to_data.item_type, rest, to_data.extra);
-                } else {
-                    to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
-                    self.clear_slot(from_slot);
-                }
-                return true;
+        }
+        // check if can merge and not a tool or a tool head
+        if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
+            let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
+            if sum > 255 {
+                let rest: u8 = (sum - 255).try_into().unwrap();
+                to_inventory.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
+                self.set_slot_data(from_slot, to_data.item_type, rest, to_data.extra);
+            } else {
+                to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
+                self.clear_slot(from_slot);
             }
-            to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
-            self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
             return true;
         }
-        false
+        to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
+        self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
+        true
     }
 
     fn move_item(ref self: Inventory, from_slot: u8, to_slot: u8) -> bool {
@@ -168,29 +167,28 @@ pub impl InventoryImpl of InventoryTrait {
         let from_data = self.get_slot_data(from_slot);
         let to_data = self.get_slot_data(to_slot);
 
-        if !from_data.is_empty() && to_data.is_empty() {
+        assert(!from_data.is_empty(), 'From slot empty');
+        if to_data.is_empty() {
             self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.clear_slot(from_slot);
             return true;
-        } else if !from_data.is_empty() && !to_data.is_empty() {
-            // check if can merge and not a tool or a tool head
-            if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
-                let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
-                if sum > 255 {
-                    let rest: u8 = (sum - 255).try_into().unwrap();
-                    self.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
-                    self.set_slot_data(from_slot, to_data.item_type, rest, to_data.extra);
-                } else {
-                    self.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
-                    self.clear_slot(from_slot);
-                }
-                return true;
+        }
+        // check if can merge and not a tool or a tool head
+        if from_data.item_type == to_data.item_type && (from_data.item_type < 33 || from_data.item_type >= 44) {
+            let sum: u16 = from_data.quantity.into() + to_data.quantity.into();
+            if sum > 255 {
+                let rest: u8 = (sum - 255).try_into().unwrap();
+                self.set_slot_data(to_slot, from_data.item_type, 255, from_data.extra);
+                self.set_slot_data(from_slot, to_data.item_type, rest, to_data.extra);
+            } else {
+                self.set_slot_data(to_slot, from_data.item_type, from_data.quantity + to_data.quantity, from_data.extra);
+                self.clear_slot(from_slot);
             }
-            self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
-            self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
             return true;
         }
-        false
+        self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
+        self.set_slot_data(from_slot, to_data.item_type, to_data.quantity, to_data.extra);
+        true
     }
 
     fn get_item_amount(self: Inventory, item_type: u16) -> u32 {
