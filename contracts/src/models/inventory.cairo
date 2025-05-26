@@ -234,10 +234,10 @@ pub impl InventoryImpl of InventoryTrait {
         assert(slot < self.inventory_size, 'Invalid slot index');
         let felt_index = slot / 9;
         let slot_in_felt = slot % 9;
-        let shift: u128 = (slot_in_felt * 28).into();
+        let shift: u256 = (slot_in_felt * 28).into();
 
         // Create mask for the slot we want to clear
-        let slot_mask: felt252 = 0xFFFFFFF.into() * fast_power_2(shift).try_into().unwrap();
+        let slot_mask: felt252 = 0xFFFFFFF.into() * fast_power_2_u256(shift).try_into().unwrap();
         // First clear the slot by subtracting existing data
         match felt_index {
             0 => { self.slots1 = self.slots1 - (self.slots1 & slot_mask); },
@@ -255,7 +255,7 @@ pub impl InventoryImpl of InventoryTrait {
         ).into();
 
         // Shift into position
-        let slot_data = slot_data * fast_power_2(shift).try_into().unwrap();
+        let slot_data = slot_data * fast_power_2_u256(shift).try_into().unwrap();
 
         match felt_index {
             0 => { self.slots1 = self.slots1 | slot_data; },

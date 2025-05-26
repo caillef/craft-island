@@ -18,7 +18,7 @@ public:
     FString DojoModelType;
 };
 
-    
+
 
 // Model definition for `craft_island_pocket::models::common::GatherableResource` model
 UCLASS(BlueprintType)
@@ -266,7 +266,7 @@ public:
     FOnDojoControllerAccount FOnDojoControllerAccount;
 
     // CALLS
-    
+
     UFUNCTION(BlueprintCallable, Category = "Calls")
     void CallCraftIslandPocketActionsSpawn(const FAccount& account);
 
@@ -306,7 +306,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Calls")
     void CallCraftIslandPocketActionsInventoryMoveItem(const FAccount& account, int from_inventory, int from_slot, int to_inventory, int to_slot);
 
-    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsInventoryMoveItem(const FControllerAccount& account, int from_inventory, int from_slot, int to_inventory, int to_slot);
 
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketAdminGiveSelf(const FAccount& account, int item, int qty);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketAdminGiveself(const FControllerAccount& account, int item, int qty);
 };

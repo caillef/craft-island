@@ -188,7 +188,7 @@ void ADojoHelpers::FetchExistingModels()
             CArrayStruct* models = &entities->data[i].models;
             this->ParseModelsAndSend(models);
         }
-        
+
         UE_LOG(LogTemp, Log, TEXT("Check if more entities"));
         if (resEntities.ok.next_cursor.tag == Somec_char) {
             UE_LOG(LogTemp, Log, TEXT("Found more entities, using next_cursor"));
@@ -205,7 +205,7 @@ void ADojoHelpers::FetchExistingModels()
                 CArrayStruct* models = &entities->data[i].models;
                 this->ParseModelsAndSend(models);
             }
-            
+
             UE_LOG(LogTemp, Log, TEXT("Check if more entities %d"), resEntities.ok.next_cursor.tag == Somec_char ? 1 : 0);
 
         }
@@ -299,7 +299,7 @@ public:
         return result;
     }
 
-    
+
 };
 
 template<typename T>
@@ -387,7 +387,7 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
             return strings;
         }
     }
-    
+
     // Default return value padded to 64 characters
     return TArray<FString>{TEXT("0x") + FString::ChrN(64, TEXT('0'))};
 }
@@ -432,7 +432,7 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
             output = TypeConverter::ConvertToBool(member);
         }
     }
-    
+
 }
 
 
@@ -559,7 +559,7 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         }
 
         UDojoModel* ParsedModel = nullptr;
-        
+
         if (strcmp(ModelName, "craft_island_pocket-GatherableResource") == 0)
         {
             ParsedModel = \
@@ -633,7 +633,7 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
 
 void ADojoHelpers::CallCraftIslandPocketActionsSpawn(const FAccount& account) {
     TArray<FString> args;
-    
+
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("spawn"), FString::Join(args, TEXT(",")));
 }
@@ -641,7 +641,7 @@ void ADojoHelpers::CallCraftIslandPocketActionsSpawn(const FAccount& account) {
 void ADojoHelpers::CallControllerCraftIslandPocketActionsSpawn(const FControllerAccount& \
                      account) {
     TArray<FString> args;
-    
+
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("spawn"), FString::Join(args, TEXT(",")));
 }
@@ -792,3 +792,18 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsInventoryMoveItem(const
                      TEXT("inventory_move_item"), FString::Join(args, TEXT(",")));
 }
 
+void ADojoHelpers::CallCraftIslandPocketAdminGiveSelf(const FAccount& account, int item, int qty)  {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(item, "u16"));
+    args.Append(ConvertToFeltHexa<int>(qty, "u32"));
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-admin"], \
+                     TEXT("giveself"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketAdminGiveself(const FControllerAccount& account, int item, int qty)  {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(item, "u16"));
+    args.Append(ConvertToFeltHexa<int>(qty, "u32"));
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-admin"], \
+                     TEXT("giveself"), FString::Join(args, TEXT(",")));
+}

@@ -23,4 +23,4 @@ private_key = "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
 world_address = "0x402183d2b1bdb5cdcb086f2df21bd334451d6e27f8defb67fa97c8ec6cc93c7"
 
 [writers]
-"craft_island_pocket" = ["craft_island_pocket-actions"]
+"craft_island_pocket" = ["craft_island_pocket-actions", "craft_island_pocket-admin"]
