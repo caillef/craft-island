@@ -23,7 +23,10 @@ mod actions {
     use craft_island_pocket::models::inventory::{
         Inventory, InventoryTrait
     };
-    use craft_island_pocket::helpers::math::{fast_power_2};
+    use craft_island_pocket::helpers::{
+        math::{fast_power_2},
+        craft::{craftmatch}
+    };
 
     use dojo::model::{ModelStorage};
 
@@ -221,12 +224,43 @@ mod actions {
         // Remove block from inventory
     }
 
+    fn try_inventory_craft(ref self: ContractState) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+
+        let mut craftinventory: Inventory = world.read_model((player, 2));
+        // mask to remove quantity
+        let craft_matrix: u256 = (craftinventory.slots1.into() & 7229938216006767371223902296383078621116345691456360212366842288707796205568);
+        println!("Craft matrix {}", craft_matrix);
+        let wanteditem = craftmatch(craft_matrix);
+
+        assert(wanteditem > 0, 'Not a valid recipe');
+        let mut k = 0;
+        loop {
+            if k >= 9 {
+                break;
+            }
+            craftinventory.remove_item(k, 1);
+            k += 1;
+        };
+
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        hotbar.add_items(wanteditem, 1);
+
+        world.write_model(@hotbar);
+        world.write_model(@craftinventory);
+    }
+
     fn try_craft(ref self: ContractState, item: u16, x: u64, y: u64, z: u64) {
+        println!("Crafting {}", item);
+        if item == 0 {
+            return try_inventory_craft(ref self);
+        }
+
         let mut world = get_world(ref self);
         let player = get_caller_address();
 
         let mut inventory: Inventory = world.read_model((player, 0));
-
         // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
             let island_id: felt252 = player.into();
@@ -413,24 +447,31 @@ mod actions {
 
         let mut hotbar: Inventory = InventoryTrait::new(0, 0, 9, player);
         hotbar.add_items(1, 19);
-        //inventory.add_items(2, 23);
-        //inventory.add_items(46, 8);
-        //inventory.add_items(47, 12);
-        //inventory.add_items(41, 1);
-        hotbar.add_items(32, 4);
-        hotbar.add_items(33, 7);
+        hotbar.add_items(2, 23);
+        //hotbar.add_items(46, 8);
+        //hotbar.add_items(47, 12);
+        //hotbar.add_items(41, 1);
+        //hotbar.add_items(32, 4);
+        //hotbar.add_items(33, 7);
         world.write_model(@hotbar);
 
         let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
-        inventory.add_items(1, 19);
-        inventory.add_items(2, 23);
-        inventory.add_item(10, 32, 4);
+        //inventory.add_items(1, 19);
+        //inventory.add_items(2, 23);
+        //inventory.add_item(10, 32, 4);
         //inventory.add_items(46, 8);
         //inventory.add_items(47, 12);
         //inventory.add_items(41, 1);
-        //inventory.add_items(32, 4);
+        inventory.add_items(32, 4);
         //inventory.add_items(33, 7);
+        inventory.add_items(36, 1);
+        inventory.add_items(38, 1);
         world.write_model(@inventory);
+
+        let mut craft: Inventory = InventoryTrait::new(2, 2, 9, player);
+        //inventory.add_items(35, 1);
+        //inventory.add_item(3, 32, 12);
+        world.write_model(@craft);
     }
 
     #[abi(embed_v0)]

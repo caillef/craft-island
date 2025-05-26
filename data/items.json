@@ -47,16 +47,7 @@
     },
     "craft": [
       {
-        "ingredients": [
-          {
-            "itemId": "34",
-            "amount": 1
-          },
-          {
-            "itemId": "32",
-            "amount": 1
-          }
-        ],
+        "ingredients": 162259276829213363391578019201024,
         "result": {
           "itemId": "35",
           "amount": 1
@@ -80,16 +71,7 @@
     },
     "craft": [
       {
-        "ingredients": [
-          {
-            "itemId": "36",
-            "amount": 1
-          },
-          {
-            "itemId": "32",
-            "amount": 1
-          }
-        ],
+        "ingredients": 162259276829213363391578019725312,
         "result": {
           "itemId": "37",
           "amount": 1
@@ -113,16 +95,7 @@
     },
     "craft": [
       {
-        "ingredients": [
-          {
-            "itemId": "38",
-            "amount": 1
-          },
-          {
-            "itemId": "32",
-            "amount": 1
-          }
-        ],
+        "ingredients": 162259276829213363391578020249600,
         "result": {
           "itemId": "39",
           "amount": 1
@@ -146,16 +119,7 @@
     },
     "craft": [
       {
-        "ingredients": [
-          {
-            "itemId": "40",
-            "amount": 1
-          },
-          {
-            "itemId": "32",
-            "amount": 1
-          }
-        ],
+        "ingredients": 162259276829213363391578020773888,
         "result": {
           "itemId": "41",
           "amount": 1
@@ -179,16 +143,7 @@
     },
     "craft": [
       {
-        "ingredients": [
-          {
-            "itemId": "42",
-            "amount": 1
-          },
-          {
-            "itemId": "32",
-            "amount": 1
-          }
-        ],
+        "ingredients": 162259276829213363391578021298176,
         "result": {
           "itemId": "43",
           "amount": 1

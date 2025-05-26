@@ -5,7 +5,6 @@ use core::traits::BitOr;
 use core::traits::Div;
 
 const MAX_SLOTS_SIZE: u8 = 255;
-const NO_SELECTION: u8 = 255;
 
 impl BitAndImpl of BitAnd<felt252> {
     fn bitand(lhs: felt252, rhs: felt252) -> felt252 {
@@ -41,7 +40,6 @@ pub struct Inventory {
     pub slots2: felt252,
     pub slots3: felt252,
     pub slots4: felt252,
-    pub selected_slot: u8, // used when moving items in the inventory
     pub hotbar_selected_slot: u8, // used when a slot is selected in the hotbar
 }
 
@@ -71,7 +69,6 @@ pub impl InventoryImpl of InventoryTrait {
             slots2: 0,
             slots3: 0,
             slots4: 0,
-            selected_slot: NO_SELECTION,
             hotbar_selected_slot: 0,
         }
     }
@@ -103,7 +100,6 @@ pub impl InventoryImpl of InventoryTrait {
             slots2: 0,
             slots3: 0,
             slots4: 0,
-            selected_slot: NO_SELECTION,
             hotbar_selected_slot: 0,
         }
     }
@@ -338,56 +334,6 @@ pub impl InventoryImpl of InventoryTrait {
         assert(remaining_quantity == 0, 'Not enough items');
         true
     }
-
-    // Keep track of selected slot
-    fn get_selected_slot(self: Inventory) -> u8 {
-        self.selected_slot
-    }
-
-    fn select_slot(ref self: Inventory, slot: u8) {
-        assert(slot < self.inventory_size, 'Invalid slot index');
-        let slot_data = self.get_slot_data(slot);
-        assert(!slot_data.is_empty(), 'Cannot select empty slot');
-        self.selected_slot = slot;
-    }
-
-    fn place_selected(ref self: Inventory, to_slot: u8) -> bool {
-        assert(to_slot < self.inventory_size, 'Invalid destination slot');
-        assert(self.selected_slot < self.inventory_size, 'No slot selected');
-
-        let from_slot = self.selected_slot;
-        let from_data = self.get_slot_data(from_slot);
-        let to_data = self.get_slot_data(to_slot);
-
-        // If destination is empty, simply move
-        if to_data.is_empty() {
-            self.set_slot_data(
-                to_slot,
-                from_data.item_type,
-                from_data.quantity,
-                from_data.extra
-            );
-            self.clear_slot(from_slot);
-        } else {
-            // Swap the slots
-            self.set_slot_data(
-                from_slot,
-                to_data.item_type,
-                to_data.quantity,
-                to_data.extra
-            );
-            self.set_slot_data(
-                to_slot,
-                from_data.item_type,
-                from_data.quantity,
-                from_data.extra
-            );
-        }
-
-        // Clear selection after placing
-        self.selected_slot = 0;
-        true
-    }
 }
 
 #[cfg(test)]
@@ -397,9 +343,9 @@ mod tests {
     #[test]
     fn test_add_item_to_empty_slot() {
         let mut inventory = InventoryTrait::default(9);
-    assert!(inventory.add_item(0, 1, 5));
+        assert!(inventory.add_item(0, 1, 5));
         let data = inventory.get_slot_data(0);
-    assert_eq!(data.item_type, 1);
+        assert_eq!(data.item_type, 1);
         assert_eq!(data.quantity, 5);
     }
 
@@ -559,7 +505,7 @@ mod tests {
     #[test]
     fn test_add_items_split() {
         let mut inventory = InventoryTrait::default(9);
-    inventory.add_items(1, 400);
+        inventory.add_items(1, 400);
 
         let slot0 = inventory.get_slot_data(0);
         assert_eq!(slot0.quantity, MAX_SLOTS_SIZE);
@@ -588,42 +534,5 @@ mod tests {
     fn test_add_items_insufficient_space() {
         let mut inventory = InventoryTrait::default(1);
         inventory.add_items(1, 300);
-    }
-
-    #[test]
-    fn test_select_and_place() {
-        let mut inventory = InventoryTrait::default(9);
-        inventory.add_item(0, 1, 5);
-        inventory.add_item(1, 2, 3);
-
-        inventory.select_slot(0);
-        assert_eq!(inventory.get_selected_slot(), 0);
-
-        inventory.place_selected(2);
-
-        let slot0 = inventory.get_slot_data(0);
-        assert!(slot0.is_empty());
-
-        let slot2 = inventory.get_slot_data(2);
-        assert_eq!(slot2.item_type, 1);
-        assert_eq!(slot2.quantity, 5);
-    }
-
-    #[test]
-    fn test_select_and_swap() {
-        let mut inventory = InventoryTrait::default(9);
-        inventory.add_item(0, 1, 5);
-        inventory.add_item(1, 2, 3);
-
-        inventory.select_slot(0);
-        inventory.place_selected(1);
-
-        let slot0 = inventory.get_slot_data(0);
-        assert_eq!(slot0.item_type, 2);
-        assert_eq!(slot0.quantity, 3);
-
-        let slot1 = inventory.get_slot_data(1);
-        assert_eq!(slot1.item_type, 1);
-        assert_eq!(slot1.quantity, 5);
     }
 }

@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x2161ad6b1a3c5f04f55a3eaadeeb6fd3fc4551eeee6f787a4780ec70d26e70a",
-      "class_hash": "0x52aff1cfb32a3a56e590bf4f1454de71b1d16977704708c311ccc2703b8cda9",
+      "address": "0x4eb8517d1ef6f6edbfa327324c451ad3f65a3c6ad795b0e120fedd0cdbb8da8",
+      "class_hash": "0x29e19f12a0f33cca48bb6d034bb3561870c09fdde7bfe738cd3d944d815fafc",
       "abi": [
         {
           "type": "impl",
@@ -1642,7 +1642,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x1366722f76663af8564e8277bd8c98d19c3c3e3b58beef44fb4aedea6dcc2be",
+      "class_hash": "0x478bc669eb6344458627ca96d51799991ecc1a60982e5362d0f01f8e75e3c20",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },

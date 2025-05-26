@@ -4,6 +4,7 @@ pub mod systems {
 
 pub mod helpers {
     pub mod math;
+    pub mod craft;
 }
 
 pub mod models {
