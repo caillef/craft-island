@@ -10,7 +10,7 @@ jq -r 'to_entries
         else 64
         end
         ),
-        icon: "/Script/Paper2D.PaperSprite'\''/Game/CraftIsland/UI/items_icons_ItemIcon_\(.key).items_icons_ItemIcon_\(.key)'\''",
+        icon: "/Script/Paper2D.PaperSprite'\''/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_\(.key).items_icons_ItemIcon_\(.key)'\''",
         craft: (
         if .value.craft and (.value.craft | length > 0) then
             .value.craft[0].ingredients

@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x4eb8517d1ef6f6edbfa327324c451ad3f65a3c6ad795b0e120fedd0cdbb8da8",
-      "class_hash": "0x35b5c3f779740b35a501fe59384472f99ee806e4db153fdec0bbb741d706a57",
+      "address": "0x789b89783162b214c9fed2160f825c9b395191cd0a4ed9d66ba1420bd1ddc1a",
+      "class_hash": "0x70669e9a29ccdd2a827e5adf88a4751dd6cfef733052deeac3536a180922c39",
       "abi": [
         {
           "type": "impl",
@@ -1632,7 +1632,7 @@
       ]
     },
     {
-      "address": "0x62a4c5180d180f464e51afdbafe0a50b1bd283aed0862c8cf0ed958f8f5a915",
+      "address": "0x5ab3ffb03a1260c468a6a345a0bbc39f586fd68926f92b932175ee9c913b915",
       "class_hash": "0x185c9dc22bec8ab5aa02e44bbb29a09cfb656051667a92e9ca3fc58224fd49b",
       "abi": [
         {
@@ -1867,6 +1867,12 @@
       "class_hash": "0x2fe5180d2c848281d0c0f32b23bf7452872f76fbd796ec0aed7fc36bdabb2b3",
       "tag": "craft_island_pocket-PlayerStats",
       "selector": "0x2a92edae62771b960421a6c25f61baa8bcb4274809be50f39a103b47ef97fad"
+    },
+    {
+      "members": [],
+      "class_hash": "0x5b2b46b701b66e866c72ecea992f1bae8da3370009cf733a09ff8e89953c62c",
+      "tag": "craft_island_pocket-WorldStructure",
+      "selector": "0x5df5957a204638a9dc1fe18f016555f1811394279cd5705d8d6a3a60dd890c6"
     }
   ],
   "events": [],

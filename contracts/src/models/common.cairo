@@ -1,5 +1,6 @@
 use starknet::ContractAddress;
 
+// Not Used Yet
 #[derive(Drop, Serde)]
 #[dojo::model]
 pub struct PlayerData {
@@ -10,6 +11,7 @@ pub struct PlayerData {
     pub current_island: felt252
 }
 
+// Not Used Yet
 #[derive(Drop, Serde)]
 #[dojo::model]
 pub struct PlayerStats {
@@ -48,7 +50,22 @@ pub struct GatherableResource {
     pub planted_at: u64, // timestamp
     pub next_harvest_at: u64, // timestamp
     pub harvested_at: u64, // timestamp
-    pub max_harvest: u8, // if 0, destroyed when harvested
-    pub remained_harvest: u8, // if 0, destroyed when gathered
+    pub max_harvest: u8, // if 0, destroyed when harvested, 255 if unlimited
+    pub remained_harvest: u8,
     pub destroyed: bool,
+}
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+pub struct WorldStructure {
+    #[key]
+    pub island_id: felt252,
+    #[key]
+    pub chunk_id: u128,
+    #[key]
+    pub position: u8,
+    pub structure_type: u8,
+    pub build_inventory_id: u16,
+    pub completed: bool,
+    pub linked_space_id: felt252,
 }

@@ -30,6 +30,10 @@ mod actions {
 
     use dojo::model::{ModelStorage};
 
+    fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
+        self.world(@"craft_island_pocket")
+    }
+
     fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
@@ -69,15 +73,26 @@ mod actions {
         let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
         assert!(resource.resource_id > 0 && !resource.destroyed, "Error: Resource does not exists");
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
+        println!("next harvest {}, timestamp {}", resource.next_harvest_at, timestamp);
         assert!(resource.next_harvest_at <= timestamp, "Error: Can\'t harvest now");
         println!("Harvested {}", resource.resource_id);
         resource.harvested_at = timestamp;
         resource.remained_harvest -= 1;
 
+        let mut item_id = resource.resource_id;
+        if item_id == 49 { // Boulder
+            item_id = 33; // Rock
+        }
+        if item_id == 46 { // Oak Tree
+            item_id = 44; // Oak log
+        }
         let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.add_items(resource.resource_id.try_into().unwrap(), 1);
+        inventory.add_items(item_id, 1);
         world.write_model(@inventory);
 
+        if resource.max_harvest == 255 {
+            return;
+        }
         if resource.max_harvest > 0 && resource.remained_harvest < resource.max_harvest {
             resource.destroyed = true;
             resource.resource_id = 0;
@@ -423,7 +438,7 @@ mod actions {
     };
     world.write_model(@resource0);
 
-    let resource0 = GatherableResource {
+    let resource1 = GatherableResource {
         island_id: player.into(),
         chunk_id: 0x000000080000000008000000000800,
         position: 23,
@@ -435,11 +450,21 @@ mod actions {
         remained_harvest: 1,
         destroyed: false,
     };
-    world.write_model(@resource0);
-    }
+    world.write_model(@resource1);
 
-    fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
-        self.world(@"craft_island_pocket")
+    let resource2 = GatherableResource {
+        island_id: player.into(),
+        chunk_id: 0x000000080000000008010000000800,
+        position: 16,
+        resource_id: 49,
+        planted_at: 0,
+        next_harvest_at: 0,
+        harvested_at: 0,
+        max_harvest: 255,
+        remained_harvest: 255,
+        destroyed: false,
+    };
+    world.write_model(@resource2);
     }
 
     fn init_inventory(ref self: ContractState, player: ContractAddress) {
@@ -448,29 +473,27 @@ mod actions {
         let mut hotbar: Inventory = InventoryTrait::new(0, 0, 9, player);
         hotbar.add_items(1, 19);
         hotbar.add_items(2, 23);
-        //hotbar.add_items(46, 8);
-        //hotbar.add_items(47, 12);
-        //hotbar.add_items(41, 1);
-        //hotbar.add_items(32, 4);
-        //hotbar.add_items(33, 7);
+        hotbar.add_items(46, 8);
+        hotbar.add_items(47, 12);
+        hotbar.add_items(41, 1);
+        hotbar.add_items(32, 4);
+        hotbar.add_items(33, 7);
         world.write_model(@hotbar);
 
         let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
-        //inventory.add_items(1, 19);
-        //inventory.add_items(2, 23);
-        //inventory.add_item(10, 32, 4);
-        //inventory.add_items(46, 8);
-        //inventory.add_items(47, 12);
-        //inventory.add_items(41, 1);
+        inventory.add_items(1, 19);
+        inventory.add_items(2, 23);
+        inventory.add_item(10, 32, 4);
+        inventory.add_items(46, 8);
+        inventory.add_items(47, 12);
+        inventory.add_items(41, 1);
         inventory.add_items(32, 4);
-        //inventory.add_items(33, 7);
+        inventory.add_items(33, 7);
         inventory.add_items(36, 1);
         inventory.add_items(38, 1);
         world.write_model(@inventory);
 
         let mut craft: Inventory = InventoryTrait::new(2, 2, 9, player);
-        //inventory.add_items(35, 1);
-        //inventory.add_item(3, 32, 12);
         world.write_model(@craft);
     }
 
@@ -495,20 +518,19 @@ mod actions {
                 return;
             }
             // handle hp
-            if !remove_block(ref self, x, y, z + 1) {
-                harvest(ref self, x, y, z + 1);
+            if !remove_block(ref self, x, y, z) {
+                harvest(ref self, x, y, z);
             }
         }
 
         fn use_item(ref self: ContractState, x: u64, y: u64, z: u64) {
-            println!("Raw Position {} {} {}", x, y, z);
-
             let world = get_world(ref self);
             let player = get_caller_address();
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
             let itemType: u16 = inventory.get_hotbar_selected_item_type();
 
+            println!("Hotbar selected item {}", itemType);
             if (itemType == 41) {
                 // hoe, transform grass to dirt
                 update_block(ref self, x, y, z, itemType);
@@ -517,7 +539,7 @@ mod actions {
                 if itemType < 32 {
                     place_block(ref self, x, y, z, itemType);
                 } else {
-                    plant(ref self, x, y, z + 1, itemType);
+                    plant(ref self, x, y, z, itemType);
                 }
             }
         }
@@ -532,7 +554,6 @@ mod actions {
         }
 
         fn craft(ref self: ContractState, item: u32, x: u64, y: u64, z: u64) {
-            println!("Crafting {}", item);
             try_craft(ref self, item.try_into().unwrap(), x, y, z);
         }
 
