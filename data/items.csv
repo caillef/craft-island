@@ -21,3 +21,4 @@ Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft
 47,47,Wheat Seed,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_47.items_icons_ItemIcon_47',
 48,48,Wheat,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_48.items_icons_ItemIcon_48',
 49,49,Boulder,object,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_49.items_icons_ItemIcon_49',
+50,50,House Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_50.items_icons_ItemIcon_50',

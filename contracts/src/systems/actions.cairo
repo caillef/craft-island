@@ -514,7 +514,7 @@ mod actions {
 
             if (itemType == 18) {
                 // hoe, transform grass to dirt
-                update_block(ref self, x, y, z, itemType);
+                update_block(ref self, x, y, z - 1, itemType);
                 return;
             }
             // handle hp
