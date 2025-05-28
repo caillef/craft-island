@@ -1,1 +1,1 @@
-slot d delete craftisland torii -f && slot d create craftisland torii --version v1.5.4 --rpc https://api.cartridge.gg/x/craftisland/katana --world 0x0402183d2b1bdb5cdcb086f2df21bd334451d6e27f8defb67fa97c8ec6cc93c7 && slot d logs craftisland torii -f
+slot d delete craftisland torii -f ; slot d create craftisland torii --version v1.5.4 --rpc https://api.cartridge.gg/x/craftisland/katana --world 0x0402183d2b1bdb5cdcb086f2df21bd334451d6e27f8defb67fa97c8ec6cc93c7 && slot d logs craftisland torii -f

@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x72c07a69f0c5cfb6d1e8057836e8c79643f27529bc3d5e0946415bed175d676",
-      "class_hash": "0x4f01e848cd52367546b4ead81dfd3975e4e42b59eb5b6577109fafa60aa8954",
+      "address": "0x8193000022413685e1ede5c19720fc9ee14cdfe1f820ed52d1a633ca5f3ba",
+      "class_hash": "0x3de51f0eaddb41d1e2ecdd04e660d56034def1e4c8626f82a3a6618975d248b",
       "abi": [
         {
           "type": "impl",
@@ -1630,6 +1630,210 @@
         "inventory_move_item",
         "upgrade"
       ]
+    },
+    {
+      "address": "0x5ab3ffb03a1260c468a6a345a0bbc39f586fd68926f92b932175ee9c913b915",
+      "class_hash": "0x185c9dc22bec8ab5aa02e44bbb29a09cfb656051667a92e9ca3fc58224fd49b",
+      "abi": [
+        {
+          "type": "impl",
+          "name": "admin__ContractImpl",
+          "interface_name": "dojo::contract::interface::IContract"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::IContract",
+          "items": []
+        },
+        {
+          "type": "impl",
+          "name": "admin__DeployedContractImpl",
+          "interface_name": "dojo::meta::interface::IDeployedResource"
+        },
+        {
+          "type": "struct",
+          "name": "core::byte_array::ByteArray",
+          "members": [
+            {
+              "name": "data",
+              "type": "core::array::Array::<core::bytes_31::bytes31>"
+            },
+            {
+              "name": "pending_word",
+              "type": "core::felt252"
+            },
+            {
+              "name": "pending_word_len",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::meta::interface::IDeployedResource",
+          "items": [
+            {
+              "type": "function",
+              "name": "dojo_name",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "AdminImpl",
+          "interface_name": "craft_island_pocket::systems::admin::IAdmin"
+        },
+        {
+          "type": "interface",
+          "name": "craft_island_pocket::systems::admin::IAdmin",
+          "items": [
+            {
+              "type": "function",
+              "name": "giveself",
+              "inputs": [
+                {
+                  "name": "item",
+                  "type": "core::integer::u16"
+                },
+                {
+                  "name": "qty",
+                  "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "dojo_init",
+          "inputs": [],
+          "outputs": [],
+          "state_mutability": "view"
+        },
+        {
+          "type": "impl",
+          "name": "WorldProviderImpl",
+          "interface_name": "dojo::contract::components::world_provider::IWorldProvider"
+        },
+        {
+          "type": "struct",
+          "name": "dojo::world::iworld::IWorldDispatcher",
+          "members": [
+            {
+              "name": "contract_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::components::world_provider::IWorldProvider",
+          "items": [
+            {
+              "type": "function",
+              "name": "world_dispatcher",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo::world::iworld::IWorldDispatcher"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "UpgradeableImpl",
+          "interface_name": "dojo::contract::components::upgradeable::IUpgradeable"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::components::upgradeable::IUpgradeable",
+          "items": [
+            {
+              "type": "function",
+              "name": "upgrade",
+              "inputs": [
+                {
+                  "name": "new_class_hash",
+                  "type": "core::starknet::class_hash::ClassHash"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
+        {
+          "type": "constructor",
+          "name": "constructor",
+          "inputs": []
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "class_hash",
+              "type": "core::starknet::class_hash::ClassHash",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "Upgraded",
+              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
+              "kind": "nested"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "enum",
+          "variants": []
+        },
+        {
+          "type": "event",
+          "name": "craft_island_pocket::systems::admin::admin::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "UpgradeableEvent",
+              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+              "kind": "nested"
+            },
+            {
+              "name": "WorldProviderEvent",
+              "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+              "kind": "nested"
+            }
+          ]
+        }
+      ],
+      "init_calldata": [],
+      "tag": "craft_island_pocket-admin",
+      "selector": "0x43d62c14f6442be7460cfd2aff92839bc505c6f7acc2904971a87319a4b1dde",
+      "systems": [
+        "giveself",
+        "upgrade"
+      ]
     }
   ],
   "libraries": [],
@@ -1642,13 +1846,13 @@
     },
     {
       "members": [],
-      "class_hash": "0x1366722f76663af8564e8277bd8c98d19c3c3e3b58beef44fb4aedea6dcc2be",
+      "class_hash": "0x478bc669eb6344458627ca96d51799991ecc1a60982e5362d0f01f8e75e3c20",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },
     {
       "members": [],
-      "class_hash": "0x3b3fb45e80c6faed09b9a5f6e778a8e15fd8d0eea4381c102e5810d331efdbf",
+      "class_hash": "0x521ee8cb5d58b5c45e124c367c66f5a3eea781f3c0920e66bcbe8cd07684fbf",
       "tag": "craft_island_pocket-IslandChunk",
       "selector": "0x33bcf22997bb979a42ca224a7d3738a796f91d705065fbd52011d91a9ed402"
     },
@@ -1663,6 +1867,12 @@
       "class_hash": "0x2fe5180d2c848281d0c0f32b23bf7452872f76fbd796ec0aed7fc36bdabb2b3",
       "tag": "craft_island_pocket-PlayerStats",
       "selector": "0x2a92edae62771b960421a6c25f61baa8bcb4274809be50f39a103b47ef97fad"
+    },
+    {
+      "members": [],
+      "class_hash": "0x5b2b46b701b66e866c72ecea992f1bae8da3370009cf733a09ff8e89953c62c",
+      "tag": "craft_island_pocket-WorldStructure",
+      "selector": "0x5df5957a204638a9dc1fe18f016555f1811394279cd5705d8d6a3a60dd890c6"
     }
   ],
   "events": [],

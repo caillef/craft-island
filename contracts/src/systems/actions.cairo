@@ -15,16 +15,18 @@ trait IActions<T> {
 // dojo decorator
 #[dojo::contract]
 mod actions {
-    use super::{IActions, get_position_id, get_block_at_pos};
+    use super::{IActions, get_position_id};
     use starknet::{get_caller_address, ContractAddress};
     use craft_island_pocket::models::common::{
-        IslandChunk, GatherableResource
+        GatherableResource
     };
     use craft_island_pocket::models::inventory::{
         Inventory, InventoryTrait
     };
+    use craft_island_pocket::models::islandchunk::{
+        IslandChunk, IslandChunkTrait
+    };
     use craft_island_pocket::helpers::{
-        math::{fast_power_2},
         craft::{craftmatch}
     };
 
@@ -122,51 +124,9 @@ mod actions {
 
         let mut inventory: Inventory = world.read_model((player, 0));
         inventory.remove_items(block_id.try_into().unwrap(), 1);
+        chunk.place_block(x, y, z, block_id);
         world.write_model(@inventory);
-
-        //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
-        if z % 4 < 2 {
-            let block_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2);
-            assert(block_info == 0, 'Error: block exists');
-            let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
-                .into();
-            chunk.blocks2 += block_id.into() * shift.into();
-
-            // If grass under, replace with dirt
-            if z % 2 == 1 {
-                let block_under_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2 - 1);
-                if block_under_info == 1 {
-                    let shift: u128 = fast_power_2(
-                        (((x % 4) + (y % 4) * 4 + (z % 2 - 1) * 16) * 4).into()
-                    )
-                        .into();
-                    chunk.blocks2 -= block_under_info.into() * shift.into();
-                    chunk.blocks2 += 2 * shift.into();
-                }
-            } else {}
-        } else {
-            let block_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2);
-            assert(block_info == 0, 'Error: block exists');
-            let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
-                .into();
-            chunk.blocks1 += block_id.into() * shift.into();
-
-            // If grass under, replace with dirt
-            if z % 2 == 1 {
-                let block_under_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2 - 1);
-                if block_under_info == 1 {
-                    let shift: u128 = fast_power_2(
-                        (((x % 4) + (y % 4) * 4 + (z % 2 - 1) * 16) * 4).into()
-                    )
-                        .into();
-                    chunk.blocks1 -= block_under_info.into() * shift.into();
-                    chunk.blocks1 += 2 * shift.into();
-                }
-            } else {}
-        }
-        //println!("Added block: {} {}", chunk.blocks1, chunk.blocks2);
         world.write_model(@chunk);
-        // Remove block from inventory
     }
 
     fn remove_block(ref self: ContractState, x: u64, y: u64, z: u64) -> bool {
@@ -175,36 +135,16 @@ mod actions {
         let island_id: felt252 = player.into();
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
-        let mut block_id = 0;
-        //println!("Removing block: {} {}", chunk.blocks1, chunk.blocks2);
-        if z % 4 < 2 {
-            let block_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2);
-            if block_info == 0 {
-                return false;
-            }
-            let index: u128 = (((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into();
-            let mut shift: u128 = fast_power_2(index).into();
-            chunk.blocks2 -= (block_info.into() * shift.into());
-            block_id = block_info;
-        } else {
-            let block_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2);
-            if block_info == 0 {
-                return false;
-            }
-            let index: u128 = (((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into();
-            let mut shift: u128 = fast_power_2(index).into();
-            chunk.blocks1 -= (block_info.into() * shift.into());
-            block_id = block_info;
+        let mut block_id = chunk.remove_block(x, y, z);
+        if block_id == 0 {
+            return false;
         }
-        //println!("Removed block: {} {}", chunk.blocks1, chunk.blocks2);
 
         let mut inventory: Inventory = world.read_model((player, 0));
         inventory.add_items(block_id.try_into().unwrap(), 1);
         world.write_model(@inventory);
-
         world.write_model(@chunk);
         return true;
-        // Add block to inventory
     }
 
     fn update_block(ref self: ContractState, x: u64, y: u64, z: u64, tool: u16) {
@@ -214,29 +154,8 @@ mod actions {
         println!("Raw Position {} {} {}", x, y, z);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
-
-        //println!("Adding block: {} {}", chunk.blocks1, chunk.blocks2);
-        if z % 4 < 2 {
-            let block_info = get_block_at_pos(chunk.blocks2, x % 4, y % 4, z % 2);
-            assert(block_info > 0, 'Error: block does not exist');
-            let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
-                .into();
-            if tool == 41 && block_info == 1 {
-                chunk.blocks2 -= block_info.into() * shift.into();
-                chunk.blocks2 += 2 * shift.into();
-            }
-        } else {
-            let block_info = get_block_at_pos(chunk.blocks1, x % 4, y % 4, z % 2);
-            assert(block_info > 0, 'Error: block does not exist');
-            let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
-                .into();
-            if tool == 18 && block_info == 1 {
-                chunk.blocks1 -= block_info.into() * shift.into();
-                chunk.blocks1 += 2 * shift.into();
-            }
-        }
+        chunk.update_block(x, y, z, tool);
         world.write_model(@chunk);
-        // Remove block from inventory
     }
 
     fn try_inventory_craft(ref self: ContractState) {
@@ -578,9 +497,4 @@ mod actions {
 
 fn get_position_id(x: u64, y: u64, z: u64) -> u128 {
     x.into() * fast_power_2(80) + y.into() * fast_power_2(40) + z.into()
-}
-
-fn get_block_at_pos(blocks: u128, x: u64, y: u64, z: u64) -> u64 {
-    let shift: u128 = fast_power_2(((x + y * 4 + z * 16) * 4).into()).into();
-    return ((blocks / shift) % 8).try_into().unwrap();
 }

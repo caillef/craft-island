@@ -11,4 +11,5 @@ pub mod helpers {
 pub mod models {
     pub mod common;
     pub mod inventory;
+    pub mod islandchunk;
 }
