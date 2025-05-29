@@ -176,7 +176,7 @@ void ADojoHelpers::FetchExistingModels()
     Async(EAsyncExecution::Thread, [this]()
             {
         ResultPageEntity resEntities =
-            FDojoModule::GetEntities(toriiClient, 100, nullptr);
+            FDojoModule::GetEntities(toriiClient, 1000, nullptr);
         if (resEntities.tag == ErrPageEntity) {
             UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
              resEntities.err.message);
