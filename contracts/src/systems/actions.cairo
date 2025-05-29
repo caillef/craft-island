@@ -18,13 +18,16 @@ mod actions {
     use super::{IActions, get_position_id};
     use starknet::{get_caller_address, ContractAddress};
     use craft_island_pocket::models::common::{
-        GatherableResource
+        GatherableResource, PlayerData
     };
     use craft_island_pocket::models::inventory::{
         Inventory, InventoryTrait
     };
     use craft_island_pocket::models::islandchunk::{
         IslandChunk, IslandChunkTrait
+    };
+    use craft_island_pocket::models::worldstructure::{
+        WorldStructure
     };
     use craft_island_pocket::helpers::{
         craft::{craftmatch}
@@ -34,6 +37,38 @@ mod actions {
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
+    }
+
+    fn place_structure(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+        let island_id: felt252 = player.into();
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        // check block under
+        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        let mut structure: WorldStructure = world.read_model((island_id, chunk_id, position));
+        assert!(structure.structure_type == 0, "Error: World Structure exists");
+        structure.structure_type = 30; // House
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+        inventory.remove_items(item_id, 1);
+        world.write_model(@inventory);
+
+        let mut player_data: PlayerData = world.read_model((player));
+        assert!(player_data.last_inventory_created_id > 0, "Player not init");
+        player_data.last_inventory_created_id += 1;
+        player_data.last_space_created_id += 1;
+        structure.build_inventory_id = player_data.last_inventory_created_id;
+
+        let mut building_inventory: Inventory = InventoryTrait::new(player_data.last_inventory_created_id, 4, 9, player);
+        world.write_model(@building_inventory);
+
+        structure.completed = false;
+        structure.linked_space_owner = player.into();
+        structure.linked_space_id = player_data.last_space_created_id;
+        structure.destroyed = false;
+        world.write_model(@player_data);
+        world.write_model(@structure);
     }
 
     fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
@@ -117,10 +152,10 @@ mod actions {
     fn place_block(ref self: ContractState, x: u64, y: u64, z: u64, block_id: u16) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let island_id: felt252 = player.into();
+        let player_data: PlayerData = world.read_model((player));
         println!("Raw Position {} {} {}", x, y, z);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
+        let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
 
         let mut inventory: Inventory = world.read_model((player, 0));
         inventory.remove_items(block_id.try_into().unwrap(), 1);
@@ -132,9 +167,9 @@ mod actions {
     fn remove_block(ref self: ContractState, x: u64, y: u64, z: u64) -> bool {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let island_id: felt252 = player.into();
+        let player_data: PlayerData = world.read_model((player));
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
+        let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
         let mut block_id = chunk.remove_block(x, y, z);
         if block_id == 0 {
             return false;
@@ -150,10 +185,10 @@ mod actions {
     fn update_block(ref self: ContractState, x: u64, y: u64, z: u64, tool: u16) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let island_id: felt252 = player.into();
+        let player_data: PlayerData = world.read_model((player));
         println!("Raw Position {} {} {}", x, y, z);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let mut chunk: IslandChunk = world.read_model((island_id, chunk_id));
+        let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
         chunk.update_block(x, y, z, tool);
         world.write_model(@chunk);
     }
@@ -217,173 +252,203 @@ mod actions {
     fn init_island(ref self: ContractState, player: ContractAddress) {
         let mut world = get_world(ref self);
 
-    let starter_chunk0 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080100000007ff0000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 76842741656518657,
-      };
-      world.write_model(@starter_chunk0);
+        let starter_chunk0 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080100000007ff0000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 76842741656518657,
+        };
+        world.write_model(@starter_chunk0);
 
-    let starter_chunk1 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080100000008000000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 4785147619639313,
-      };
-      world.write_model(@starter_chunk1);
+        let starter_chunk1 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080100000008000000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 4785147619639313,
+        };
+        world.write_model(@starter_chunk1);
 
-    let starter_chunk2 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080100000008010000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 281547992268817,
-      };
-      world.write_model(@starter_chunk2);
+        let starter_chunk2 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080100000008010000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 281547992268817,
+        };
+        world.write_model(@starter_chunk2);
 
-    let starter_chunk3 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080000000008000000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1229782938247303441,
-      };
-      world.write_model(@starter_chunk3);
+        let starter_chunk3 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000008000000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+        world.write_model(@starter_chunk3);
 
-    let starter_chunk4 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080000000008010000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1229782938247303441,
-      };
-      world.write_model(@starter_chunk4);
+        let starter_chunk4 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000008010000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+        world.write_model(@starter_chunk4);
 
-    let starter_chunk5 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080000000008020000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 4296085777,
-      };
-      world.write_model(@starter_chunk5);
+        let starter_chunk5 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000008020000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 4296085777,
+        };
+        world.write_model(@starter_chunk5);
 
-    let starter_chunk6 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x000000080000000007ff0000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1229782938247303440,
-      };
-      world.write_model(@starter_chunk6);
+        let starter_chunk6 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000007ff0000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303440,
+        };
+        world.write_model(@starter_chunk6);
 
-    let starter_chunk7 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007ff00000008000000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1229782938247303441,
-      };
-      world.write_model(@starter_chunk7);
+        let starter_chunk7 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007ff00000008000000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1229782938247303441,
+        };
+        world.write_model(@starter_chunk7);
 
-    let starter_chunk8 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007ff00000008010000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1234568085865828625,
-      };
-      world.write_model(@starter_chunk8);
+        let starter_chunk8 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007ff00000008010000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1234568085865828625,
+        };
+        world.write_model(@starter_chunk8);
 
-    let starter_chunk9 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007ff00000008020000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 18760703480098,
-      };
-      world.write_model(@starter_chunk9);
+        let starter_chunk9 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007ff00000008020000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 18760703480098,
+        };
+        world.write_model(@starter_chunk9);
 
-    let starter_chunk10 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007ff00000007ff0000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1224997790610882560,
-      };
-      world.write_model(@starter_chunk10);
+        let starter_chunk10 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007ff00000007ff0000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1224997790610882560,
+        };
+        world.write_model(@starter_chunk10);
 
-    let starter_chunk11 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007fe00000008000000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1152939097061326848,
-      };
-      world.write_model(@starter_chunk11);
+        let starter_chunk11 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007fe00000008000000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1152939097061326848,
+        };
+        world.write_model(@starter_chunk11);
 
-    let starter_chunk12 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007fe00000008010000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 1224997790627664128,
-      };
-      world.write_model(@starter_chunk12);
+        let starter_chunk12 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007fe00000008010000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 1224997790627664128,
+        };
+        world.write_model(@starter_chunk12);
 
-    let starter_chunk13 = IslandChunk {
-          island_id: player.into(),
-          chunk_id: 0x00000007fe00000008020000000800,
-          version: 0,
-          blocks1: 0,
-          blocks2: 268439552,
-      };
-      world.write_model(@starter_chunk13);
+        let starter_chunk13 = IslandChunk {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x00000007fe00000008020000000800,
+            version: 0,
+            blocks1: 0,
+            blocks2: 268439552,
+        };
+        world.write_model(@starter_chunk13);
 
-    let resource0 = GatherableResource {
-        island_id: player.into(),
-        chunk_id: 0x000000080000000008000000000800,
-        position: 17,
-        resource_id: 32,
-        planted_at: 0,
-        next_harvest_at: 0,
-        harvested_at: 0,
-        max_harvest: 1,
-        remained_harvest: 1,
-        destroyed: false,
-    };
-    world.write_model(@resource0);
+        let resource0 = GatherableResource {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000008000000000800,
+            position: 17,
+            resource_id: 32,
+            planted_at: 0,
+            next_harvest_at: 0,
+            harvested_at: 0,
+            max_harvest: 1,
+            remained_harvest: 1,
+            destroyed: false,
+        };
+        world.write_model(@resource0);
 
-    let resource1 = GatherableResource {
-        island_id: player.into(),
-        chunk_id: 0x000000080000000008000000000800,
-        position: 23,
-        resource_id: 33,
-        planted_at: 0,
-        next_harvest_at: 0,
-        harvested_at: 0,
-        max_harvest: 1,
-        remained_harvest: 1,
-        destroyed: false,
-    };
-    world.write_model(@resource1);
+        let resource1 = GatherableResource {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000008000000000800,
+            position: 23,
+            resource_id: 33,
+            planted_at: 0,
+            next_harvest_at: 0,
+            harvested_at: 0,
+            max_harvest: 1,
+            remained_harvest: 1,
+            destroyed: false,
+        };
+        world.write_model(@resource1);
 
-    let resource2 = GatherableResource {
-        island_id: player.into(),
-        chunk_id: 0x000000080000000008010000000800,
-        position: 16,
-        resource_id: 49,
-        planted_at: 0,
-        next_harvest_at: 0,
-        harvested_at: 0,
-        max_harvest: 255,
-        remained_harvest: 255,
-        destroyed: false,
-    };
-    world.write_model(@resource2);
+        let resource2 = GatherableResource {
+            island_owner: player.into(),
+            island_id: 1,
+            chunk_id: 0x000000080000000008010000000800,
+            position: 16,
+            resource_id: 49,
+            planted_at: 0,
+            next_harvest_at: 0,
+            harvested_at: 0,
+            max_harvest: 255,
+            remained_harvest: 255,
+            destroyed: false,
+        };
+        world.write_model(@resource2);
+    }
+
+    fn init_player(ref self: ContractState, player: ContractAddress) {
+        let mut world = get_world(ref self);
+
+        let mut player_data: PlayerData = PlayerData {
+            player: player,
+            last_inventory_created_id: 2, // hotbar, inventory, craft
+            last_space_created_id: 1, // own island
+            current_island_owner: player.into(),
+            current_island_id: 1,
+        };
+        world.write_model(@player_data);
     }
 
     fn init_inventory(ref self: ContractState, player: ContractAddress) {
@@ -420,6 +485,7 @@ mod actions {
     impl ActionsImpl of IActions<ContractState> {
         fn spawn(ref self: ContractState) {
             let player = get_caller_address();
+            init_player(ref self, player);
             init_island(ref self, player);
             init_inventory(ref self, player);
         }
@@ -447,18 +513,20 @@ mod actions {
             let player = get_caller_address();
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
-            let itemType: u16 = inventory.get_hotbar_selected_item_type();
+            let item_type: u16 = inventory.get_hotbar_selected_item_type();
 
-            println!("Hotbar selected item {}", itemType);
-            if (itemType == 41) {
+            println!("Hotbar selected item {}", item_type);
+            if (item_type == 41) {
                 // hoe, transform grass to dirt
-                update_block(ref self, x, y, z, itemType);
+                update_block(ref self, x, y, z, item_type);
             } else {
-                assert(itemType > 0, 'Error: item id is zero');
-                if itemType < 32 {
-                    place_block(ref self, x, y, z, itemType);
+                assert(item_type > 0, 'Error: item id is zero');
+                if item_type < 32 {
+                    place_block(ref self, x, y, z, item_type);
+                } else if item_type == 50 {
+                    place_structure(ref self, x, y, z, item_type);
                 } else {
-                    plant(ref self, x, y, z, itemType);
+                    plant(ref self, x, y, z, item_type);
                 }
             }
         }

@@ -34,7 +34,7 @@ pub struct Inventory {
     pub owner: ContractAddress,
     #[key]
     pub id: u16,
-    pub inventory_type: u8, // 0 == hotbar, 1 == inventory, 2 == storage, 3 == machine
+    pub inventory_type: u8, // 0 == hotbar, 1 == inventory, 2 == craft, 3 == storage, 4 == structure building, 5 == machine
     pub inventory_size: u8,
     pub slots1: felt252,
     pub slots2: felt252,

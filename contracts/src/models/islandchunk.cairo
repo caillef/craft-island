@@ -15,7 +15,9 @@ fn get_block_at_pos(blocks: u128, x: u64, y: u64, z: u64) -> u64 {
 #[dojo::model]
 pub struct IslandChunk {
     #[key]
-    pub island_id: felt252,
+    pub island_owner: felt252,
+    #[key]
+    pub island_id: u16,
     #[key]
     pub chunk_id: u128, // pos x y z & 42 mask bits
     pub version: u8,

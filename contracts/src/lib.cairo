@@ -12,4 +12,5 @@ pub mod models {
     pub mod common;
     pub mod inventory;
     pub mod islandchunk;
+    pub mod worldstructure;
 }

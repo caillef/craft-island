@@ -1,6 +1,6 @@
 #[starknet::interface]
 trait IAdmin<T> {
-    fn giveself(ref self: T, item: u16, qty: u32);
+    fn give_self(ref self: T, item: u16, qty: u32);
 }
 
 // dojo decorator
@@ -19,7 +19,7 @@ mod admin {
 
     #[abi(embed_v0)]
     impl AdminImpl of IAdmin<ContractState> {
-        fn giveself(ref self: ContractState, item: u16, qty: u32) {
+        fn give_self(ref self: ContractState, item: u16, qty: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
             let mut inventory: Inventory = world.read_model((player, 1));
