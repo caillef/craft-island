@@ -6,6 +6,8 @@ pub mod systems {
 pub mod helpers {
     pub mod math;
     pub mod craft;
+    pub mod init;
+    pub mod utils;
 }
 
 pub mod models {

@@ -2,9 +2,6 @@ use craft_island_pocket::helpers::{
     math::{fast_power_2},
 };
 
-fn get_position_id(x: u64, y: u64, z: u64) -> u128 {
-    x.into() * fast_power_2(80) + y.into() * fast_power_2(40) + z.into()
-}
 
 fn get_block_at_pos(blocks: u128, x: u64, y: u64, z: u64) -> u64 {
     let shift: u128 = fast_power_2(((x + y * 4 + z * 16) * 4).into()).into();
@@ -24,7 +21,6 @@ pub struct IslandChunk {
     pub blocks1: u128,
     pub blocks2: u128,
 }
-
 
 #[generate_trait]
 pub impl IslandChunkImpl of IslandChunkTrait {
