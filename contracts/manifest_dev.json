@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x8193000022413685e1ede5c19720fc9ee14cdfe1f820ed52d1a633ca5f3ba",
-      "class_hash": "0x443151eaf411262436a0e35ea4623c6c0a7fcc651263fde948444f941d0913e",
+      "address": "0x4bc212e91d4c8697d9bb495093d7b2d2b4ad52810831a15be258044a2b02985",
+      "class_hash": "0x72fea192d1e646d0ff90b24285685dc26ee43f9d7195a1209c3cc8f93d1b5b0",
       "abi": [
         {
           "type": "impl",
@@ -1632,8 +1632,8 @@
       ]
     },
     {
-      "address": "0x5ab3ffb03a1260c468a6a345a0bbc39f586fd68926f92b932175ee9c913b915",
-      "class_hash": "0x185c9dc22bec8ab5aa02e44bbb29a09cfb656051667a92e9ca3fc58224fd49b",
+      "address": "0x9080ede6cfd88cd3b2a603e66273f914c5bbd3149304ef9bf2ecd615d109e3",
+      "class_hash": "0x75316361433e4b68fb1ea8ccb3b8950a20dc2630a18b57560a11c0b7b2f2797",
       "abi": [
         {
           "type": "impl",
@@ -1696,7 +1696,7 @@
           "items": [
             {
               "type": "function",
-              "name": "giveself",
+              "name": "give_self",
               "inputs": [
                 {
                   "name": "item",
@@ -1831,7 +1831,7 @@
       "tag": "craft_island_pocket-admin",
       "selector": "0x43d62c14f6442be7460cfd2aff92839bc505c6f7acc2904971a87319a4b1dde",
       "systems": [
-        "giveself",
+        "give_self",
         "upgrade"
       ]
     }
@@ -1840,7 +1840,7 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0xf6d8f0392554ee7dc037877fcc244f10bae60b3df4eac061bf91773e941b0e",
+      "class_hash": "0x498e256748d71fa202c62adbdd2e6ea33d138aeea363f0df976293c789ac712",
       "tag": "craft_island_pocket-GatherableResource",
       "selector": "0x724f6e93d1c79ee556934629fac544529f95a96cf9b19eccf2cec9afb77b6b5"
     },
@@ -1852,13 +1852,13 @@
     },
     {
       "members": [],
-      "class_hash": "0x521ee8cb5d58b5c45e124c367c66f5a3eea781f3c0920e66bcbe8cd07684fbf",
+      "class_hash": "0x742f008ba9c2e563f1186c07a5089c9652a6c2dae6935a49223755cef744049",
       "tag": "craft_island_pocket-IslandChunk",
       "selector": "0x33bcf22997bb979a42ca224a7d3738a796f91d705065fbd52011d91a9ed402"
     },
     {
       "members": [],
-      "class_hash": "0x7342582715d49006444ff4bdcb43ae8845bf6e16ec34703d383273b56148005",
+      "class_hash": "0x7a250beb9416efe2bfff0cf116a22772ffa2d7514f11dd797dd6c0b3b3469ca",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
@@ -1870,7 +1870,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x5b2b46b701b66e866c72ecea992f1bae8da3370009cf733a09ff8e89953c62c",
+      "class_hash": "0x36d1a84754f2670d03f1a60883bcd08e655c360b0646707c5c0e74e4494d1ac",
       "tag": "craft_island_pocket-WorldStructure",
       "selector": "0x5df5957a204638a9dc1fe18f016555f1811394279cd5705d8d6a3a60dd890c6"
     }

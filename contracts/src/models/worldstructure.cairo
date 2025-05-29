@@ -3,7 +3,9 @@
 #[dojo::model]
 pub struct WorldStructure {
     #[key]
-    pub island_id: felt252,
+    pub island_owner: felt252,
+    #[key]
+    pub island_id: u16,
     #[key]
     pub chunk_id: u128,
     #[key]

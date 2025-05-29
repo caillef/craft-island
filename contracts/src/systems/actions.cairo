@@ -39,14 +39,38 @@ mod actions {
         self.world(@"craft_island_pocket")
     }
 
-    fn place_structure(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
+    fn upgrade_structure(ref self: ContractState, x: u64, y: u64, z: u64) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let island_id: felt252 = player.into();
+        let player_data: PlayerData = world.read_model((player));
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut structure: WorldStructure = world.read_model((island_id, chunk_id, position));
+        let mut structure: WorldStructure = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+        assert!(structure.structure_type > 0, "Error: World Structure does not exist");
+
+        let mut build_inventory: Inventory = world.read_model((player, structure.build_inventory_id));
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        if !hotbar.world_structure_next_step(ref build_inventory) {
+            let mut inventory: Inventory = world.read_model((player, 1));
+            assert(inventory.world_structure_next_step(ref build_inventory), 'Not enough resource');
+        }
+        if build_inventory.slots1 == 0 {
+            structure.completed = true;
+        }
+        world.write_model(@structure);
+        world.write_model(@build_inventory);
+        world.write_model(@hotbar);
+    }
+
+    fn place_structure(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+        let player_data: PlayerData = world.read_model((player));
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        // check block under
+        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        let mut structure: WorldStructure = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
         assert!(structure.structure_type == 0, "Error: World Structure exists");
         structure.structure_type = 30; // House
 
@@ -61,6 +85,7 @@ mod actions {
         structure.build_inventory_id = player_data.last_inventory_created_id;
 
         let mut building_inventory: Inventory = InventoryTrait::new(player_data.last_inventory_created_id, 4, 9, player);
+        building_inventory.slots1 = 2322718322067456; // First slot is 3 stick, second slot 3 stone 00001000010000001000000000000000100000000000100000000000
         world.write_model(@building_inventory);
 
         structure.completed = false;
@@ -74,11 +99,11 @@ mod actions {
     fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let island_id: felt252 = player.into();
+        let player_data: PlayerData = world.read_model((player));
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
+        let mut resource: GatherableResource = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
         resource.resource_id = item_id;
 
@@ -103,11 +128,10 @@ mod actions {
     fn harvest(ref self: ContractState, x: u64, y: u64, z: u64) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let island_id: felt252 = player.into();
+        let player_data: PlayerData = world.read_model((player));
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
+        let mut resource: GatherableResource = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
         assert!(resource.resource_id > 0 && !resource.destroyed, "Error: Resource does not exists");
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         println!("next harvest {}, timestamp {}", resource.next_harvest_at, timestamp);
@@ -232,10 +256,10 @@ mod actions {
         let mut inventory: Inventory = world.read_model((player, 0));
         // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
-            let island_id: felt252 = player.into();
+            let player_data: PlayerData = world.read_model((player));
             let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
             let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-            let mut resource: GatherableResource = world.read_model((island_id, chunk_id, position));
+            let mut resource: GatherableResource = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
             assert!(resource.resource_id == 33 && !resource.destroyed, "Error: No rock");
             resource.destroyed = true;
             resource.resource_id = 0;
@@ -461,13 +485,11 @@ mod actions {
         hotbar.add_items(47, 12);
         hotbar.add_items(41, 1);
         hotbar.add_items(32, 4);
-        hotbar.add_items(33, 7);
+        hotbar.add_items(43, 1);
         world.write_model(@hotbar);
 
         let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
-        inventory.add_items(1, 19);
-        inventory.add_items(2, 23);
-        inventory.add_item(10, 32, 4);
+        inventory.add_items(50, 8);
         inventory.add_items(46, 8);
         inventory.add_items(47, 12);
         inventory.add_items(41, 1);
@@ -516,9 +538,10 @@ mod actions {
             let item_type: u16 = inventory.get_hotbar_selected_item_type();
 
             println!("Hotbar selected item {}", item_type);
-            if (item_type == 41) {
-                // hoe, transform grass to dirt
+            if item_type == 41 { // hoe
                 update_block(ref self, x, y, z, item_type);
+            } else if item_type == 43 { // hammer
+                upgrade_structure(ref self, x, y, z);
             } else {
                 assert(item_type > 0, 'Error: item id is zero');
                 if item_type < 32 {

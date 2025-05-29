@@ -334,6 +334,29 @@ pub impl InventoryImpl of InventoryTrait {
         assert(remaining_quantity == 0, 'Not enough items');
         true
     }
+
+    fn world_structure_next_step(ref self: Inventory, ref build_inventory: Inventory) -> bool {
+        let mut next_requirement = SlotData { item_type: 0, quantity: 0, extra: 0 };
+
+        let slots_value: u256 = build_inventory.slots1.into();
+        if slots_value > 0 {
+            let mut i = 0;
+            while i < 8 && next_requirement.quantity == 0 {
+                next_requirement = build_inventory.get_slot_data(i);
+                i += 1;
+            }
+        }
+
+        if next_requirement.quantity > 0 {
+            if self.get_item_amount(next_requirement.item_type) <= 0 {
+                return false;
+            }
+            self.remove_items(next_requirement.item_type, 1);
+            build_inventory.remove_items(next_requirement.item_type, 1);
+            return true;
+        }
+        return false;
+    }
 }
 
 #[cfg(test)]
