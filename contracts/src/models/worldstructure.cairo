@@ -46,6 +46,7 @@ pub impl WorldStructureImpl of WorldStructureTrait {
         if !hotbar.world_structure_next_step(ref build_inventory) {
             let mut inventory: Inventory = world.read_model((player, 1));
             assert(inventory.world_structure_next_step(ref build_inventory), 'Not enough resource');
+            world.write_model(@inventory);
         }
         if build_inventory.slots1 == 0 {
             structure.completed = true;
