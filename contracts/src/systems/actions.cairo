@@ -22,7 +22,7 @@ mod actions {
         Inventory, InventoryTrait
     };
     use craft_island_pocket::models::islandchunk::{
-        IslandChunk, IslandChunkTrait
+        place_block, remove_block, update_block
     };
     use craft_island_pocket::models::worldstructure::{WorldStructureTrait};
     use craft_island_pocket::helpers::{
@@ -114,49 +114,8 @@ mod actions {
     ) { //let player = get_caller_address();
     }
 
-    fn place_block(ref self: ContractState, x: u64, y: u64, z: u64, block_id: u16) {
-        let mut world = get_world(ref self);
-        let player = get_caller_address();
-        let player_data: PlayerData = world.read_model((player));
-        println!("Raw Position {} {} {}", x, y, z);
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
 
-        let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.remove_items(block_id.try_into().unwrap(), 1);
-        chunk.place_block(x, y, z, block_id);
-        world.write_model(@inventory);
-        world.write_model(@chunk);
-    }
 
-    fn remove_block(ref self: ContractState, x: u64, y: u64, z: u64) -> bool {
-        let mut world = get_world(ref self);
-        let player = get_caller_address();
-        let player_data: PlayerData = world.read_model((player));
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
-        let mut block_id = chunk.remove_block(x, y, z);
-        if block_id == 0 {
-            return false;
-        }
-
-        let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.add_items(block_id.try_into().unwrap(), 1);
-        world.write_model(@inventory);
-        world.write_model(@chunk);
-        return true;
-    }
-
-    fn update_block(ref self: ContractState, x: u64, y: u64, z: u64, tool: u16) {
-        let mut world = get_world(ref self);
-        let player = get_caller_address();
-        let player_data: PlayerData = world.read_model((player));
-        println!("Raw Position {} {} {}", x, y, z);
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
-        chunk.update_block(x, y, z, tool);
-        world.write_model(@chunk);
-    }
 
     fn try_inventory_craft(ref self: ContractState) {
         let mut world = get_world(ref self);
@@ -223,7 +182,7 @@ mod actions {
         }
 
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
-            let world = get_world(ref self);
+            let mut world = get_world(ref self);
             let player = get_caller_address();
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
@@ -231,11 +190,11 @@ mod actions {
 
             if (itemType == 18) {
                 // hoe, transform grass to dirt
-                update_block(ref self, x, y, z - 1, itemType);
+                update_block(ref world, x, y, z - 1, itemType);
                 return;
             }
             // handle hp
-            if !remove_block(ref self, x, y, z) {
+            if !remove_block(ref world, x, y, z) {
                 harvest(ref self, x, y, z);
             }
         }
@@ -249,13 +208,13 @@ mod actions {
 
             println!("Hotbar selected item {}", item_type);
             if item_type == 41 { // hoe
-                update_block(ref self, x, y, z, item_type);
+                update_block(ref world, x, y, z, item_type);
             } else if item_type == 43 { // hammer
                 WorldStructureTrait::upgrade_structure(ref world, x, y, z);
             } else {
                 assert(item_type > 0, 'Error: item id is zero');
                 if item_type < 32 {
-                    place_block(ref self, x, y, z, item_type);
+                    place_block(ref world, x, y, z, item_type);
                 } else if item_type == 50 {
                     WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
                 } else {

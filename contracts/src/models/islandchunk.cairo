@@ -1,7 +1,11 @@
 use craft_island_pocket::helpers::{
     math::{fast_power_2},
 };
-
+use starknet::get_caller_address;
+use craft_island_pocket::models::common::PlayerData;
+use craft_island_pocket::models::inventory::{Inventory, InventoryTrait};
+use craft_island_pocket::helpers::utils::get_position_id;
+use dojo::{world::WorldStorage,model::ModelStorage};
 
 fn get_block_at_pos(blocks: u128, x: u64, y: u64, z: u64) -> u64 {
     let shift: u128 = fast_power_2(((x + y * 4 + z * 16) * 4).into()).into();
@@ -20,6 +24,62 @@ pub struct IslandChunk {
     pub version: u8,
     pub blocks1: u128,
     pub blocks2: u128,
+}
+
+pub fn place_block(
+    ref world: WorldStorage,
+    x: u64,
+    y: u64,
+    z: u64,
+    block_id: u16
+) {
+    let player = get_caller_address();
+    let player_data: PlayerData = world.read_model((player));
+    let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+    let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
+
+    let mut inventory: Inventory = world.read_model((player, 0));
+    inventory.remove_items(block_id.try_into().unwrap(), 1);
+    chunk.place_block(x, y, z, block_id);
+    world.write_model(@inventory);
+    world.write_model(@chunk);
+}
+
+pub fn remove_block(
+    ref world: WorldStorage,
+    x: u64,
+    y: u64,
+    z: u64
+) -> bool {
+    let player = get_caller_address();
+    let player_data: PlayerData = world.read_model((player));
+    let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+    let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
+    let mut block_id = chunk.remove_block(x, y, z);
+    if block_id == 0 {
+        return false;
+    }
+
+    let mut inventory: Inventory = world.read_model((player, 0));
+    inventory.add_items(block_id.try_into().unwrap(), 1);
+    world.write_model(@inventory);
+    world.write_model(@chunk);
+    true
+}
+
+pub fn update_block(
+    ref world: WorldStorage,
+    x: u64,
+    y: u64,
+    z: u64,
+    tool: u16
+) {
+    let player = get_caller_address();
+    let player_data: PlayerData = world.read_model((player));
+    let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+    let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
+    chunk.update_block(x, y, z, tool);
+    world.write_model(@chunk);
 }
 
 #[generate_trait]
