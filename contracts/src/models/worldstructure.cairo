@@ -32,6 +32,38 @@ pub struct WorldStructure {
 
 #[generate_trait]
 pub impl WorldStructureImpl of WorldStructureTrait {
+    fn place_structure(ref world: WorldStorage, x: u64, y: u64, z: u64, item_id: u16) {
+        let player = get_caller_address();
+        let player_data: PlayerData = world.read_model((player));
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        // check block under
+        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        let mut structure: WorldStructure = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+        assert!(structure.structure_type == 0, "Error: World Structure exists");
+        structure.structure_type = 30; // House
+
+        let mut inventory: Inventory = world.read_model((player, 0));
+        inventory.remove_items(item_id, 1);
+        world.write_model(@inventory);
+
+        let mut player_data: PlayerData = world.read_model((player));
+        assert!(player_data.last_inventory_created_id > 0, "Player not init");
+        player_data.last_inventory_created_id += 1;
+        player_data.last_space_created_id += 1;
+        structure.build_inventory_id = player_data.last_inventory_created_id;
+
+        let mut building_inventory: Inventory = InventoryTrait::new(player_data.last_inventory_created_id, 4, 2, player);
+        building_inventory.slots1 = 2322993199975424; // First slot is 3 stick, second slot 3 stone 00001000010000001100000000000000100000000000110000000000
+        world.write_model(@building_inventory);
+
+        structure.completed = false;
+        structure.linked_space_owner = player.into();
+        structure.linked_space_id = player_data.last_space_created_id;
+        structure.destroyed = false;
+        world.write_model(@player_data);
+        world.write_model(@structure);
+    }
+
     fn upgrade_structure(ref world: WorldStorage, x: u64, y: u64, z: u64) {
         let player = get_caller_address();
         let player_data: PlayerData = world.read_model((player));
@@ -54,37 +86,5 @@ pub impl WorldStructureImpl of WorldStructureTrait {
         world.write_model(@structure);
         world.write_model(@build_inventory);
         world.write_model(@hotbar);
-    }
-
-    fn place_structure(ref world: WorldStorage, x: u64, y: u64, z: u64, item_id: u16) {
-        let player = get_caller_address();
-        let player_data: PlayerData = world.read_model((player));
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        // check block under
-        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut structure: WorldStructure = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
-        assert!(structure.structure_type == 0, "Error: World Structure exists");
-        structure.structure_type = 30; // House
-
-        let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.remove_items(item_id, 1);
-        world.write_model(@inventory);
-
-        let mut player_data: PlayerData = world.read_model((player));
-        assert!(player_data.last_inventory_created_id > 0, "Player not init");
-        player_data.last_inventory_created_id += 1;
-        player_data.last_space_created_id += 1;
-        structure.build_inventory_id = player_data.last_inventory_created_id;
-
-        let mut building_inventory: Inventory = InventoryTrait::new(player_data.last_inventory_created_id, 4, 9, player);
-        building_inventory.slots1 = 2322718322067456; // First slot is 3 stick, second slot 3 stone 00001000010000001000000000000000100000000000100000000000
-        world.write_model(@building_inventory);
-
-        structure.completed = false;
-        structure.linked_space_owner = player.into();
-        structure.linked_space_id = player_data.last_space_created_id;
-        structure.destroyed = false;
-        world.write_model(@player_data);
-        world.write_model(@structure);
     }
 }

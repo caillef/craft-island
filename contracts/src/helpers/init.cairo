@@ -206,15 +206,13 @@ fn init_inventory(ref world: WorldStorage, player: ContractAddress) {
     let mut hotbar: Inventory = InventoryTrait::new(0, 0, 9, player);
     hotbar.add_items(1, 19);
     hotbar.add_items(2, 23);
-    hotbar.add_items(46, 8);
-    hotbar.add_items(47, 12);
     hotbar.add_items(41, 1);
     hotbar.add_items(32, 4);
     hotbar.add_items(43, 1);
+    hotbar.add_items(50, 1);
     world.write_model(@hotbar);
 
     let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
-    inventory.add_items(50, 8);
     inventory.add_items(46, 8);
     inventory.add_items(47, 12);
     inventory.add_items(41, 1);
