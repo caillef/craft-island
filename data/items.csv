@@ -6,15 +6,15 @@ Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft
 32,32,Wooden Stick,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_32.items_icons_ItemIcon_32',
 33,33,Rock,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_33.items_icons_ItemIcon_33',
 34,34,Stone Axe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_34.items_icons_ItemIcon_34',
-35,35,Stone Axe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_35.items_icons_ItemIcon_35',162259276829213363391578019201024
+35,35,Stone Axe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_35.items_icons_ItemIcon_35',0x0000000000000000000000000000000000000800000000000000000000880000
 36,36,Stone Pickaxe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_36.items_icons_ItemIcon_36',
-37,37,Stone Pickaxe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_37.items_icons_ItemIcon_37',162259276829213363391578019725312
+37,37,Stone Pickaxe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_37.items_icons_ItemIcon_37',0x0000000000000000000000000000000000000800000000000000000000900000
 38,38,Stone Shovel Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_38.items_icons_ItemIcon_38',
-39,39,Stone Shovel,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_39.items_icons_ItemIcon_39',162259276829213363391578020249600
+39,39,Stone Shovel,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_39.items_icons_ItemIcon_39',0x0000000000000000000000000000000000000800000000000000000000980000
 40,40,Stone Hoe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_40.items_icons_ItemIcon_40',
-41,41,Stone Hoe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_41.items_icons_ItemIcon_41',162259276829213363391578020773888
+41,41,Stone Hoe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_41.items_icons_ItemIcon_41',0x0000000000000000000000000000000000000800000000000000000000A00000
 42,42,Stone Hammer Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_42.items_icons_ItemIcon_42',
-43,43,Stone Hammer,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_43.items_icons_ItemIcon_43',162259276829213363391578021298176
+43,43,Stone Hammer,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_43.items_icons_ItemIcon_43',0x0000000000000000000000000000000000000800000000000000000000A80000
 44,44,Oak Log,item,16,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_44.items_icons_ItemIcon_44',
 45,45,Oak Plank,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_45.items_icons_ItemIcon_45',
 46,46,Oak Sapling,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_46.items_icons_ItemIcon_46',

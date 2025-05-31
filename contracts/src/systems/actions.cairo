@@ -114,9 +114,6 @@ mod actions {
     ) { //let player = get_caller_address();
     }
 
-
-
-
     fn try_inventory_craft(ref self: ContractState) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
@@ -166,7 +163,6 @@ mod actions {
             world.write_model(@resource);
 
             if inventory.get_hotbar_selected_item_type() == 33 {
-                inventory.remove_items(33, 1);
                 inventory.add_items(item, 1);
             }
         }
