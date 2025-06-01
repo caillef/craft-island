@@ -135,9 +135,15 @@ mod actions {
         };
 
         let mut hotbar: Inventory = world.read_model((player, 0));
-        hotbar.add_items(wanteditem, 1);
+        let mut inventory: Inventory = world.read_model((player, 1));
+        let qty_left = hotbar.add_items(wanteditem, 1);
+        if qty_left == 0 {
+            world.write_model(@hotbar);
+        } else {
+            inventory.add_items(wanteditem, 1);
+            world.write_model(@inventory);
+        }
 
-        world.write_model(@hotbar);
         world.write_model(@craftinventory);
     }
 
@@ -150,7 +156,6 @@ mod actions {
         let mut world = get_world(ref self);
         let player = get_caller_address();
 
-        let mut inventory: Inventory = world.read_model((player, 0));
         // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
             let player_data: PlayerData = world.read_model((player));
@@ -162,11 +167,18 @@ mod actions {
             resource.resource_id = 0;
             world.write_model(@resource);
 
-            if inventory.get_hotbar_selected_item_type() == 33 {
+            let mut hotbar: Inventory = world.read_model((player, 0));
+            let mut inventory: Inventory = world.read_model((player, 1));
+            if hotbar.get_hotbar_selected_item_type() == 33 {
+                let qty_left = hotbar.add_items(item, 1);
+                if qty_left == 0 {
+                    world.write_model(@hotbar);
+                    return;
+                }
                 inventory.add_items(item, 1);
+                world.write_model(@inventory);
             }
         }
-        world.write_model(@inventory);
     }
 
     #[abi(embed_v0)]

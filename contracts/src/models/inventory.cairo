@@ -236,14 +236,21 @@ pub impl InventoryImpl of InventoryTrait {
         let slot_in_felt = slot % 9;
         let shift: u256 = (slot_in_felt * 28).into();
 
+        let mut mask: felt252 = 0xFFFFFFF;
+        if slot_in_felt == 8 {
+            mask = 0x7FFFFFF;
+        }
         // Create mask for the slot we want to clear
-        let slot_mask: felt252 = 0xFFFFFFF.into() * fast_power_2_u256(shift).try_into().unwrap();
+        let slot_mask: felt252 = mask * fast_power_2_u256(shift).try_into().unwrap();
         // First clear the slot by subtracting existing data
+        let inverse_mask: felt252 = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF - slot_mask.into();
+
+        // First clear the slot by applying the inverse mask with bitwise AND
         match felt_index {
-            0 => { self.slots1 = self.slots1 - (self.slots1 & slot_mask); },
-            1 => { self.slots2 = self.slots2 - (self.slots2 & slot_mask); },
-            2 => { self.slots3 = self.slots3 - (self.slots3 & slot_mask); },
-            3 => { self.slots4 = self.slots4 - (self.slots4 & slot_mask); },
+            0 => { self.slots1 = inverse_mask & self.slots1; },
+            1 => { self.slots2 = inverse_mask & self.slots2; },
+            2 => { self.slots3 = inverse_mask & self.slots3; },
+            3 => { self.slots4 = inverse_mask & self.slots4; },
             _ => {},
         };
 
@@ -271,7 +278,8 @@ pub impl InventoryImpl of InventoryTrait {
         self.set_slot_data(slot, 0, 0, 0)
     }
 
-    fn add_items(ref self: Inventory, item_type: u16, mut quantity: u32) -> bool {
+    // returns what's left
+    fn add_items(ref self: Inventory, item_type: u16, mut quantity: u32) -> u32 {
         // First try to fill existing slots of same item type that aren't full
         let mut slot: u8 = 0;
         while slot < self.inventory_size && quantity > 0 {
@@ -304,10 +312,7 @@ pub impl InventoryImpl of InventoryTrait {
             }
             slot += 1;
         };
-
-        // If we still have quantity to add, there wasn't enough space
-        assert(quantity == 0, 'Not enough space in inventory');
-        true
+        quantity
     }
 
     fn remove_items(ref self: Inventory, item_type: u16, quantity: u32) -> bool {
