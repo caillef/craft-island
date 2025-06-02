@@ -94,19 +94,12 @@ mod actions {
             item_id = 33; // Rock
         }
 
-        let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.add_items(item_id, 1);
-        world.write_model(@inventory);
-
+        InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
         if item_id == 47 { // Wheat seed
-            let mut inventory: Inventory = world.read_model((player, 0));
-            inventory.add_items(48, 1); // Wheat
-            world.write_model(@inventory);
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 48, 1);
         }
         if item_id == 46 { // Oak Tree
-            let mut inventory: Inventory = world.read_model((player, 0));
-            inventory.add_items(44, 1); // Oak log
-            world.write_model(@inventory);
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 44, 1);
         }
 
         if resource.max_harvest == 255 {
@@ -151,15 +144,7 @@ mod actions {
             k += 1;
         };
 
-        let mut hotbar: Inventory = world.read_model((player, 0));
-        let mut inventory: Inventory = world.read_model((player, 1));
-        let qty_left = hotbar.add_items(wanteditem, 1);
-        if qty_left == 0 {
-            world.write_model(@hotbar);
-        } else {
-            inventory.add_items(wanteditem, 1);
-            world.write_model(@inventory);
-        }
+        InventoryTrait::add_to_player_inventories(ref world, player.into(), wanteditem, 1);
 
         world.write_model(@craftinventory);
     }
@@ -185,15 +170,8 @@ mod actions {
             world.write_model(@resource);
 
             let mut hotbar: Inventory = world.read_model((player, 0));
-            let mut inventory: Inventory = world.read_model((player, 1));
             if hotbar.get_hotbar_selected_item_type() == 33 {
-                let qty_left = hotbar.add_items(item, 1);
-                if qty_left == 0 {
-                    world.write_model(@hotbar);
-                    return;
-                }
-                inventory.add_items(item, 1);
-                world.write_model(@inventory);
+                InventoryTrait::add_to_player_inventories(ref world, player.into(), item, 1);
             }
         }
     }

@@ -1,3 +1,4 @@
+use dojo::{world::WorldStorage,model::ModelStorage};
 use starknet::ContractAddress;
 use craft_island_pocket::helpers::math::{fast_power_2, fast_power_2_u256};
 use core::traits::BitAnd;
@@ -361,6 +362,20 @@ pub impl InventoryImpl of InventoryTrait {
             return true;
         }
         return false;
+    }
+
+    fn add_to_player_inventories(ref world: WorldStorage, player: felt252, item: u16, quantity: u32) {
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let mut inventory: Inventory = world.read_model((player, 1));
+        let mut qty_left = hotbar.add_items(item, quantity);
+        if qty_left == 0 {
+            world.write_model(@hotbar);
+        } else {
+            qty_left = inventory.add_items(item, qty_left);
+            world.write_model(@inventory);
+        }
+        //TODO: add a bag object that contains an inventory to store this excess and place it in the world
+        assert!(qty_left == 0, "Not enough space in inventories");
     }
 }
 

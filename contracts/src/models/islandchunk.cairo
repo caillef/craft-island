@@ -60,9 +60,7 @@ pub fn remove_block(
         return false;
     }
 
-    let mut inventory: Inventory = world.read_model((player, 0));
-    inventory.add_items(block_id.try_into().unwrap(), 1);
-    world.write_model(@inventory);
+    InventoryTrait::add_to_player_inventories(ref world, player.into(), block_id, 1);
     world.write_model(@chunk);
     true
 }

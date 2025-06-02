@@ -8,10 +8,7 @@ trait IAdmin<T> {
 mod admin {
     use super::IAdmin;
     use starknet::{get_caller_address};
-    use craft_island_pocket::models::inventory::{
-        Inventory, InventoryTrait
-    };
-    use dojo::model::{ModelStorage};
+    use craft_island_pocket::models::inventory::InventoryTrait;
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
@@ -22,9 +19,7 @@ mod admin {
         fn give_self(ref self: ContractState, item: u16, qty: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            let mut inventory: Inventory = world.read_model((player, 1));
-            inventory.add_items(item, qty);
-            world.write_model(@inventory);
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item, qty);
         }
     }
 }
