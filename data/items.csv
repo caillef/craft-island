@@ -2,7 +2,6 @@ Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft
 1,1,Grass,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_1.items_icons_ItemIcon_1',
 2,2,Dirt,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_2.items_icons_ItemIcon_2',
 3,3,Stone,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_3.items_icons_ItemIcon_3',
-31,31,Oak Tree,object,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_31.items_icons_ItemIcon_31',
 32,32,Wooden Stick,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_32.items_icons_ItemIcon_32',
 33,33,Rock,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_33.items_icons_ItemIcon_33',
 34,34,Stone Axe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_34.items_icons_ItemIcon_34',

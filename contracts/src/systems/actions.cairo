@@ -16,7 +16,10 @@ mod actions {
     use super::{IActions};
     use starknet::{get_caller_address};
     use craft_island_pocket::models::common::{
-        GatherableResource, PlayerData
+        PlayerData
+    };
+    use craft_island_pocket::models::gatherableresource::{
+        GatherableResource
     };
     use craft_island_pocket::models::inventory::{
         Inventory, InventoryTrait
@@ -76,7 +79,12 @@ mod actions {
         assert!(resource.resource_id > 0 && !resource.destroyed, "Error: Resource does not exists");
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         println!("next harvest {}, timestamp {}", resource.next_harvest_at, timestamp);
-        assert!(resource.next_harvest_at <= timestamp, "Error: Can\'t harvest now");
+        assert!(resource.next_harvest_at <= timestamp, "Error: Can't harvest now");
+        let mut inventory: Inventory = world.read_model((player, 0));
+        let tool: u16 = inventory.get_hotbar_selected_item_type();
+        if resource.resource_id == 46 { // sapling
+            assert!(tool == 35, "Error: Need an axe");
+        }
         println!("Harvested {}", resource.resource_id);
         resource.harvested_at = timestamp;
         resource.remained_harvest -= 1;
@@ -85,12 +93,21 @@ mod actions {
         if item_id == 49 { // Boulder
             item_id = 33; // Rock
         }
-        if item_id == 46 { // Oak Tree
-            item_id = 44; // Oak log
-        }
+
         let mut inventory: Inventory = world.read_model((player, 0));
         inventory.add_items(item_id, 1);
         world.write_model(@inventory);
+
+        if item_id == 47 { // Wheat seed
+            let mut inventory: Inventory = world.read_model((player, 0));
+            inventory.add_items(48, 1); // Wheat
+            world.write_model(@inventory);
+        }
+        if item_id == 46 { // Oak Tree
+            let mut inventory: Inventory = world.read_model((player, 0));
+            inventory.add_items(44, 1); // Oak log
+            world.write_model(@inventory);
+        }
 
         if resource.max_harvest == 255 {
             return;

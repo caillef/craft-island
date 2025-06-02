@@ -11,17 +11,6 @@
     "name": "Stone",
     "type": "block"
   },
-  "31": {
-    "name": "Oak Tree",
-    "type": "object",
-    "object": {
-      "growth": 10,
-      "harvest": {
-        "32": [1, 3],
-        "44": [3, 5]
-      }
-    }
-  },
   "32": {
     "name": "Wooden Stick",
     "type": "item",

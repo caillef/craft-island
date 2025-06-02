@@ -24,23 +24,3 @@ pub struct PlayerStats {
     pub lumberjack_xp: u32,
     pub farmer_xp: u32,
 }
-
-#[derive(Drop, Serde)]
-#[dojo::model]
-pub struct GatherableResource {
-    #[key]
-    pub island_owner: felt252,
-    #[key]
-    pub island_id: u16,
-    #[key]
-    pub chunk_id: u128,
-    #[key]
-    pub position: u8,
-    pub resource_id: u16,
-    pub planted_at: u64, // timestamp
-    pub next_harvest_at: u64, // timestamp
-    pub harvested_at: u64, // timestamp
-    pub max_harvest: u8, // if 0, destroyed when harvested, 255 if unlimited
-    pub remained_harvest: u8,
-    pub destroyed: bool,
-}

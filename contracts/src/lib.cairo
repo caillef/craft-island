@@ -15,4 +15,5 @@ pub mod models {
     pub mod inventory;
     pub mod islandchunk;
     pub mod worldstructure;
+    pub mod gatherableresource;
 }

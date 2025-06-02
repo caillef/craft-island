@@ -181,22 +181,21 @@ void ADojoHelpers::ExecuteFromOutside(const FControllerAccount& account, const F
 
 void ADojoHelpers::FetchExistingModels()
 {
-    Async(EAsyncExecution::Thread, [this]()
-        {
-            ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, 1000, nullptr);
-            if (resEntities.tag == ErrPageEntity) {
-                UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
-                resEntities.err.message);
-                return;
-            }
-            CArrayEntity *entities = &resEntities.ok.items;
-            for (int i = 0; i < entities->data_len; i++) {
-                CArrayStruct* models = &entities->data[i].models;
-                this->ParseModelsAndSend(models);
-            }
-            FDojoModule::CArrayFree(entities->data, entities->data_len);
-        });
-    }
+    Async(EAsyncExecution::Thread, [this]() {
+        ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, 1000, nullptr);
+        if (resEntities.tag == ErrPageEntity) {
+            UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
+                   resEntities.err.message);
+            return;
+        }        
+        CArrayEntity *entities = &resEntities.ok.items;
+        for (int i = 0; i < entities->data_len; i++) {
+            CArrayStruct* models = &entities->data[i].models;
+            this->ParseModelsAndSend(models);
+        }
+        FDojoModule::CArrayFree(entities->data, entities->data_len);
+    });
+}
 
 void ADojoHelpers::SubscribeOnDojoModelUpdate()
 {
