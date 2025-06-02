@@ -573,9 +573,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: ('Not enough space in inventory',))]
     fn test_add_items_insufficient_space() {
         let mut inventory = InventoryTrait::default(1);
-        inventory.add_items(1, 300);
+        let remaining = inventory.add_items(1, 300);
+        assert_eq!(remaining, 45);
     }
 }

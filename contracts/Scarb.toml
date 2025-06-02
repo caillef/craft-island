@@ -1,5 +1,4 @@
 [package]
-#cairo-version = "=2.9.2"
 name = "craft_island_pocket"
 version = "0.1.0"
 edition = "2024_07"
