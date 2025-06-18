@@ -19,7 +19,7 @@ mod actions {
         PlayerData
     };
     use craft_island_pocket::models::gatherableresource::{
-        GatherableResource
+        GatherableResource, GatherableResourceImpl
     };
     use craft_island_pocket::models::inventory::{
         Inventory, InventoryTrait
@@ -57,13 +57,9 @@ mod actions {
 
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         resource.planted_at = timestamp;
-        if item_id == 32 || item_id == 33 {
-            resource.next_harvest_at = 0; // instant
-        } else {
-            resource.next_harvest_at = timestamp + 10;
-        }
+        resource.next_harvest_at = GatherableResourceImpl::calculate_next_harvest_time(item_id, timestamp);
         resource.harvested_at = 0;
-        resource.max_harvest = 1;
+        resource.max_harvest = GatherableResourceImpl::get_max_harvest(item_id);
         resource.remained_harvest = resource.max_harvest;
         resource.destroyed = false;
         world.write_model(@resource);

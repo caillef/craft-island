@@ -23,18 +23,21 @@ pub struct GatherableResource {
 #[generate_trait]
 pub impl GatherableResourceImpl of GatherableResourceTrait {
     fn new(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16) -> GatherableResource {
-        let mut max_harvest: u8 = 1;
-        if resource_id == 49 {
-            max_harvest = 255;
-        }
-        let remained_harvest: u8 = max_harvest;
+        Self::create_resource(owner, island_id, chunk_id, position, resource_id, false)
+    }
 
+    fn new_ready(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16) -> GatherableResource {
+        Self::create_resource(owner, island_id, chunk_id, position, resource_id, true)
+    }
+
+    fn create_resource(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16, ready: bool) -> GatherableResource {
+        let max_harvest = Self::get_max_harvest(resource_id);
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
-        let planted_at = timestamp;
-        let mut next_harvest_at = timestamp + 10;
-        if resource_id == 32 || resource_id == 33 { // wooden sticks or rock
-            next_harvest_at = 0; // instant
-        }
+        let next_harvest_at = if ready {
+            timestamp + 1
+        } else {
+            Self::calculate_next_harvest_time(resource_id, timestamp)
+        };
 
         GatherableResource {
             island_owner: owner,
@@ -42,40 +45,28 @@ pub impl GatherableResourceImpl of GatherableResourceTrait {
             chunk_id: chunk_id,
             position: position,
             resource_id: resource_id,
-            planted_at: planted_at,
+            planted_at: timestamp,
             next_harvest_at: next_harvest_at,
             harvested_at: 0,
             max_harvest: max_harvest,
-            remained_harvest: remained_harvest,
+            remained_harvest: max_harvest,
             destroyed: false,
         }
     }
 
-    fn new_ready(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16) -> GatherableResource {
-        let mut max_harvest: u8 = 1;
+    fn get_max_harvest(resource_id: u16) -> u8 {
         if resource_id == 49 {
-            max_harvest = 255;
+            255
+        } else {
+            1
         }
-        let remained_harvest: u8 = max_harvest;
-        let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
-        let planted_at = timestamp;
-        let mut next_harvest_at = timestamp + 10;
-        if resource_id == 32 || resource_id == 33 { // wooden sticks or rock
-            next_harvest_at = 0; // instant
-        }
+    }
 
-        GatherableResource {
-            island_owner: owner,
-            island_id: island_id,
-            chunk_id: chunk_id,
-            position: position,
-            resource_id: resource_id,
-            planted_at: planted_at,
-            next_harvest_at: planted_at + 1,
-            harvested_at: 0,
-            max_harvest: max_harvest,
-            remained_harvest: remained_harvest,
-            destroyed: false,
+    fn calculate_next_harvest_time(resource_id: u16, timestamp: u64) -> u64 {
+        if resource_id == 32 || resource_id == 33 { // wooden sticks or rock
+            0 // instant
+        } else {
+            timestamp + 10
         }
     }
 }
