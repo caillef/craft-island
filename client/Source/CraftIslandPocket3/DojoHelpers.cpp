@@ -146,13 +146,13 @@ void ADojoHelpers::ExecuteRawDeprecated(const FAccount& account, const FString& 
 {
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
     {
-        std::vector<std::string> felts;
+        TArray<std::string> felts;
         if (strcmp(TCHAR_TO_UTF8(*calldataParameter), "") != 0) {
             TArray<FString> Out;
             calldataParameter.ParseIntoArray(Out,TEXT(","),true);
             for (int i = 0; i < Out.Num(); i++) {
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
-                felts.push_back(felt);
+                felts.Add(felt);
             }
         }
         FDojoModule::ExecuteRaw(account.account, TCHAR_TO_UTF8(*to), TCHAR_TO_UTF8(*selector), \
@@ -165,13 +165,13 @@ void ADojoHelpers::ExecuteFromOutside(const FControllerAccount& account, const F
 {
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
     {
-        std::vector<std::string> felts;
+        TArray<std::string> felts;
         if (strcmp(TCHAR_TO_UTF8(*calldataParameter), "") != 0) {
             TArray<FString> Out;
             calldataParameter.ParseIntoArray(Out,TEXT(","),true);
             for (int i = 0; i < Out.Num(); i++) {
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
-                felts.push_back(felt);
+                felts.Add(felt);
             }
         }
         FDojoModule::ExecuteFromOutside(account.account, TCHAR_TO_UTF8(*to), \

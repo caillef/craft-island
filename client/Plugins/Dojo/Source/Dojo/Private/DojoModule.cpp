@@ -78,7 +78,7 @@ ToriiClient *FDojoModule::CreateToriiClient(const char *torii_url, const char *w
     FieldElement world;
     FDojoModule::string_to_bytes(world_str, world.data, 32);
 
-    ResultToriiClient resClient = client_new(torii_url, "/ip4/127.0.0.1/tcp/9090", world);
+    ResultToriiClient resClient = client_new(torii_url, world);
     if (resClient.tag == ErrToriiClient)
     {
         UE_LOG(LogTemp, Log, TEXT("Failed to create client: %hs"), resClient.err.message);
@@ -197,13 +197,13 @@ Account *FDojoModule::CreateBurner(const char* rpc_url, Account *master_account)
     return account;
 }
 
-void FDojoModule::ExecuteRaw(Account *account, const char *to, const char *selector, const std::vector<std::string>& feltsStr)
+void FDojoModule::ExecuteRaw(Account *account, const char *to, const char *selector, const TArray<std::string>& feltsStr)
 {
     struct FieldElement actions;
     FDojoModule::string_to_bytes(to, actions.data, 32);
 
     struct FieldElement *felts = nullptr;
-    int nbFelts = feltsStr.size();
+    int nbFelts = feltsStr.Num();
 
     if (nbFelts > 0) {
         felts = reinterpret_cast<struct FieldElement *>(malloc(sizeof(*felts) * nbFelts));
@@ -229,13 +229,13 @@ void FDojoModule::ExecuteRaw(Account *account, const char *to, const char *selec
     }
 }
 
-void FDojoModule::ExecuteFromOutside(ControllerAccount *account, const char *to, const char *selector, const std::vector<std::string>& feltsStr)
+void FDojoModule::ExecuteFromOutside(ControllerAccount *account, const char *to, const char *selector, const TArray<std::string>& feltsStr)
 {
     struct FieldElement actions;
     FDojoModule::string_to_bytes(to, actions.data, 32);
 
     struct FieldElement *felts = nullptr;
-    int nbFelts = feltsStr.size();
+    int nbFelts = feltsStr.Num();
 
     if (nbFelts > 0) {
         felts = reinterpret_cast<struct FieldElement *>(malloc(sizeof(*felts) * nbFelts));

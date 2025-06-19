@@ -32,9 +32,9 @@ public:
 
     static struct ResultSubscription OnEntityUpdate(ToriiClient *client, const char *query_str, void *user_data, EntityUpdateCallback callback);
     
-    static void ExecuteRaw(Account *account, const char *to, const char *selector, const std::vector<std::string> &feltsStr);
+    static void ExecuteRaw(Account *account, const char *to, const char *selector, const TArray<std::string> &feltsStr);
 
-    static void ExecuteFromOutside(ControllerAccount *account, const char *to, const char *selector, const std::vector<std::string> &feltsStr);
+    static void ExecuteFromOutside(ControllerAccount *account, const char *to, const char *selector, const TArray<std::string> &feltsStr);
 
     static Account *CreateAccount(const char *rpc_url, const char *address, const char *private_key);
     

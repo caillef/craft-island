@@ -97,7 +97,7 @@ void AGeneratedHelpers::ExecuteRaw(const FAccount& account, const FString& to, c
                 felts.push_back(felt);
             }
         }
-        FDojoModule::ExecuteRaw(activeBurner, TCHAR_TO_UTF8(*to), TCHAR_TO_UTF8(*selector), felts);
+//        FDojoModule::ExecuteRaw(activeBurner, TCHAR_TO_UTF8(*to), TCHAR_TO_UTF8(*selector), felts);
     });
 }
 
