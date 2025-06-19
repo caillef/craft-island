@@ -41,7 +41,8 @@ pub struct Inventory {
     pub slots2: felt252,
     pub slots3: felt252,
     pub slots4: felt252,
-    pub hotbar_selected_slot: u8, // used when a slot is selected in the hotbar
+    pub hotbar_selected_slot: u8, // used when a slot is selected in the hotbar,
+    pub readonly: bool, // used for buildings' inventories
 }
 
 #[derive(Copy, Drop)]
@@ -71,6 +72,7 @@ pub impl InventoryImpl of InventoryTrait {
             slots3: 0,
             slots4: 0,
             hotbar_selected_slot: 0,
+            readonly: false,
         }
     }
 
@@ -102,6 +104,7 @@ pub impl InventoryImpl of InventoryTrait {
             slots3: 0,
             slots4: 0,
             hotbar_selected_slot: 0,
+            readonly: false,
         }
     }
 
@@ -132,6 +135,7 @@ pub impl InventoryImpl of InventoryTrait {
 
     fn move_item_between_inventories(ref self: Inventory, from_slot: u8, ref to_inventory: Inventory, to_slot: u8) -> bool {
         assert(from_slot < self.inventory_size && to_slot < to_inventory.inventory_size, 'Invalid slot index');
+        assert(self.readonly == false, 'Read-only inventory');
         let from_data = self.get_slot_data(from_slot);
         let to_data = to_inventory.get_slot_data(to_slot);
 
@@ -160,6 +164,7 @@ pub impl InventoryImpl of InventoryTrait {
     }
 
     fn move_item(ref self: Inventory, from_slot: u8, to_slot: u8) -> bool {
+        assert(self.readonly == false, 'Read-only inventory');
         assert(from_slot < self.inventory_size && to_slot < self.inventory_size, 'Invalid slot index');
         let from_data = self.get_slot_data(from_slot);
         let to_data = self.get_slot_data(to_slot);

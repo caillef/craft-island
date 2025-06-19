@@ -54,6 +54,7 @@ pub impl WorldStructureImpl of WorldStructureTrait {
 
         let mut building_inventory: Inventory = InventoryTrait::new(player_data.last_inventory_created_id, 4, 2, player);
         building_inventory.slots1 = 2322993199975424; // First slot is 3 stick, second slot 3 stone 00001000010000001100000000000000100000000000110000000000
+        building_inventory.readonly = true;
         world.write_model(@building_inventory);
 
         structure.completed = false;
