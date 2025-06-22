@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x6c78b5d0e1c9bc7a287e31cccbecf316e125f56aa0b606801044d91139e882",
-      "class_hash": "0x1a1adc298e34052756ae62e29677fca5ad5bd48e4e950c7fc5ed01f5789faab",
+      "class_hash": "0x79a0b4aa9b07b7f7e67c0770ed7fec3175d687b5157e5343dae3f3e896f0bba",
       "abi": [
         {
           "type": "impl",
@@ -1901,6 +1901,12 @@
       "class_hash": "0x742f008ba9c2e563f1186c07a5089c9652a6c2dae6935a49223755cef744049",
       "tag": "craft_island_pocket-IslandChunk",
       "selector": "0x33bcf22997bb979a42ca224a7d3738a796f91d705065fbd52011d91a9ed402"
+    },
+    {
+      "members": [],
+      "class_hash": "0x71296f8369acc7f008ce5fd3c4c3d8894addaab5289b388d961c015eecc94d0",
+      "tag": "craft_island_pocket-IslandInfo",
+      "selector": "0x67e103009e1d694b274874d7eb0dc7a4406e3b5224ebbb50d9e908830bdf41e"
     },
     {
       "members": [],
