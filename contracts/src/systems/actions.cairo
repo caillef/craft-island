@@ -22,7 +22,7 @@ mod actions {
         PlayerData
     };
     use craft_island_pocket::models::gatherableresource::{
-        GatherableResource, GatherableResourceImpl
+        GatherableResource, GatherableResourceImpl, GatherableResourceTrait
     };
     use craft_island_pocket::models::inventory::{
         Inventory, InventoryTrait
@@ -259,24 +259,28 @@ mod actions {
             let mut world = get_world(ref self);
             let player = get_caller_address();
 
+            assert!(island_id > 1, "Can't explore main island");
+
             let shift: u128 = get_position_id(x, y, z);
 
             world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008000000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008000000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008000000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000008010000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008010000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008010000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008010000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000008020000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008020000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008020000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008020000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000008030000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008030000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008030000000000, 0, 1229782938247303441));
-            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000000000000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000000000000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000000000000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000000010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000000010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000000010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000000010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000000020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000000020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000000020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000000020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000000030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000000030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000000030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000000030000000000, 0, 1229782938247303441));
+
+            spawn_random_resources(ref world, player.into(), island_id, shift);
         }
 
         fn visit(ref self: ContractState, space_id: u16) {
@@ -313,7 +317,66 @@ mod actions {
             world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080200000008030000000800, 0, 1229782938247303441));
             world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080300000008030000000800, 0, 1229782938247303441));
 
+            // Generate 10 random gatherable resources
+            spawn_random_resources(ref world, player.into(), island_id, 0x000000080000000008000000000800);
+
             self.visit(island_id);
         }
+    }
+
+    fn spawn_random_resources(ref world: dojo::world::storage::WorldStorage, player: felt252, island_id: u16, shift: u128) {
+        let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
+
+        // Available resource types: wooden sticks (32), rocks (33), trees (46), wheat (47), boulders (49)
+        let resource_types: Array<u16> = array![32, 33, 46, 47, 49];
+
+        // Generate chunk IDs using shift like in generate_island_part
+        let chunk_ids: Array<u128> = array![
+            shift,
+            shift + 0x000000000100000000000000000000,
+            shift + 0x000000000200000000000000000000,
+            shift + 0x000000000300000000000000000000,
+            shift + 0x000000000000000000010000000000,
+            shift + 0x000000000100000000010000000000,
+            shift + 0x000000000200000000010000000000,
+            shift + 0x000000000300000000010000000000,
+            shift + 0x000000000000000000020000000000,
+            shift + 0x000000000100000000020000000000,
+            shift + 0x000000000200000000020000000000,
+            shift + 0x000000000300000000020000000000,
+            shift + 0x000000000000000000030000000000,
+            shift + 0x000000000100000000030000000000,
+            shift + 0x000000000200000000030000000000,
+            shift + 0x000000000300000000030000000000
+        ];
+
+        let mut i: u32 = 0;
+        loop {
+            if i >= 10 {
+                break;
+            }
+
+            // Simple pseudo-random generation using timestamp + iteration
+            let seed = timestamp + i.into();
+            let resource_index = (seed % resource_types.len().into()).try_into().unwrap();
+            let chunk_index = ((seed * 7) % chunk_ids.len().into()).try_into().unwrap();
+            let position = ((seed * 13) % 16 + 16).try_into().unwrap(); // 16 positions in base layer (16-31)
+
+            let resource_id = *resource_types.at(resource_index);
+            let chunk_id = *chunk_ids.at(chunk_index);
+
+            // Check if position is already occupied
+            let existing_resource: GatherableResource = world.read_model((player, island_id, chunk_id, position));
+            if existing_resource.resource_id == 0 {
+                // Spawn ready resources for trees and wheat, normal for others
+                if resource_id == 46 || resource_id == 47 {
+                    world.write_model(@GatherableResourceTrait::new_ready(player, island_id, chunk_id, position, resource_id));
+                } else {
+                    world.write_model(@GatherableResourceTrait::new(player, island_id, chunk_id, position, resource_id));
+                }
+            }
+
+            i += 1;
+        };
     }
 }
