@@ -38,7 +38,7 @@ pub impl WorldStructureImpl of WorldStructureTrait {
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut structure: WorldStructure = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+        let mut structure: WorldStructure = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(structure.structure_type == 0, "Error: World Structure exists");
         structure.structure_type = 30; // House
 
@@ -71,7 +71,7 @@ pub impl WorldStructureImpl of WorldStructureTrait {
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut structure: WorldStructure = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+        let mut structure: WorldStructure = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(structure.structure_type > 0, "Error: World Structure does not exist");
 
         let mut build_inventory: Inventory = world.read_model((player, structure.build_inventory_id));

@@ -7,8 +7,8 @@ pub struct PlayerData {
     pub player: ContractAddress,
     pub last_inventory_created_id: u16,
     pub last_space_created_id: u16,
-    pub current_island_owner: felt252,
-    pub current_island_id: u16,
+    pub current_space_owner: felt252,
+    pub current_space_id: u16,
 }
 
 // Not Used Yet

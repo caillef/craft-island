@@ -45,8 +45,8 @@ fn init_player(ref world: WorldStorage, player: ContractAddress) {
         player: player,
         last_inventory_created_id: 2, // hotbar, inventory, craft
         last_space_created_id: 1, // own island
-        current_island_owner: player.into(),
-        current_island_id: 1,
+        current_space_owner: player.into(),
+        current_space_id: 1,
     };
     world.write_model(@player_data);
 }

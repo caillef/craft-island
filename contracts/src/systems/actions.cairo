@@ -8,6 +8,9 @@ trait IActions<T> {
     fn select_hotbar_slot(ref self: T, slot: u8);
     fn craft(ref self: T, item: u32, x: u64, y:u64, z: u64);
     fn inventory_move_item(ref self: T, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8);
+    fn generate_island_part(ref self: T, x: u64, y: u64, z: u64, island_id: u16);
+    fn visit(ref self: T, space_id: u16);
+    fn visit_new_island(ref self: T);
 }
 
 // dojo decorator
@@ -25,7 +28,7 @@ mod actions {
         Inventory, InventoryTrait
     };
     use craft_island_pocket::models::islandchunk::{
-        place_block, remove_block, update_block
+        place_block, remove_block, update_block, IslandChunkTrait
     };
     use craft_island_pocket::models::worldstructure::{WorldStructureTrait};
     use craft_island_pocket::helpers::{
@@ -47,7 +50,7 @@ mod actions {
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut resource: GatherableResource = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+        let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
         resource.resource_id = item_id;
 
@@ -71,7 +74,7 @@ mod actions {
         let player_data: PlayerData = world.read_model((player));
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let mut resource: GatherableResource = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+        let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id > 0 && !resource.destroyed, "Error: Resource does not exists");
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         println!("next harvest {}, timestamp {}", resource.next_harvest_at, timestamp);
@@ -159,7 +162,7 @@ mod actions {
             let player_data: PlayerData = world.read_model((player));
             let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
             let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-            let mut resource: GatherableResource = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id, position));
+            let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
             assert!(resource.resource_id == 33 && !resource.destroyed, "Error: No rock");
             resource.destroyed = true;
             resource.resource_id = 0;
@@ -250,6 +253,67 @@ mod actions {
                 world.write_model(@to_inventory);
             }
             world.write_model(@inventory);
+        }
+
+        fn generate_island_part(ref self: ContractState, x: u64, y: u64, z: u64, island_id: u16) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+
+            let shift: u128 = get_position_id(x, y, z);
+
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008000000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008000000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008000000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000008010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008010000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000008020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008020000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000000000008030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000100000008030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000200000008030000000000, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, shift + 0x000000000300000008030000000000, 0, 1229782938247303441));
+        }
+
+        fn visit(ref self: ContractState, space_id: u16) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+            let mut player_data: PlayerData = world.read_model((player));
+            player_data.current_space_id  = space_id;
+            world.write_model(@player_data);
+        }
+
+        fn visit_new_island(ref self: ContractState) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+
+            let mut player_data: PlayerData = world.read_model((player));
+            let island_id = player_data.last_space_created_id + 1;
+            player_data.last_space_created_id = island_id;
+            world.write_model(@player_data);
+
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080000000008000000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080100000008000000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080200000008000000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080300000008000000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080000000008010000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080100000008010000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080200000008010000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080300000008010000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080000000008020000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080100000008020000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080200000008020000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080300000008020000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080000000008030000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080100000008030000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080200000008030000000800, 0, 1229782938247303441));
+            world.write_model(@IslandChunkTrait::new(player.into(), island_id, 0x000000080300000008030000000800, 0, 1229782938247303441));
+
+            self.visit(island_id);
         }
     }
 }

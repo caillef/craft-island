@@ -36,7 +36,7 @@ pub fn place_block(
     let player = get_caller_address();
     let player_data: PlayerData = world.read_model((player));
     let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-    let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
+    let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
 
     let mut inventory: Inventory = world.read_model((player, 0));
     inventory.remove_items(block_id.try_into().unwrap(), 1);
@@ -54,7 +54,7 @@ pub fn remove_block(
     let player = get_caller_address();
     let player_data: PlayerData = world.read_model((player));
     let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-    let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
+    let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
     let mut block_id = chunk.remove_block(x, y, z);
     if block_id == 0 {
         return false;
@@ -75,7 +75,7 @@ pub fn update_block(
     let player = get_caller_address();
     let player_data: PlayerData = world.read_model((player));
     let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-    let mut chunk: IslandChunk = world.read_model((player_data.current_island_owner, player_data.current_island_id, chunk_id));
+    let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
     chunk.update_block(x, y, z - 1, tool);
     world.write_model(@chunk);
 }

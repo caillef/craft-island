@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x67432678895fabcad45a9be8018781e1d1f5ad92850adc253432fa0c64b4fa6",
-      "class_hash": "0x472ecc8b1abe8f16728bc609727e35f2f185b8f1d4dcabfa1087006d30739e",
+      "address": "0x6c78b5d0e1c9bc7a287e31cccbecf316e125f56aa0b606801044d91139e882",
+      "class_hash": "0x569704b0c9755da67a00f5bbd62d519f0df90d35fc326e58b5613a3676b0a95",
       "abi": [
         {
           "type": "impl",
@@ -1500,6 +1500,49 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "generate_island_part",
+              "inputs": [
+                {
+                  "name": "x",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "y",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "z",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "island_id",
+                  "type": "core::integer::u16"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "visit",
+              "inputs": [
+                {
+                  "name": "space_id",
+                  "type": "core::integer::u16"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "visit_new_island",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1628,6 +1671,9 @@
         "select_hotbar_slot",
         "craft",
         "inventory_move_item",
+        "generate_island_part",
+        "visit",
+        "visit_new_island",
         "upgrade"
       ]
     },
@@ -1858,7 +1904,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x7a250beb9416efe2bfff0cf116a22772ffa2d7514f11dd797dd6c0b3b3469ca",
+      "class_hash": "0x669e43fe8b05151a97941e231e17205f160785641ae0518e7987fc4e4f1b66f",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
