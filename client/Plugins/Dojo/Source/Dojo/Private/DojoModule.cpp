@@ -103,7 +103,8 @@ ResultPageEntity FDojoModule::GetEntities(ToriiClient *client, int limit, const 
     if (cursor) {
         query.pagination.cursor.some = cursor;
     }
-    query.pagination.limit = limit;
+    query.pagination.limit.tag = Someu32;
+    query.pagination.limit.some = limit;
     query.historical = true;
     return client_entities(client, query);
 }

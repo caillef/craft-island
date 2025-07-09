@@ -54,8 +54,8 @@ typedef enum OrderDirection {
 } OrderDirection;
 
 typedef enum PaginationDirection {
-  Forward,
-  Backward,
+  PDirForward,
+  PDirBackward,
 } PaginationDirection;
 
 typedef enum PatternMatching {

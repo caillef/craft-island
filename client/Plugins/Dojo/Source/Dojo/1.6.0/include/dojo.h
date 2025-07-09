@@ -13,19 +13,17 @@ struct ControllerAccount;
 struct Call;
 struct Controller;
 struct Entity;
-struct Query;
-struct CHashItemFieldElementModelMetadata;
+struct OrderBy;
+struct COptionFieldElement;
+struct Model;
 struct Subscription;
-struct EntityKeysClause;
 struct Struct;
 struct Token;
-struct U256;
 struct TokenBalance;
+struct TokenCollection;
 struct Provider;
 struct Account;
 struct Ty;
-struct COptionFieldElement;
-struct OrderBy;
 struct Member;
 struct EnumOption;
 
@@ -54,6 +52,11 @@ typedef enum OrderDirection {
   Asc,
   Desc,
 } OrderDirection;
+
+typedef enum PaginationDirection {
+  PForward,
+  PBackward,
+} PaginationDirection;
 
 typedef enum PatternMatching {
   FixedLen = 0,
@@ -136,98 +139,336 @@ typedef struct ResultFieldElement {
   };
 } ResultFieldElement;
 
-typedef struct CArrayu8 {
-  uint8_t *data;
+typedef struct CArrayFieldElement {
+  struct FieldElement *data;
   uintptr_t data_len;
-} CArrayu8;
+} CArrayFieldElement;
 
-typedef enum ResultCArrayu8_Tag {
-  OkCArrayu8,
-  ErrCArrayu8,
-} ResultCArrayu8_Tag;
+typedef struct Message {
+  const char *message;
+  struct CArrayFieldElement signature;
+} Message;
 
-typedef struct ResultCArrayu8 {
-  ResultCArrayu8_Tag tag;
+typedef enum ResultCArrayFieldElement_Tag {
+  OkCArrayFieldElement,
+  ErrCArrayFieldElement,
+} ResultCArrayFieldElement_Tag;
+
+typedef struct ResultCArrayFieldElement {
+  ResultCArrayFieldElement_Tag tag;
   union {
     struct {
-      struct CArrayu8 ok;
+      struct CArrayFieldElement ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultCArrayu8;
+} ResultCArrayFieldElement;
 
 typedef struct CArrayController {
   struct Controller *data;
   uintptr_t data_len;
 } CArrayController;
 
-typedef enum ResultCArrayController_Tag {
-  OkCArrayController,
-  ErrCArrayController,
-} ResultCArrayController_Tag;
+typedef enum COptionc_char_Tag {
+  Somec_char,
+  Nonec_char,
+} COptionc_char_Tag;
 
-typedef struct ResultCArrayController {
-  ResultCArrayController_Tag tag;
+typedef struct COptionc_char {
+  COptionc_char_Tag tag;
   union {
     struct {
-      struct CArrayController ok;
+      const char *some;
+    };
+  };
+} COptionc_char;
+
+typedef struct PageController {
+  struct CArrayController items;
+  struct COptionc_char next_cursor;
+} PageController;
+
+typedef enum ResultPageController_Tag {
+  OkPageController,
+  ErrPageController,
+} ResultPageController_Tag;
+
+typedef struct ResultPageController {
+  ResultPageController_Tag tag;
+  union {
+    struct {
+      struct PageController ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultCArrayController;
+} ResultPageController;
+
+typedef enum COptionu32_Tag {
+  Someu32,
+  Noneu32,
+} COptionu32_Tag;
+
+typedef struct COptionu32 {
+  COptionu32_Tag tag;
+  union {
+    struct {
+      uint32_t some;
+    };
+  };
+} COptionu32;
 
 typedef struct CArrayEntity {
   struct Entity *data;
   uintptr_t data_len;
 } CArrayEntity;
 
-typedef enum ResultCArrayEntity_Tag {
-  OkCArrayEntity,
-  ErrCArrayEntity,
-} ResultCArrayEntity_Tag;
+typedef struct PageEntity {
+  struct CArrayEntity items;
+  struct COptionc_char next_cursor;
+} PageEntity;
 
-typedef struct ResultCArrayEntity {
-  ResultCArrayEntity_Tag tag;
+typedef enum ResultPageEntity_Tag {
+  OkPageEntity,
+  ErrPageEntity,
+} ResultPageEntity_Tag;
+
+typedef struct ResultPageEntity {
+  ResultPageEntity_Tag tag;
   union {
     struct {
-      struct CArrayEntity ok;
+      struct PageEntity ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultCArrayEntity;
+} ResultPageEntity;
 
-typedef struct CArrayCHashItemFieldElementModelMetadata {
-  struct CHashItemFieldElementModelMetadata *data;
+typedef struct CArrayOrderBy {
+  struct OrderBy *data;
   uintptr_t data_len;
-} CArrayCHashItemFieldElementModelMetadata;
+} CArrayOrderBy;
 
-typedef struct WorldMetadata {
-  struct FieldElement world_address;
-  struct CArrayCHashItemFieldElementModelMetadata models;
-} WorldMetadata;
+typedef struct Pagination {
+  struct COptionc_char cursor;
+  struct COptionu32 limit;
+  enum PaginationDirection direction;
+  struct CArrayOrderBy order_by;
+} Pagination;
 
-typedef enum ResultWorldMetadata_Tag {
-  OkWorldMetadata,
-  ErrWorldMetadata,
-} ResultWorldMetadata_Tag;
+typedef struct CArrayCOptionFieldElement {
+  struct COptionFieldElement *data;
+  uintptr_t data_len;
+} CArrayCOptionFieldElement;
 
-typedef struct ResultWorldMetadata {
-  ResultWorldMetadata_Tag tag;
+typedef struct CArrayc_char {
+  const char **data;
+  uintptr_t data_len;
+} CArrayc_char;
+
+typedef struct KeysClause {
+  struct CArrayCOptionFieldElement keys;
+  enum PatternMatching pattern_matching;
+  struct CArrayc_char models;
+} KeysClause;
+
+typedef struct U256 {
+  uint8_t data[32];
+} U256;
+
+typedef enum Primitive_Tag {
+  I8,
+  I16,
+  I32,
+  I64,
+  I128,
+  U8,
+  U16,
+  U32,
+  U64,
+  U128,
+  U256_,
+  Bool,
+  Felt252,
+  ClassHash,
+  ContractAddress,
+  EthAddress,
+} Primitive_Tag;
+
+typedef struct Primitive {
+  Primitive_Tag tag;
   union {
     struct {
-      struct WorldMetadata ok;
+      int8_t i8;
+    };
+    struct {
+      int16_t i16;
+    };
+    struct {
+      int32_t i32;
+    };
+    struct {
+      int64_t i64;
+    };
+    struct {
+      uint8_t i128[16];
+    };
+    struct {
+      uint8_t u8;
+    };
+    struct {
+      uint16_t u16;
+    };
+    struct {
+      uint32_t u32;
+    };
+    struct {
+      uint64_t u64;
+    };
+    struct {
+      uint8_t u128[16];
+    };
+    struct {
+      struct U256 u256;
+    };
+    struct {
+      bool bool_;
+    };
+    struct {
+      struct FieldElement felt252;
+    };
+    struct {
+      struct FieldElement class_hash;
+    };
+    struct {
+      struct FieldElement contract_address;
+    };
+    struct {
+      struct FieldElement eth_address;
+    };
+  };
+} Primitive;
+
+typedef struct CArrayMemberValue {
+  struct MemberValue *data;
+  uintptr_t data_len;
+} CArrayMemberValue;
+
+typedef enum MemberValue_Tag {
+  PrimitiveValue,
+  String,
+  List,
+} MemberValue_Tag;
+
+typedef struct MemberValue {
+  MemberValue_Tag tag;
+  union {
+    struct {
+      struct Primitive primitive_value;
+    };
+    struct {
+      const char *string;
+    };
+    struct {
+      struct CArrayMemberValue list;
+    };
+  };
+} MemberValue;
+
+typedef struct MemberClause {
+  const char *model;
+  const char *member;
+  enum ComparisonOperator operator_;
+  struct MemberValue value;
+} MemberClause;
+
+typedef struct CArrayClause {
+  struct Clause *data;
+  uintptr_t data_len;
+} CArrayClause;
+
+typedef struct CompositeClause {
+  enum LogicalOperator operator_;
+  struct CArrayClause clauses;
+} CompositeClause;
+
+typedef enum Clause_Tag {
+  HashedKeys,
+  Keys,
+  CMember,
+  Composite,
+} Clause_Tag;
+
+typedef struct Clause {
+  Clause_Tag tag;
+  union {
+    struct {
+      struct CArrayFieldElement hashed_keys;
+    };
+    struct {
+      struct KeysClause keys;
+    };
+    struct {
+      struct MemberClause c_member;
+    };
+    struct {
+      struct CompositeClause composite;
+    };
+  };
+} Clause;
+
+typedef enum COptionClause_Tag {
+  SomeClause,
+  NoneClause,
+} COptionClause_Tag;
+
+typedef struct COptionClause {
+  COptionClause_Tag tag;
+  union {
+    struct {
+      struct Clause some;
+    };
+  };
+} COptionClause;
+
+typedef struct Query {
+  struct Pagination pagination;
+  struct COptionClause clause;
+  bool no_hashed_keys;
+  struct CArrayc_char models;
+  bool historical;
+} Query;
+
+typedef struct CArrayModel {
+  struct Model *data;
+  uintptr_t data_len;
+} CArrayModel;
+
+typedef struct World {
+  struct FieldElement world_address;
+  struct CArrayModel models;
+} World;
+
+typedef enum ResultWorld_Tag {
+  OkWorld,
+  ErrWorld,
+} ResultWorld_Tag;
+
+typedef struct ResultWorld {
+  ResultWorld_Tag tag;
+  union {
+    struct {
+      struct World ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultWorldMetadata;
+} ResultWorld;
 
 typedef enum ResultSubscription_Tag {
   OkSubscription,
@@ -251,11 +492,6 @@ typedef struct CArrayStruct {
   uintptr_t data_len;
 } CArrayStruct;
 
-typedef struct CArrayFieldElement {
-  struct FieldElement *data;
-  uintptr_t data_len;
-} CArrayFieldElement;
-
 typedef struct Event {
   struct CArrayFieldElement keys;
   struct CArrayFieldElement data;
@@ -267,26 +503,27 @@ typedef struct CArrayToken {
   uintptr_t data_len;
 } CArrayToken;
 
-typedef enum ResultCArrayToken_Tag {
-  OkCArrayToken,
-  ErrCArrayToken,
-} ResultCArrayToken_Tag;
+typedef struct PageToken {
+  struct CArrayToken items;
+  struct COptionc_char next_cursor;
+} PageToken;
 
-typedef struct ResultCArrayToken {
-  ResultCArrayToken_Tag tag;
+typedef enum ResultPageToken_Tag {
+  OkPageToken,
+  ErrPageToken,
+} ResultPageToken_Tag;
+
+typedef struct ResultPageToken {
+  ResultPageToken_Tag tag;
   union {
     struct {
-      struct CArrayToken ok;
+      struct PageToken ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultCArrayToken;
-
-typedef struct U256 {
-  uint8_t data[32];
-} U256;
+} ResultPageToken;
 
 typedef struct Token {
   struct FieldElement contract_address;
@@ -302,22 +539,54 @@ typedef struct CArrayTokenBalance {
   uintptr_t data_len;
 } CArrayTokenBalance;
 
-typedef enum ResultCArrayTokenBalance_Tag {
-  OkCArrayTokenBalance,
-  ErrCArrayTokenBalance,
-} ResultCArrayTokenBalance_Tag;
+typedef struct PageTokenBalance {
+  struct CArrayTokenBalance items;
+  struct COptionc_char next_cursor;
+} PageTokenBalance;
 
-typedef struct ResultCArrayTokenBalance {
-  ResultCArrayTokenBalance_Tag tag;
+typedef enum ResultPageTokenBalance_Tag {
+  OkPageTokenBalance,
+  ErrPageTokenBalance,
+} ResultPageTokenBalance_Tag;
+
+typedef struct ResultPageTokenBalance {
+  ResultPageTokenBalance_Tag tag;
   union {
     struct {
-      struct CArrayTokenBalance ok;
+      struct PageTokenBalance ok;
     };
     struct {
       struct Error err;
     };
   };
-} ResultCArrayTokenBalance;
+} ResultPageTokenBalance;
+
+typedef struct CArrayTokenCollection {
+  struct TokenCollection *data;
+  uintptr_t data_len;
+} CArrayTokenCollection;
+
+typedef struct PageTokenCollection {
+  struct CArrayTokenCollection items;
+  struct COptionc_char next_cursor;
+} PageTokenCollection;
+
+typedef enum ResultPageTokenCollection_Tag {
+  OkPageTokenCollection,
+  ErrPageTokenCollection,
+} ResultPageTokenCollection_Tag;
+
+typedef struct ResultPageTokenCollection {
+  ResultPageTokenCollection_Tag tag;
+  union {
+    struct {
+      struct PageTokenCollection ok;
+    };
+    struct {
+      struct Error err;
+    };
+  };
+} ResultPageTokenCollection;
 
 typedef struct IndexerUpdate {
   int64_t head;
@@ -332,23 +601,6 @@ typedef struct TokenBalance {
   struct FieldElement contract_address;
   struct U256 token_id;
 } TokenBalance;
-
-typedef enum ResultCArrayFieldElement_Tag {
-  OkCArrayFieldElement,
-  ErrCArrayFieldElement,
-} ResultCArrayFieldElement_Tag;
-
-typedef struct ResultCArrayFieldElement {
-  ResultCArrayFieldElement_Tag tag;
-  union {
-    struct {
-      struct CArrayFieldElement ok;
-    };
-    struct {
-      struct Error err;
-    };
-  };
-} ResultCArrayFieldElement;
 
 typedef enum Resultc_char_Tag {
   Okc_char,
@@ -476,187 +728,24 @@ typedef struct Entity {
   struct CArrayStruct models;
 } Entity;
 
-typedef struct CArrayCOptionFieldElement {
-  struct COptionFieldElement *data;
-  uintptr_t data_len;
-} CArrayCOptionFieldElement;
+typedef struct OrderBy {
+  const char *field;
+  enum OrderDirection direction;
+} OrderBy;
 
-typedef struct CArrayc_char {
-  const char **data;
-  uintptr_t data_len;
-} CArrayc_char;
+typedef enum COptionFieldElement_Tag {
+  SomeFieldElement,
+  NoneFieldElement,
+} COptionFieldElement_Tag;
 
-typedef struct KeysClause {
-  struct CArrayCOptionFieldElement keys;
-  enum PatternMatching pattern_matching;
-  struct CArrayc_char models;
-} KeysClause;
-
-typedef enum Primitive_Tag {
-  I8,
-  I16,
-  I32,
-  I64,
-  I128,
-  U8,
-  U16,
-  U32,
-  U64,
-  U128,
-  U256_,
-  Bool,
-  Felt252,
-  ClassHash,
-  ContractAddress,
-  EthAddress,
-} Primitive_Tag;
-
-typedef struct Primitive {
-  Primitive_Tag tag;
+typedef struct COptionFieldElement {
+  COptionFieldElement_Tag tag;
   union {
     struct {
-      int8_t i8;
-    };
-    struct {
-      int16_t i16;
-    };
-    struct {
-      int32_t i32;
-    };
-    struct {
-      int64_t i64;
-    };
-    struct {
-      uint8_t i128[16];
-    };
-    struct {
-      uint8_t u8;
-    };
-    struct {
-      uint16_t u16;
-    };
-    struct {
-      uint32_t u32;
-    };
-    struct {
-      uint64_t u64;
-    };
-    struct {
-      uint8_t u128[16];
-    };
-    struct {
-      struct U256 u256;
-    };
-    struct {
-      bool bool_;
-    };
-    struct {
-      struct FieldElement felt252;
-    };
-    struct {
-      struct FieldElement class_hash;
-    };
-    struct {
-      struct FieldElement contract_address;
-    };
-    struct {
-      struct FieldElement eth_address;
+      struct FieldElement some;
     };
   };
-} Primitive;
-
-typedef struct CArrayMemberValue {
-  struct MemberValue *data;
-  uintptr_t data_len;
-} CArrayMemberValue;
-
-typedef enum MemberValue_Tag {
-  PrimitiveValue,
-  String,
-  List,
-} MemberValue_Tag;
-
-typedef struct MemberValue {
-  MemberValue_Tag tag;
-  union {
-    struct {
-      struct Primitive primitive_value;
-    };
-    struct {
-      const char *string;
-    };
-    struct {
-      struct CArrayMemberValue list;
-    };
-  };
-} MemberValue;
-
-typedef struct MemberClause {
-  const char *model;
-  const char *member;
-  enum ComparisonOperator operator_;
-  struct MemberValue value;
-} MemberClause;
-
-typedef struct CArrayClause {
-  struct Clause *data;
-  uintptr_t data_len;
-} CArrayClause;
-
-typedef struct CompositeClause {
-  enum LogicalOperator operator_;
-  struct CArrayClause clauses;
-} CompositeClause;
-
-typedef enum Clause_Tag {
-  Keys,
-  CMember,
-  Composite,
-} Clause_Tag;
-
-typedef struct Clause {
-  Clause_Tag tag;
-  union {
-    struct {
-      struct KeysClause keys;
-    };
-    struct {
-      struct MemberClause c_member;
-    };
-    struct {
-      struct CompositeClause composite;
-    };
-  };
-} Clause;
-
-typedef enum COptionClause_Tag {
-  SomeClause,
-  NoneClause,
-} COptionClause_Tag;
-
-typedef struct COptionClause {
-  COptionClause_Tag tag;
-  union {
-    struct {
-      struct Clause some;
-    };
-  };
-} COptionClause;
-
-typedef struct CArrayOrderBy {
-  struct OrderBy *data;
-  uintptr_t data_len;
-} CArrayOrderBy;
-
-typedef struct Query {
-  uint32_t limit;
-  uint32_t offset;
-  struct COptionClause clause;
-  bool dont_include_hashed_keys;
-  struct CArrayOrderBy order_by;
-  struct CArrayc_char entity_models;
-  uint64_t entity_updated_after;
-} Query;
+} COptionFieldElement;
 
 typedef struct CArrayMember {
   struct Member *data;
@@ -717,58 +806,26 @@ typedef struct Ty {
   };
 } Ty;
 
-typedef struct ModelMetadata {
+typedef struct Model {
   struct Ty schema;
   const char *namespace_;
   const char *name;
+  struct FieldElement selector;
   uint32_t packed_size;
   uint32_t unpacked_size;
   struct FieldElement class_hash;
   struct FieldElement contract_address;
-  struct CArrayFieldElement layout;
-} ModelMetadata;
+  const char *layout;
+} Model;
 
-typedef struct CHashItemFieldElementModelMetadata {
-  struct FieldElement key;
-  struct ModelMetadata value;
-} CHashItemFieldElementModelMetadata;
-
-typedef enum EntityKeysClause_Tag {
-  HashedKeys,
-  EntityKeys,
-} EntityKeysClause_Tag;
-
-typedef struct EntityKeysClause {
-  EntityKeysClause_Tag tag;
-  union {
-    struct {
-      struct CArrayFieldElement hashed_keys;
-    };
-    struct {
-      struct KeysClause entity_keys;
-    };
-  };
-} EntityKeysClause;
-
-typedef enum COptionFieldElement_Tag {
-  SomeFieldElement,
-  NoneFieldElement,
-} COptionFieldElement_Tag;
-
-typedef struct COptionFieldElement {
-  COptionFieldElement_Tag tag;
-  union {
-    struct {
-      struct FieldElement some;
-    };
-  };
-} COptionFieldElement;
-
-typedef struct OrderBy {
-  const char *model;
-  const char *member;
-  enum OrderDirection direction;
-} OrderBy;
+typedef struct TokenCollection {
+  struct FieldElement contract_address;
+  const char *name;
+  const char *symbol;
+  uint8_t decimals;
+  uint32_t count;
+  const char *metadata;
+} TokenCollection;
 
 typedef struct Member {
   const char *name;
@@ -796,9 +853,7 @@ extern "C" {
  * # Returns
  * Result containing pointer to new ToriiClient instance or error
  */
-struct ResultToriiClient client_new(const char *torii_url,
-                                    const char *libp2p_relay_url,
-                                    struct FieldElement world);
+struct ResultToriiClient client_new(const char *torii_url, struct FieldElement world);
 
 /**
  * Initiates a connection to establish a new session account
@@ -841,49 +896,6 @@ void controller_connect(const char *rpc_url,
                         const struct Policy *policies,
                         uintptr_t policies_len,
                         void (*account_callback)(struct ControllerAccount*));
-
-/**
- * Initiates a connection to establish a new session account
- *
- * This function:
- * 1. Generates a new signing key pair
- * 2. Starts a local HTTP server to receive the callback
- * 3. Opens the keychain session URL in browser
- * 4. Waits for callback with session details
- * 5. Creates and stores the session
- * 6. Calls the provided callback with the new session account
- *
- * # Safety
- * This function is marked as unsafe because it:
- * - Handles raw C pointers
- * - Performs FFI operations
- * - Creates system-level resources (HTTP server, keyring entries)
- *
- * # Parameters
- * * `rpc_url` - Pointer to null-terminated string containing the RPC endpoint URL
- * * `policies` - Pointer to array of Policy structs defining session permissions
- * * `policies_len` - Length of the policies array
- * * `account_callback` - Function pointer called with the new session account when ready
- *
- * # Example
- * ```c
- * void on_account(SessionAccount* account) {
- *     // Handle new session account
- * }
- *
- * controller_connect(
- *     "https://rpc.example.com",
- *     policies,
- *     policies_length,
- *     on_account
- * );
- * ```
- */
-void controller_connect_mobile(const char *rpc_url,
-                               const struct Policy *policies,
-                               uintptr_t policies_len,
-                               void (*account_callback)(struct ControllerAccount*),
-                               void (*url_callback)(const char*));
 
 /**
  * Retrieves a stored session account if one exists and is valid
@@ -1010,10 +1022,23 @@ void client_set_logger(struct ToriiClient *client, void (*logger)(const char*));
  * # Returns
  * Result containing byte array or error
  */
-struct ResultCArrayu8 client_publish_message(struct ToriiClient *client,
-                                             const char *message,
-                                             const struct FieldElement *signature_felts,
-                                             uintptr_t signature_felts_len);
+struct ResultFieldElement client_publish_message(struct ToriiClient *client,
+                                                 struct Message message);
+
+/**
+ * Publishes multiple messages to the network
+ *
+ * # Parameters
+ * * `client` - Pointer to ToriiClient instance
+ * * `messages` - Array of Message structs
+ * * `messages_len` - Length of messages array
+ *
+ * # Returns
+ * Result containing array of message IDs or error
+ */
+struct ResultCArrayFieldElement client_publish_message_batch(struct ToriiClient *client,
+                                                             const struct Message *messages,
+                                                             uintptr_t messages_len);
 
 /**
  * Retrieves controllers for the given contract addresses
@@ -1026,9 +1051,13 @@ struct ResultCArrayu8 client_publish_message(struct ToriiClient *client,
  * # Returns
  * Result containing controllers or error
  */
-struct ResultCArrayController client_controllers(struct ToriiClient *client,
-                                                 const struct FieldElement *contract_addresses,
-                                                 uintptr_t contract_addresses_len);
+struct ResultPageController client_controllers(struct ToriiClient *client,
+                                               const struct FieldElement *contract_addresses,
+                                               uintptr_t contract_addresses_len,
+                                               const char *usernames,
+                                               uintptr_t usernames_len,
+                                               struct COptionu32 limit,
+                                               struct COptionc_char cursor);
 
 /**
  * Queries entities matching given criteria
@@ -1040,7 +1069,7 @@ struct ResultCArrayController client_controllers(struct ToriiClient *client,
  * # Returns
  * Result containing array of matching entities or error
  */
-struct ResultCArrayEntity client_entities(struct ToriiClient *client, const struct Query *query);
+struct ResultPageEntity client_entities(struct ToriiClient *client, struct Query query);
 
 /**
  * Retrieves event messages matching the given query
@@ -1053,9 +1082,7 @@ struct ResultCArrayEntity client_entities(struct ToriiClient *client, const stru
  * # Returns
  * Result containing array of matching event message entities or error
  */
-struct ResultCArrayEntity client_event_messages(struct ToriiClient *client,
-                                                const struct Query *query,
-                                                bool historical);
+struct ResultPageEntity client_event_messages(struct ToriiClient *client, struct Query query);
 
 /**
  * Gets the world metadata for the client
@@ -1064,9 +1091,9 @@ struct ResultCArrayEntity client_event_messages(struct ToriiClient *client,
  * * `client` - Pointer to ToriiClient instance
  *
  * # Returns
- * WorldMetadata structure containing world information
+ * World structure containing world information
  */
-struct ResultWorldMetadata client_metadata(struct ToriiClient *client);
+struct ResultWorld client_metadata(struct ToriiClient *client);
 
 /**
  * Subscribes to entity state updates
@@ -1081,8 +1108,7 @@ struct ResultWorldMetadata client_metadata(struct ToriiClient *client);
  * Result containing pointer to Subscription or error
  */
 struct ResultSubscription client_on_entity_state_update(struct ToriiClient *client,
-                                                        const struct EntityKeysClause *clauses,
-                                                        uintptr_t clauses_len,
+                                                        struct COptionClause clause,
                                                         void (*callback)(struct FieldElement,
                                                                          struct CArrayStruct));
 
@@ -1100,8 +1126,7 @@ struct ResultSubscription client_on_entity_state_update(struct ToriiClient *clie
  */
 struct Resultbool client_update_entity_subscription(struct ToriiClient *client,
                                                     struct Subscription *subscription,
-                                                    const struct EntityKeysClause *clauses,
-                                                    uintptr_t clauses_len);
+                                                    struct COptionClause clause);
 
 /**
  * Subscribes to event message updates
@@ -1110,16 +1135,13 @@ struct Resultbool client_update_entity_subscription(struct ToriiClient *client,
  * * `client` - Pointer to ToriiClient instance
  * * `clauses` - Array of entity key clauses to filter updates
  * * `clauses_len` - Length of clauses array
- * * `historical` - Whether to include historical messages
  * * `callback` - Function called when updates occur
  *
  * # Returns
  * Result containing pointer to Subscription or error
  */
 struct ResultSubscription client_on_event_message_update(struct ToriiClient *client,
-                                                         const struct EntityKeysClause *clauses,
-                                                         uintptr_t clauses_len,
-                                                         bool historical,
+                                                         struct COptionClause clause,
                                                          void (*callback)(struct FieldElement,
                                                                           struct CArrayStruct));
 
@@ -1131,16 +1153,13 @@ struct ResultSubscription client_on_event_message_update(struct ToriiClient *cli
  * * `subscription` - Pointer to existing Subscription
  * * `clauses` - New array of entity key clauses
  * * `clauses_len` - Length of new clauses array
- * * `historical` - Whether to include historical messages
  *
  * # Returns
  * Result containing success boolean or error
  */
 struct Resultbool client_update_event_message_subscription(struct ToriiClient *client,
                                                            struct Subscription *subscription,
-                                                           const struct EntityKeysClause *clauses,
-                                                           uintptr_t clauses_len,
-                                                           bool historical);
+                                                           struct COptionClause clause);
 
 /**
  * Subscribes to Starknet events
@@ -1155,7 +1174,7 @@ struct Resultbool client_update_event_message_subscription(struct ToriiClient *c
  * Result containing pointer to Subscription or error
  */
 struct ResultSubscription client_on_starknet_event(struct ToriiClient *client,
-                                                   const struct EntityKeysClause *clauses,
+                                                   const struct KeysClause *clauses,
                                                    uintptr_t clauses_len,
                                                    void (*callback)(struct Event));
 
@@ -1166,15 +1185,21 @@ struct ResultSubscription client_on_starknet_event(struct ToriiClient *client,
  * * `client` - Pointer to ToriiClient instance
  * * `contract_addresses` - Array of contract addresses
  * * `contract_addresses_len` - Length of addresses array
+ * * `token_ids` - Array of token ids
+ * * `token_ids_len` - Length of token ids array
+ * * `limit` - Maximum number of tokens to return
+ * * `cursor` - Cursor to start from
  *
  * # Returns
  * Result containing array of Token information or error
  */
-struct ResultCArrayToken client_tokens(struct ToriiClient *client,
-                                       const struct FieldElement *contract_addresses,
-                                       uintptr_t contract_addresses_len,
-                                       const struct U256 *token_ids,
-                                       uintptr_t token_ids_len);
+struct ResultPageToken client_tokens(struct ToriiClient *client,
+                                     const struct FieldElement *contract_addresses,
+                                     uintptr_t contract_addresses_len,
+                                     const struct U256 *token_ids,
+                                     uintptr_t token_ids_len,
+                                     uint32_t limit,
+                                     struct COptionc_char cursor);
 
 /**
  * Subscribes to token updates
@@ -1203,17 +1228,50 @@ struct ResultSubscription client_on_token_update(struct ToriiClient *client,
  * * `contract_addresses_len` - Length of contract addresses array
  * * `account_addresses` - Array of account addresses
  * * `account_addresses_len` - Length of account addresses array
+ * * `token_ids` - Array of token ids
+ * * `token_ids_len` - Length of token ids array
+ * * `limit` - Maximum number of token balances to return
+ * * `cursor` - Cursor to start from
  *
  * # Returns
  * Result containing array of TokenBalance information or error
  */
-struct ResultCArrayTokenBalance client_token_balances(struct ToriiClient *client,
-                                                      const struct FieldElement *contract_addresses,
-                                                      uintptr_t contract_addresses_len,
-                                                      const struct FieldElement *account_addresses,
-                                                      uintptr_t account_addresses_len,
-                                                      const struct U256 *token_ids,
-                                                      uintptr_t token_ids_len);
+struct ResultPageTokenBalance client_token_balances(struct ToriiClient *client,
+                                                    const struct FieldElement *contract_addresses,
+                                                    uintptr_t contract_addresses_len,
+                                                    const struct FieldElement *account_addresses,
+                                                    uintptr_t account_addresses_len,
+                                                    const struct U256 *token_ids,
+                                                    uintptr_t token_ids_len,
+                                                    uint32_t limit,
+                                                    struct COptionc_char cursor);
+
+/**
+ * Gets token collections for given accounts and contracts
+ *
+ * # Parameters
+ * * `client` - Pointer to ToriiClient instance
+ * * `contract_addresses` - Array of contract addresses
+ * * `contract_addresses_len` - Length of contract addresses array
+ * * `account_addresses` - Array of account addresses
+ * * `account_addresses_len` - Length of account addresses array
+ * * `token_ids` - Array of token ids
+ * * `token_ids_len` - Length of token ids array
+ * * `limit` - Maximum number of token balances to return
+ * * `cursor` - Cursor to start from
+ *
+ * # Returns
+ * Result containing array of TokenBalance information or error
+ */
+struct ResultPageTokenCollection client_token_collections(struct ToriiClient *client,
+                                                          const struct FieldElement *contract_addresses,
+                                                          uintptr_t contract_addresses_len,
+                                                          const struct FieldElement *account_addresses,
+                                                          uintptr_t account_addresses_len,
+                                                          const struct U256 *token_ids,
+                                                          uintptr_t token_ids_len,
+                                                          uint32_t limit,
+                                                          struct COptionc_char cursor);
 
 /**
  * Subscribes to indexer updates
@@ -1639,7 +1697,7 @@ void error_free(struct Error *error);
  * # Parameters
  * * `metadata` - Pointer to WorldMetadata to free
  */
-void world_metadata_free(struct WorldMetadata *metadata);
+void world_metadata_free(struct World *metadata);
 
 /**
  * Frees a CArray instance
