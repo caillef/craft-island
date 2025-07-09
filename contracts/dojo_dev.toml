@@ -28,9 +28,5 @@ private_key = "0x00c5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f91
 # private_key = "0xcd93de85d43988b9492bfaaff930c129fc3edbc513bb0c2b81577291848007"
 # world_address = "0xbbacc886d0554806f77e6917fa22cf7d45a2899ef7db4ff8e1d846c36ff1c7"
 
-[profile.second]
-account_address = "0x13d9ee239f33fea4f8785b9e3870ade909e20a9599ae7cd62c1c292b73af1b7"
-private_key = "0x1c9053c053edf324aec366a34c6901b1095b07af69495bffec7d7fe21effb1b"
-
 [writers]
 "craft_island_pocket" = ["craft_island_pocket-actions","craft_island_pocket-admin"]

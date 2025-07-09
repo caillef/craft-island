@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x4c60dc46a8ca8bb47675b7b914053cef769afbf0e340523187336b72bd71d1f",
-    "address": "0x402183d2b1bdb5cdcb086f2df21bd334451d6e27f8defb67fa97c8ec6cc93c7",
+    "class_hash": "0x7746f30d2b8494780387ed469797ecb5c62c7b6f49f4939a5e60e0f7ae5f99e",
+    "address": "0x55097e2bf8fff22ca69ad7c0c13bf7ad522041df38f39c2b84c8d82fee9be89",
     "seed": "craft_island_pocket",
     "name": "Dojo starter",
     "entrypoints": [
@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x68ec3d7fd88ddebb07ae91f3c561cee80a22d2757cdc3392605f2265f851129",
-      "class_hash": "0x7bbe8072b6842c07e9ec6efbbf993da14f65c35b589e04db61c7403ad0b2375",
+      "address": "0x50acd20e4c3bfebf516db8d6286d08e8ca27e65cc1d102594bb24c3fe8e4188",
+      "class_hash": "0x79a0b4aa9b07b7f7e67c0770ed7fec3175d687b5157e5343dae3f3e896f0bba",
       "abi": [
         {
           "type": "impl",
@@ -1500,6 +1500,49 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "generate_island_part",
+              "inputs": [
+                {
+                  "name": "x",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "y",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "z",
+                  "type": "core::integer::u64"
+                },
+                {
+                  "name": "island_id",
+                  "type": "core::integer::u16"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "visit",
+              "inputs": [
+                {
+                  "name": "space_id",
+                  "type": "core::integer::u16"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "visit_new_island",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1628,12 +1671,15 @@
         "select_hotbar_slot",
         "craft",
         "inventory_move_item",
+        "generate_island_part",
+        "visit",
+        "visit_new_island",
         "upgrade"
       ]
     },
     {
-      "address": "0x516c878143dab6f8b8f0b77917a04dd2e93de6c92fac22c608527d9fee51f7c",
-      "class_hash": "0x3068763eda30bc51e9caabff120eebab514a90d83fbf2d09189eb08f5f51111",
+      "address": "0x1a1031b53deb125e4777d38016773048136444791cd463bf9bb814ef28d0a08",
+      "class_hash": "0x7edb1c95dc0aa4aaad4d55203f4d85bc6a8906b9394d36f610d4466621708cd",
       "abi": [
         {
           "type": "impl",
@@ -1846,7 +1892,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x478bc669eb6344458627ca96d51799991ecc1a60982e5362d0f01f8e75e3c20",
+      "class_hash": "0x2fa3d89d383db9cfef903672a40f767c7d4b9b8c863dde95dc7d858897da586",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },
@@ -1858,7 +1904,13 @@
     },
     {
       "members": [],
-      "class_hash": "0x7a250beb9416efe2bfff0cf116a22772ffa2d7514f11dd797dd6c0b3b3469ca",
+      "class_hash": "0x71296f8369acc7f008ce5fd3c4c3d8894addaab5289b388d961c015eecc94d0",
+      "tag": "craft_island_pocket-IslandInfo",
+      "selector": "0x67e103009e1d694b274874d7eb0dc7a4406e3b5224ebbb50d9e908830bdf41e"
+    },
+    {
+      "members": [],
+      "class_hash": "0x669e43fe8b05151a97941e231e17205f160785641ae0518e7987fc4e4f1b66f",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
