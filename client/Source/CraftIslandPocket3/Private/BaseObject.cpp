@@ -11,12 +11,10 @@ ABaseObject::ABaseObject()
 
 }
 
-static USceneComponent* FindRootBase(AActor* Owner)
+USceneComponent* ABaseObject::FindRootBase()
 {
-    if (!Owner) return nullptr;
-
     TArray<USceneComponent*> Components;
-    Owner->GetComponents<USceneComponent>(Components);
+    this->GetComponents<USceneComponent>(Components);
 
     for (USceneComponent* Comp : Components)
     {
@@ -29,20 +27,26 @@ static USceneComponent* FindRootBase(AActor* Owner)
     return nullptr;
 }
 
+void ABaseObject::HarvestableBeginPlay() {
+    this->BeginPlay();
+}
+
 void ABaseObject::BeginPlay()
 {
     Super::BeginPlay();
 
-    USceneComponent* RootBase = FindRootBase(this);
+    UE_LOG(LogTemp, Warning, TEXT("BeginPlay called"));
+    USceneComponent* RootBase = this->FindRootBase();
     if (!RootBase) return;
-
+    UE_LOG(LogTemp, Warning, TEXT("RootBase found: %s"), *RootBase->GetName());
     Grew = false;
-
+    UE_LOG(LogTemp, Warning, TEXT("NumChildren: %d"), RootBase->GetNumChildrenComponents());
     const bool bCanGrow = RootBase->GetNumChildrenComponents() > 1;
     SetActorTickEnabled(bCanGrow);
-
+    UE_LOG(LogTemp, Warning, TEXT("bCanGrow: %s"), bCanGrow ? TEXT("true") : TEXT("false"));
     if (bCanGrow)
     {
+        UE_LOG(LogTemp, Warning, TEXT("Setting up harvestable resource"));
         SetupHarvestableResource(RootBase);
     }
 }
@@ -81,11 +85,11 @@ float ABaseObject::GetRealTimePercentage() const
 {
     const double Now = FDateTime::UtcNow().ToUnixTimestamp();
 
-    const double Start = GatherableResourceInfo.PlantedAt > 0
-        ? static_cast<double>(GatherableResourceInfo.PlantedAt)
-        : static_cast<double>(GatherableResourceInfo.HarvestedAt);
+    const double Start = GatherableResourceInfo->PlantedAt > 0
+        ? static_cast<double>(GatherableResourceInfo->PlantedAt)
+        : static_cast<double>(GatherableResourceInfo->HarvestedAt);
 
-    const double End = static_cast<double>(GatherableResourceInfo.NextHarvestAt);
+    const double End = static_cast<double>(GatherableResourceInfo->NextHarvestAt);
     const double Duration = End - Start;
     if (Duration <= 0.0) return 1.0f;
 
@@ -114,7 +118,7 @@ void ABaseObject::Tick(float DeltaTime)
     // Hide prev step
     TargetComponent = MultiStepParents[NextGrowthStep - 1];
     TargetComponent->SetVisibility(false, true);
-    
+
     TargetComponent = MultiStepParents[NextGrowthStep];
 
     if (!TargetComponent) return;
@@ -128,4 +132,3 @@ void ABaseObject::Tick(float DeltaTime)
         Grew = true;
     }
 }
-

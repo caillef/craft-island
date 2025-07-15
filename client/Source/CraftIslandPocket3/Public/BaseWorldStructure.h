@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "BaseBlock.h"
+#include "../DojoHelpers.h"
 #include "BaseWorldStructure.generated.h"
 
 UCLASS()
-class CRAFTISLANDPOCKET3_API ABaseWorldStructure : public AActor
+class CRAFTISLANDPOCKET3_API ABaseWorldStructure : public ABaseBlock
 {
 	GENERATED_BODY()
 	
@@ -19,8 +21,13 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+    UFUNCTION(BlueprintImplementableEvent)
+    void OnConstructed();
 
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Structure")
+    bool Constructed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Structure")
+    UDojoModelCraftIslandPocketWorldStructure* WorldStructure;
 };

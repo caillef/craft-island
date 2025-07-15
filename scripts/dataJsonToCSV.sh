@@ -17,9 +17,15 @@ jq -r 'to_entries
         else
             ""
         end
+        ),
+        actorClass: (
+        if .value.actorClass then .value.actorClass
+        else
+            ""
+        end
         )
     })
     | sort_by(.index | tonumber)
-    | (["Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft"]
-        + map("\(.index),\(.index),\(.name),\(.type),\(.max),\(.icon),\(.craft)"))[]
+    | (["Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft,ActorClass"]
+        + map("\(.index),\(.index),\(.name),\(.type),\(.max),\(.icon),\(.craft),\(.actorClass)"))[]
 ' data/items.json > data/items.csv

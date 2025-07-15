@@ -10,67 +10,13 @@
 #include "CraftIslandGameInst.h"
 #include "Engine/DataTable.h"
 #include "UObject/UnrealType.h"
+#include "BaseBlock.h"
+#include "BaseObject.h"
+#include "BaseWorldStructure.h"
+#include "E_Item.h"
+#include "PaperSprite.h"
+
 #include "DojoCraftIslandManager.generated.h"
-
-class ABaseBlock;
-
-UENUM(BlueprintType)
-enum class E_Item : uint8
-{
-    None UMETA(DisplayName = "None"),
-    Grass UMETA(DisplayName = "Grass"),
-    Dirt UMETA(DisplayName = "Dirt"),
-    Stone UMETA(DisplayName = "Stone"),
-    
-    NewEnumerator4,
-    NewEnumerator5,
-    NewEnumerator6,
-    NewEnumerator7,
-    NewEnumerator8,
-    NewEnumerator9,
-    NewEnumerator10,
-    NewEnumerator11,
-    NewEnumerator12,
-    NewEnumerator13,
-    NewEnumerator14,
-    NewEnumerator15,
-    NewEnumerator16,
-    NewEnumerator17,
-    NewEnumerator18,
-    NewEnumerator19,
-    NewEnumerator20,
-    NewEnumerator21,
-    NewEnumerator22,
-    NewEnumerator23,
-    NewEnumerator24,
-    NewEnumerator25,
-    NewEnumerator26,
-    NewEnumerator27,
-    NewEnumerator28,
-    NewEnumerator29,
-
-    House UMETA(DisplayName = "House"),           // Index 30
-    OakTree UMETA(DisplayName = "Oak Tree"),      // Index 31
-    WoodenStick2 UMETA(DisplayName = "Wooden Stick"), // Index 32
-    Rock UMETA(DisplayName = "Rock"),
-    StoneAxeHead UMETA(DisplayName = "Stone Axe Head"),
-    StoneAxe UMETA(DisplayName = "Stone Axe"),
-    StonePickaxeHead UMETA(DisplayName = "Stone Pickaxe Head"),
-    StonePickaxe UMETA(DisplayName = "Stone Pickaxe"),
-    StoneShovelHead UMETA(DisplayName = "Stone Shovel Head"),
-    StoneShovel UMETA(DisplayName = "Stone Shovel"),
-    StoneHoeHead UMETA(DisplayName = "Stone Hoe Head"),
-    StoneHoe UMETA(DisplayName = "Stone Hoe"),
-    StoneHammerHead UMETA(DisplayName = "Stone Hammer Head"),
-    StoneHammer UMETA(DisplayName = "Stone Hammer"),
-    OakLog UMETA(DisplayName = "Oak Log"),
-    OakPlank UMETA(DisplayName = "Oak Plank"),
-    OakSapling UMETA(DisplayName = "Oak Sapling"),
-    WheatSeed UMETA(DisplayName = "Wheat Seed"),
-    Wheat UMETA(DisplayName = "Wheat"),
-    Boulder UMETA(DisplayName = "Boulder"),
-    HousePattern UMETA(DisplayName = "House Pattern"),
-};
 
 USTRUCT(BlueprintType)
 struct FItemDataRow : public FTableRowBase
@@ -90,7 +36,7 @@ struct FItemDataRow : public FTableRowBase
     int32 MaxStackSize;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSoftObjectPtr<UTexture2D> Icon;
+    UPaperSprite* Icon;
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FString Craft;
@@ -98,6 +44,74 @@ struct FItemDataRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TSubclassOf<AActor> ActorClass;
 };
+
+USTRUCT(BlueprintType)
+struct FSpawnQueueData
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    E_Item Item;
+
+    UPROPERTY()
+    FIntVector DojoPosition;
+
+    UPROPERTY()
+    bool Validated;
+
+    UPROPERTY()
+    UDojoModel* DojoModel;
+
+    FSpawnQueueData()
+    {
+        Item = E_Item::None;
+        DojoPosition = FIntVector::ZeroValue;
+        Validated = false;
+        DojoModel = nullptr;
+    }
+
+    FSpawnQueueData(E_Item InItem, const FIntVector& InPosition, bool InValidated, UDojoModel* InModel = nullptr)
+    {
+        Item = InItem;
+        DojoPosition = InPosition;
+        Validated = InValidated;
+        DojoModel = InModel;
+    }
+};
+
+UENUM(BlueprintType)
+enum class EActorSpawnType : uint8
+{
+    ChunkBlock,
+    GatherableResource,
+    WorldStructure
+};
+
+USTRUCT(BlueprintType)
+struct FActorSpawnInfo
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    AActor* Actor;
+
+    UPROPERTY()
+    EActorSpawnType SpawnType;
+
+    FActorSpawnInfo()
+    {
+        Actor = nullptr;
+        SpawnType = EActorSpawnType::ChunkBlock;
+    }
+
+    FActorSpawnInfo(AActor* InActor, EActorSpawnType InSpawnType)
+    {
+        Actor = InActor;
+        SpawnType = InSpawnType;
+    }
+};
+
+
 
 class DataTableHelpers
 {
@@ -163,6 +177,33 @@ class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
 {
 	GENERATED_BODY()
 
+    UFUNCTION()
+    void RequestPlaceUse();
+
+    UFUNCTION()
+    void RequestSpawn();
+
+    UFUNCTION()
+    void UpdateInventory(UDojoModelCraftIslandPocketInventory* Inventory);
+
+    UFUNCTION()
+    void InventorySelectHotbar(UObject* Slot);
+
+    UFUNCTION()
+    void RequestHit();
+
+    UFUNCTION()
+    void RequestInventoryMoveItem(int32 FromInventory, int32 FromSlot, int32 ToInventory, int32 ToSlot);
+
+    UFUNCTION()
+    void RequestCraft(int32 Item);
+
+    UFUNCTION()
+    void RequestGiveItem();
+
+    UFUNCTION()
+    void SetTargetBlock(FVector Location);
+
 public:
 	// Sets default values for this actor's properties
 	ADojoCraftIslandManager();
@@ -214,6 +255,8 @@ public:
 
     UPROPERTY()
     AActor* FloatingShip;
+    
+    FIntVector TargetBlock;
 
     bool bLoaded = false;
     
@@ -261,11 +304,19 @@ public:
 
     UPROPERTY()
     TMap<FIntVector, AActor*> Actors;
+
+    UPROPERTY()
+    TMap<FIntVector, FActorSpawnInfo> ActorSpawnInfo;
+
+    UPROPERTY()
+    TArray<FSpawnQueueData> SpawnQueue;
+    
+
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
     UDataTable* ItemDataTable;
     
-    AActor* PlaceAssetInWorld(E_Item Item, const FIntVector& DojoPosition, bool Validated);
+    AActor* PlaceAssetInWorld(E_Item Item, const FIntVector& DojoPosition, bool Validated, EActorSpawnType SpawnType = EActorSpawnType::ChunkBlock);
 
     int32 DojoPositionToLocalPosition(const FIntVector& DojoPosition);
 
@@ -274,4 +325,9 @@ public:
     FIntVector GetWorldPositionFromLocal(int Position, const FIntVector& ChunkOffset);
     
     FIntVector HexStringToVector(const FString& Source);
+    
+
+    
+    void ConnectGameInstanceEvents();
+    int32 CurrentItemId;
 };

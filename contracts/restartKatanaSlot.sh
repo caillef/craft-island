@@ -1,1 +1,1 @@
-slot deployments delete craftisland katana -f && slot d create craftisland katana --dev --dev.no-fee --dev.seed 0 --cartridge.paymaster && slot d logs craftisland katana -f
+slot deployments delete craftisland katana -f && slot d create craftisland katana --dev --dev.no-fee --dev.seed 0 --cartridge.paymaster && sleep 3 && sozo migrate --release && slot d logs craftisland katana -f

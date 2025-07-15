@@ -4,43 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "BaseBlock.h"
+#include "../DojoHelpers.h"
 #include "BaseObject.generated.h"
-
-USTRUCT(BlueprintType)
-struct FGatherableResource
-{
-    GENERATED_BODY()
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 ResourceId;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int64 NextHarvestAt;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 RawPosition;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    bool Destroyed;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FIntVector DojoPosition;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    AActor* Actor;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int64 PlantedAt;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int64 HarvestedAt;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 MaxHarvest;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 RemainingHarvest;
-};
 
 UCLASS()
 class CRAFTISLANDPOCKET3_API ABaseObject : public ABaseBlock
@@ -50,13 +15,14 @@ class CRAFTISLANDPOCKET3_API ABaseObject : public ABaseBlock
     float GetCurrentStepPercentage() const;
     float GetRealTimePercentage() const;
     void SetupHarvestableResource(USceneComponent* RootBase);
-	
+    USceneComponent* FindRootBase();
+
 public:	
 	// Sets default values for this actor's properties
 	ABaseObject();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gatherable")
-    FGatherableResource GatherableResourceInfo;
+    UDojoModelCraftIslandPocketGatherableResource* GatherableResourceInfo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gatherable")
     bool Grew;
@@ -77,4 +43,7 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+    
+    UFUNCTION(BlueprintCallable)
+    void HarvestableBeginPlay();
 };

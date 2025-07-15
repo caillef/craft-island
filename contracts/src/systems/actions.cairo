@@ -187,6 +187,8 @@ mod actions {
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
+
+            println!("hit_block x:{} y:{} z:{}", x, y, z);
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
             let itemType: u16 = inventory.get_hotbar_selected_item_type();
@@ -207,6 +209,9 @@ mod actions {
             let player = get_caller_address();
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
+
+            println!("use_item x:{} y:{} z:{}", x, y, z);
+
             let item_type: u16 = inventory.get_hotbar_selected_item_type();
 
             println!("Hotbar selected item {}", item_type);

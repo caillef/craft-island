@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "DojoCraftIslandManager.h"
+#include "E_Item.h"
 #include "BaseBlock.generated.h"
 
 UCLASS()
