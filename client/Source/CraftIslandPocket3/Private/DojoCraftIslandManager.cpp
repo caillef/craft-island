@@ -311,160 +311,21 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
 {
     FString Name = Model->DojoModelType;
 
+    // First, update the chunk cache
+    UCraftIslandChunks::HandleCraftIslandModel(Model, ChunkCache);
+
+    // Then process for immediate display
     if (Name == "craft_island_pocket-IslandChunk") {
-        UDojoModelCraftIslandPocketIslandChunk* Chunk = reinterpret_cast<UDojoModelCraftIslandPocketIslandChunk*>(Model);
-
-        if (Chunk->IslandOwner == Account.Address) {
-            // Check IslandId
-
-            FString Blocks = Chunk->Blocks1.Mid(2) + Chunk->Blocks2.Mid(2);
-            
-            // Validate chunk data length
-            if (Blocks.Len() != 64)
-            {
-                UE_LOG(LogTemp, Error, TEXT("Invalid chunk data length: %d, expected 64 for chunk %s"), 
-                    Blocks.Len(), *Chunk->ChunkId);
-                return;
-            }
-            
-            FString SubStr = Blocks.Reverse();
-
-            FIntVector ChunkOffset = this->HexStringToVector(Chunk->ChunkId);
-
-            // Process chunk data and batch add to queue
-            TArray<FSpawnQueueData> ChunkSpawnData;
-
-            int32 Index = 0;
-            for (TCHAR Char : SubStr)
-            {
-                uint8 Byte = FParse::HexDigit(Char);
-                int32 IntValue = static_cast<int32>(Byte);
-                E_Item Item = static_cast<E_Item>(IntValue);
-                FIntVector dojoPos = this->GetWorldPositionFromLocal(Index, ChunkOffset);
-
-                if (Byte == 0 && Actors.Contains(dojoPos))
-                {
-                    // Only remove actors that were spawned as chunk blocks
-                    if (ActorSpawnInfo.Contains(dojoPos))
-                    {
-                        FActorSpawnInfo SpawnInfo = ActorSpawnInfo[dojoPos];
-                        if (SpawnInfo.SpawnType == EActorSpawnType::ChunkBlock)
-                        {
-                            AActor* ToRemove = Actors[dojoPos];
-                            if (IsValid(ToRemove))
-                            {
-                                ToRemove->Destroy();
-                                Actors.Remove(dojoPos);
-                                ActorSpawnInfo.Remove(dojoPos);
-                            }
-                        }
-                    }
-                }
-                else if (Item != E_Item::None)
-                {
-                    // Batch add to local array first
-                    ChunkSpawnData.Add(FSpawnQueueData(Item, dojoPos, false));
-                }
-
-                Index++;
-            }
-
-            // Add entire chunk batch to queue at once with overflow protection
-            if (ChunkSpawnData.Num() > 0)
-            {
-                const int32 MaxSpawnQueueSize = 1000;
-                if (SpawnQueue.Num() + ChunkSpawnData.Num() >= MaxSpawnQueueSize)
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"), 
-                        SpawnQueue.Num(), MaxSpawnQueueSize);
-                    
-                    // Remove oldest entries to make room
-                    int32 NumToRemove = (SpawnQueue.Num() + ChunkSpawnData.Num()) - MaxSpawnQueueSize + 1;
-                    SpawnQueue.RemoveAt(0, NumToRemove);
-                }
-                SpawnQueue.Append(ChunkSpawnData);
-            }
-        }
+        ProcessIslandChunk(Cast<UDojoModelCraftIslandPocketIslandChunk>(Model));
     }
     else if (Name == "craft_island_pocket-GatherableResource") {
-        UDojoModelCraftIslandPocketGatherableResource* Gatherable = reinterpret_cast<UDojoModelCraftIslandPocketGatherableResource*>(Model);
-
-        if (Gatherable->IslandOwner == Account.Address) {
-            // Check IslandId
-
-            FIntVector ChunkOffset = this->HexStringToVector(Gatherable->ChunkId);
-
-            E_Item Item = static_cast<E_Item>(Gatherable->ResourceId);
-            FIntVector dojoPos = this->GetWorldPositionFromLocal(Gatherable->Position, ChunkOffset);
-
-            if (Item == E_Item::None && Actors.Contains(dojoPos))
-            {
-                // Only remove if it's actually a gatherable resource
-                if (ActorSpawnInfo.Contains(dojoPos))
-                {
-                    FActorSpawnInfo SpawnInfo = ActorSpawnInfo[dojoPos];
-                    if (SpawnInfo.SpawnType == EActorSpawnType::GatherableResource)
-                    {
-                        AActor* ToRemove = Actors[dojoPos];
-                        if (IsValid(ToRemove)) ToRemove->Destroy();
-                        Actors.Remove(dojoPos);
-                        ActorSpawnInfo.Remove(dojoPos);
-                    }
-                }
-            }
-            else if (Item != E_Item::None)
-            {
-                // Queue the spawn instead of spawning immediately with overflow protection
-                const int32 MaxSpawnQueueSize = 1000;
-                if (SpawnQueue.Num() >= MaxSpawnQueueSize)
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
-                    SpawnQueue.RemoveAt(0);
-                }
-                SpawnQueue.Add(FSpawnQueueData(Item, dojoPos, false, Gatherable));
-            }
-        }
+        ProcessGatherableResource(Cast<UDojoModelCraftIslandPocketGatherableResource>(Model));
     }
     else if (Name == "craft_island_pocket-WorldStructure") {
-        UDojoModelCraftIslandPocketWorldStructure* Structure = reinterpret_cast<UDojoModelCraftIslandPocketWorldStructure*>(Model);
-        if (Structure->IslandOwner == Account.Address) {
-            // Check IslandId
-
-            FIntVector ChunkOffset = this->HexStringToVector(Structure->ChunkId);
-
-            E_Item Item = static_cast<E_Item>(Structure->StructureType);
-            FIntVector dojoPos = this->GetWorldPositionFromLocal(Structure->Position, ChunkOffset);
-
-            if (Item == E_Item::None && Actors.Contains(dojoPos))
-            {
-                // Only remove if it's actually a world structure
-                if (ActorSpawnInfo.Contains(dojoPos))
-                {
-                    FActorSpawnInfo SpawnInfo = ActorSpawnInfo[dojoPos];
-                    if (SpawnInfo.SpawnType == EActorSpawnType::WorldStructure)
-                    {
-                        AActor* ToRemove = Actors[dojoPos];
-                        if (IsValid(ToRemove)) ToRemove->Destroy();
-                        Actors.Remove(dojoPos);
-                        ActorSpawnInfo.Remove(dojoPos);
-                    }
-                }
-            }
-            else if (Item != E_Item::None)
-            {
-                // Queue the spawn instead of spawning immediately with overflow protection
-                const int32 MaxSpawnQueueSize = 1000;
-                if (SpawnQueue.Num() >= MaxSpawnQueueSize)
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
-                    SpawnQueue.RemoveAt(0);
-                }
-                SpawnQueue.Add(FSpawnQueueData(Item, dojoPos, false, Structure));
-            }
-        }
+        ProcessWorldStructure(Cast<UDojoModelCraftIslandPocketWorldStructure>(Model));
     }
     else if (Name == "craft_island_pocket-Inventory") {
-        this->HandleInventory(Model);
+        HandleInventory(Model);
     }
 
     if (!bLoaded)
@@ -654,4 +515,201 @@ void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
     TargetBlock.X = Location.X;
     TargetBlock.Y = Location.Y;
     TargetBlock.Z = Location.Z;
+}
+
+// Helper function implementations
+
+FString ADojoCraftIslandManager::GetCurrentIslandKey() const
+{
+    // For now, we'll use player address + island id 0
+    // You may want to make this configurable or get from game state
+    return Account.Address + FString::FromInt(0);
+}
+
+void ADojoCraftIslandManager::QueueSpawnWithOverflowProtection(const FSpawnQueueData& SpawnData)
+{
+    const int32 MaxSpawnQueueSize = 1000;
+    if (SpawnQueue.Num() >= MaxSpawnQueueSize)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
+        SpawnQueue.RemoveAt(0);
+    }
+    SpawnQueue.Add(SpawnData);
+}
+
+void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray<FSpawnQueueData>& SpawnDataBatch)
+{
+    if (SpawnDataBatch.Num() == 0) return;
+    
+    const int32 MaxSpawnQueueSize = 1000;
+    if (SpawnQueue.Num() + SpawnDataBatch.Num() >= MaxSpawnQueueSize)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"), 
+            SpawnQueue.Num(), MaxSpawnQueueSize);
+        
+        // Remove oldest entries to make room
+        int32 NumToRemove = (SpawnQueue.Num() + SpawnDataBatch.Num()) - MaxSpawnQueueSize + 1;
+        SpawnQueue.RemoveAt(0, NumToRemove);
+    }
+    SpawnQueue.Append(SpawnDataBatch);
+}
+
+void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPosition, EActorSpawnType RequiredType)
+{
+    if (!Actors.Contains(DojoPosition)) return;
+    
+    if (ActorSpawnInfo.Contains(DojoPosition))
+    {
+        FActorSpawnInfo SpawnInfo = ActorSpawnInfo[DojoPosition];
+        if (SpawnInfo.SpawnType == RequiredType)
+        {
+            AActor* ToRemove = Actors[DojoPosition];
+            if (IsValid(ToRemove))
+            {
+                ToRemove->Destroy();
+            }
+            Actors.Remove(DojoPosition);
+            ActorSpawnInfo.Remove(DojoPosition);
+        }
+    }
+}
+
+void ADojoCraftIslandManager::ProcessChunkBlock(uint8 Byte, const FIntVector& DojoPosition, E_Item Item, TArray<FSpawnQueueData>& ChunkSpawnData)
+{
+    if (Byte == 0)
+    {
+        RemoveActorAtPosition(DojoPosition, EActorSpawnType::ChunkBlock);
+    }
+    else if (Item != E_Item::None)
+    {
+        ChunkSpawnData.Add(FSpawnQueueData(Item, DojoPosition, false));
+    }
+}
+
+void ADojoCraftIslandManager::ProcessIslandChunk(UDojoModelCraftIslandPocketIslandChunk* Chunk)
+{
+    if (!Chunk || Chunk->IslandOwner != Account.Address) return;
+    
+    FString Blocks = Chunk->Blocks1.Mid(2) + Chunk->Blocks2.Mid(2);
+    
+    // Validate chunk data length
+    if (Blocks.Len() != 64)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Invalid chunk data length: %d, expected 64 for chunk %s"), 
+            Blocks.Len(), *Chunk->ChunkId);
+        return;
+    }
+    
+    FString SubStr = Blocks.Reverse();
+    FIntVector ChunkOffset = HexStringToVector(Chunk->ChunkId);
+    
+    // Process chunk data and batch add to queue
+    TArray<FSpawnQueueData> ChunkSpawnData;
+    
+    int32 Index = 0;
+    for (TCHAR Char : SubStr)
+    {
+        uint8 Byte = FParse::HexDigit(Char);
+        E_Item Item = static_cast<E_Item>(Byte);
+        FIntVector DojoPos = GetWorldPositionFromLocal(Index, ChunkOffset);
+        
+        ProcessChunkBlock(Byte, DojoPos, Item, ChunkSpawnData);
+        Index++;
+    }
+    
+    QueueSpawnBatchWithOverflowProtection(ChunkSpawnData);
+}
+
+void ADojoCraftIslandManager::ProcessGatherableResource(UDojoModelCraftIslandPocketGatherableResource* Gatherable)
+{
+    if (!Gatherable || Gatherable->IslandOwner != Account.Address) return;
+    
+    FIntVector ChunkOffset = HexStringToVector(Gatherable->ChunkId);
+    E_Item Item = static_cast<E_Item>(Gatherable->ResourceId);
+    FIntVector DojoPos = GetWorldPositionFromLocal(Gatherable->Position, ChunkOffset);
+    
+    if (Item == E_Item::None)
+    {
+        RemoveActorAtPosition(DojoPos, EActorSpawnType::GatherableResource);
+    }
+    else
+    {
+        QueueSpawnWithOverflowProtection(FSpawnQueueData(Item, DojoPos, false, Gatherable));
+    }
+}
+
+void ADojoCraftIslandManager::ProcessWorldStructure(UDojoModelCraftIslandPocketWorldStructure* Structure)
+{
+    if (!Structure || Structure->IslandOwner != Account.Address) return;
+    
+    FIntVector ChunkOffset = HexStringToVector(Structure->ChunkId);
+    E_Item Item = static_cast<E_Item>(Structure->StructureType);
+    FIntVector DojoPos = GetWorldPositionFromLocal(Structure->Position, ChunkOffset);
+    
+    if (Item == E_Item::None)
+    {
+        RemoveActorAtPosition(DojoPos, EActorSpawnType::WorldStructure);
+    }
+    else
+    {
+        QueueSpawnWithOverflowProtection(FSpawnQueueData(Item, DojoPos, false, Structure));
+    }
+}
+
+void ADojoCraftIslandManager::LoadChunkFromCache(const FString& ChunkId)
+{
+    FString IslandKey = GetCurrentIslandKey();
+    if (!ChunkCache.Contains(IslandKey)) return;
+    
+    FSpaceChunks& SpaceData = ChunkCache[IslandKey];
+    
+    // Load chunk blocks
+    if (SpaceData.Chunks.Contains(ChunkId))
+    {
+        ProcessIslandChunk(SpaceData.Chunks[ChunkId]);
+    }
+    
+    // Load gatherables for this chunk
+    for (const auto& Pair : SpaceData.Gatherables)
+    {
+        if (Pair.Value && Pair.Value->ChunkId == ChunkId)
+        {
+            ProcessGatherableResource(Pair.Value);
+        }
+    }
+    
+    // Load structures for this chunk
+    for (const auto& Pair : SpaceData.Structures)
+    {
+        if (Pair.Value && Pair.Value->ChunkId == ChunkId)
+        {
+            ProcessWorldStructure(Pair.Value);
+        }
+    }
+}
+
+void ADojoCraftIslandManager::LoadChunksFromCache(const FIntVector& CenterChunk, int32 Radius)
+{
+    FString IslandKey = GetCurrentIslandKey();
+    if (!ChunkCache.Contains(IslandKey)) return;
+    
+    // Load all chunks within radius
+    for (int32 X = -Radius; X <= Radius; X++)
+    {
+        for (int32 Y = -Radius; Y <= Radius; Y++)
+        {
+            for (int32 Z = -Radius; Z <= Radius; Z++)
+            {
+                FIntVector ChunkPos = CenterChunk + FIntVector(X, Y, Z);
+                
+                // Convert chunk position to chunk ID format (0x + 10 hex chars for each coordinate)
+                FString ChunkId = FString::Printf(TEXT("0x%010x%010x%010x"), 
+                    ChunkPos.X + 2048, 
+                    ChunkPos.Y + 2048, 
+                    ChunkPos.Z + 2048);
+                
+                LoadChunkFromCache(ChunkId);
+            }
+        }
+    }
 }

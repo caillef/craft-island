@@ -15,6 +15,7 @@
 #include "BaseWorldStructure.h"
 #include "E_Item.h"
 #include "PaperSprite.h"
+#include "CraftIslandChunks.h"
 
 #include "DojoCraftIslandManager.generated.h"
 
@@ -330,4 +331,24 @@ public:
     
     void ConnectGameInstanceEvents();
     int32 CurrentItemId;
+    
+    // Chunk caching system
+    UPROPERTY()
+    TMap<FString, FSpaceChunks> ChunkCache;
+    
+    // Helper functions to reduce code duplication
+    void QueueSpawnWithOverflowProtection(const FSpawnQueueData& SpawnData);
+    void QueueSpawnBatchWithOverflowProtection(const TArray<FSpawnQueueData>& SpawnDataBatch);
+    void RemoveActorAtPosition(const FIntVector& DojoPosition, EActorSpawnType RequiredType);
+    void ProcessChunkBlock(uint8 Byte, const FIntVector& DojoPosition, E_Item Item, TArray<FSpawnQueueData>& ChunkSpawnData);
+    void ProcessGatherableResource(UDojoModelCraftIslandPocketGatherableResource* Gatherable);
+    void ProcessWorldStructure(UDojoModelCraftIslandPocketWorldStructure* Structure);
+    void ProcessIslandChunk(UDojoModelCraftIslandPocketIslandChunk* Chunk);
+    
+    // Get current player's island key for chunk cache
+    FString GetCurrentIslandKey() const;
+    
+    // Load chunks from cache for a specific area
+    void LoadChunksFromCache(const FIntVector& CenterChunk, int32 Radius);
+    void LoadChunkFromCache(const FString& ChunkId);
 };
