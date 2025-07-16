@@ -35,18 +35,13 @@ void ABaseObject::BeginPlay()
 {
     Super::BeginPlay();
 
-    UE_LOG(LogTemp, Warning, TEXT("BeginPlay called"));
     USceneComponent* RootBase = this->FindRootBase();
     if (!RootBase) return;
-    UE_LOG(LogTemp, Warning, TEXT("RootBase found: %s"), *RootBase->GetName());
     Grew = false;
-    UE_LOG(LogTemp, Warning, TEXT("NumChildren: %d"), RootBase->GetNumChildrenComponents());
     const bool bCanGrow = RootBase->GetNumChildrenComponents() > 1;
     SetActorTickEnabled(bCanGrow);
-    UE_LOG(LogTemp, Warning, TEXT("bCanGrow: %s"), bCanGrow ? TEXT("true") : TEXT("false"));
     if (bCanGrow)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Setting up harvestable resource"));
         SetupHarvestableResource(RootBase);
     }
 }
@@ -57,21 +52,31 @@ void ABaseObject::SetupHarvestableResource(USceneComponent* RootBase)
     RootBase->GetChildrenComponents(true, Children);
 
     NextGrowthStep = 0;
-    NbGrowthStep = Children.Num();
-
-    for (int32 i = 0; i < Children.Num(); ++i)
+    
+    // Clear the map first
+    MultiStepParents.Empty();
+    
+    // Look for numbered components (folders like "0", "1", "2", etc.)
+    for (USceneComponent* Child : Children)
     {
-        USceneComponent* Comp = Children[i];
-        if (!Comp) continue;
-
-        MultiStepParents.Add(i, Comp);
-
-        const FString Name = Comp->GetName();
-        const int32 ParsedName = FCString::Atoi(*Name); // or parse properly
-
-        const bool bIsZero = ParsedName == 0;
-        Comp->SetVisibility(bIsZero, true);
+        if (!Child) continue;
+        
+        const FString Name = Child->GetName();
+        
+        // Try to parse the name as a number
+        const int32 StepNumber = FCString::Atoi(*Name);
+        
+        // Check if the name is a valid number (0, 1, 2, etc.)
+        if (Name.IsNumeric() || (StepNumber == 0 && Name == TEXT("0")))
+        {
+            MultiStepParents.Add(StepNumber, Child);
+            
+            // Initially hide all except step 0
+            Child->SetVisibility(StepNumber == 0, true);
+        }
     }
+    
+    NbGrowthStep = MultiStepParents.Num();
 }
 
 float ABaseObject::GetCurrentStepPercentage() const
@@ -83,6 +88,8 @@ float ABaseObject::GetCurrentStepPercentage() const
 
 float ABaseObject::GetRealTimePercentage() const
 {
+    if (!GatherableResourceInfo) return 0.0f;
+    
     const double Now = FDateTime::UtcNow().ToUnixTimestamp();
 
     const double Start = GatherableResourceInfo->PlantedAt > 0
@@ -106,24 +113,29 @@ void ABaseObject::Tick(float DeltaTime)
     float RealTime = GetRealTimePercentage();
     float CurrentStep = GetCurrentStepPercentage();
 
-    if (CurrentStep < RealTime) return;
+    // Progress to next step when real time percentage exceeds current step percentage
+    if (RealTime < CurrentStep) return;
 
-    if (!MultiStepParents.Contains(NextGrowthStep)) {
+    // Cache component lookups to avoid multiple TMap searches
+    USceneComponent** CurrentStepPtr = MultiStepParents.Find(NextGrowthStep);
+    if (!CurrentStepPtr || !*CurrentStepPtr)
+    {
         Grew = true;
         return;
     }
 
-    USceneComponent* TargetComponent = nullptr;
+    // Hide previous step (only if we're not on the first step)
+    if (NextGrowthStep > 0)
+    {
+        USceneComponent** PrevStepPtr = MultiStepParents.Find(NextGrowthStep - 1);
+        if (PrevStepPtr && *PrevStepPtr)
+        {
+            (*PrevStepPtr)->SetVisibility(false, true);
+        }
+    }
 
-    // Hide prev step
-    TargetComponent = MultiStepParents[NextGrowthStep - 1];
-    TargetComponent->SetVisibility(false, true);
-
-    TargetComponent = MultiStepParents[NextGrowthStep];
-
-    if (!TargetComponent) return;
-
-    TargetComponent->SetVisibility(true, true);
+    // Show current step
+    (*CurrentStepPtr)->SetVisibility(true, true);
 
     NextGrowthStep++;
 
