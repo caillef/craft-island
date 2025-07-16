@@ -83,5 +83,9 @@ public:
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FOnShipClicked OnShipClicked;
+    
+    // Debug function to log Dojo memory usage
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void LogDojoMemoryUsage();
 
 };
