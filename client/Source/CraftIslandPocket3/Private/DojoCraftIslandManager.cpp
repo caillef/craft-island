@@ -324,7 +324,7 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
             {
                 UE_LOG(LogTemp, Error, TEXT("Invalid chunk data length: %d, expected 64 for chunk %s"), 
                     Blocks.Len(), *Chunk->ChunkId);
-                continue;
+                return;
             }
             
             FString SubStr = Blocks.Reverse();
