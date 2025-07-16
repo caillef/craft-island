@@ -7,6 +7,7 @@
 #include <memory>
 #include "Async/Async.h"
 
+using namespace dojo_bindings;
 
 ADojoHelpers* ADojoHelpers::Instance = nullptr;
 FCriticalSection ADojoHelpers::InstanceMutex;
@@ -103,7 +104,7 @@ void ADojoHelpers::CleanupResources()
 
 void ADojoHelpers::LogResourceUsage() const
 {
-    FScopeLock Lock(&ResourceMutex);
+    FScopeLock Lock(const_cast<FCriticalSection*>(&ResourceMutex));
     
     UE_LOG(LogTemp, Warning, TEXT("=== Dojo Resource Usage ==="));
     UE_LOG(LogTemp, Warning, TEXT("Local Resources:"));
@@ -132,11 +133,17 @@ void ADojoHelpers::LogResourceUsage() const
     }
     
     // Log memory estimates
+    // Note: Using estimated sizes as these are opaque types
+    const int32 EstimatedAccountSize = 256;  // Estimated size
+    const int32 EstimatedProviderSize = 128; // Estimated size
+    const int32 EstimatedClientSize = 512;   // Estimated size
+    const int32 EstimatedSubscriptionSize = 64; // Estimated size
+    
     int32 EstimatedMemory = 0;
-    EstimatedMemory += GlobalActiveAccounts * sizeof(Account);
-    EstimatedMemory += GlobalActiveProviders * sizeof(Provider);
-    EstimatedMemory += GlobalActiveToriiClients * sizeof(ToriiClient);
-    EstimatedMemory += GlobalActiveSubscriptions * sizeof(Subscription);
+    EstimatedMemory += GlobalActiveAccounts * EstimatedAccountSize;
+    EstimatedMemory += GlobalActiveProviders * EstimatedProviderSize;
+    EstimatedMemory += GlobalActiveToriiClients * EstimatedClientSize;
+    EstimatedMemory += GlobalActiveSubscriptions * EstimatedSubscriptionSize;
     
     UE_LOG(LogTemp, Warning, TEXT("Estimated Global Memory Usage: %d bytes"), EstimatedMemory);
     UE_LOG(LogTemp, Warning, TEXT("=========================="));
@@ -189,9 +196,10 @@ FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FSt
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
     
     // Create provider first
-    Provider* provider = provider_new(rpc_url_string.c_str());
-    if (provider)
+    ResultProvider resProvider = provider_new(rpc_url_string.c_str());
+    if (resProvider.tag == OkProvider)
     {
+        Provider* provider = resProvider.ok;
         FScopeLock Lock(&ResourceMutex);
         AllocatedProviders.Add(provider);
         GlobalActiveProviders++;
@@ -221,9 +229,10 @@ FAccount ADojoHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FStr
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
     
     // Create provider first
-    Provider* provider = provider_new(rpc_url_string.c_str());
-    if (provider)
+    ResultProvider resProvider = provider_new(rpc_url_string.c_str());
+    if (resProvider.tag == OkProvider)
     {
+        Provider* provider = resProvider.ok;
         FScopeLock Lock(&ResourceMutex);
         AllocatedProviders.Add(provider);
         GlobalActiveProviders++;

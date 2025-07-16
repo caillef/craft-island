@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "DojoModule.h"
 #include "Account.h"
+#include "dojo.h"
 #include "DojoHelpers.generated.h"
 
 UCLASS(BlueprintType)
