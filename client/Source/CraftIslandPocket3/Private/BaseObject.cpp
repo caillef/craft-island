@@ -88,6 +88,8 @@ float ABaseObject::GetCurrentStepPercentage() const
 
 float ABaseObject::GetRealTimePercentage() const
 {
+    if (!GatherableResourceInfo) return 0.0f;
+    
     const double Now = FDateTime::UtcNow().ToUnixTimestamp();
 
     const double Start = GatherableResourceInfo->PlantedAt > 0
@@ -114,28 +116,26 @@ void ABaseObject::Tick(float DeltaTime)
     // Progress to next step when real time percentage exceeds current step percentage
     if (RealTime < CurrentStep) return;
 
-    if (!MultiStepParents.Contains(NextGrowthStep)) {
+    // Cache component lookups to avoid multiple TMap searches
+    USceneComponent** CurrentStepPtr = MultiStepParents.Find(NextGrowthStep);
+    if (!CurrentStepPtr || !*CurrentStepPtr)
+    {
         Grew = true;
         return;
     }
 
-    USceneComponent* TargetComponent = nullptr;
-
-    // Hide prev step (only if we're not on the first step)
-    if (NextGrowthStep > 0 && MultiStepParents.Contains(NextGrowthStep - 1))
+    // Hide previous step (only if we're not on the first step)
+    if (NextGrowthStep > 0)
     {
-        TargetComponent = MultiStepParents[NextGrowthStep - 1];
-        if (TargetComponent)
+        USceneComponent** PrevStepPtr = MultiStepParents.Find(NextGrowthStep - 1);
+        if (PrevStepPtr && *PrevStepPtr)
         {
-            TargetComponent->SetVisibility(false, true);
+            (*PrevStepPtr)->SetVisibility(false, true);
         }
     }
 
-    TargetComponent = MultiStepParents[NextGrowthStep];
-
-    if (!TargetComponent) return;
-
-    TargetComponent->SetVisibility(true, true);
+    // Show current step
+    (*CurrentStepPtr)->SetVisibility(true, true);
 
     NextGrowthStep++;
 

@@ -318,6 +318,15 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
             // Check IslandId
 
             FString Blocks = Chunk->Blocks1.Mid(2) + Chunk->Blocks2.Mid(2);
+            
+            // Validate chunk data length
+            if (Blocks.Len() != 64)
+            {
+                UE_LOG(LogTemp, Error, TEXT("Invalid chunk data length: %d, expected 64 for chunk %s"), 
+                    Blocks.Len(), *Chunk->ChunkId);
+                continue;
+            }
+            
             FString SubStr = Blocks.Reverse();
 
             FIntVector ChunkOffset = this->HexStringToVector(Chunk->ChunkId);
@@ -360,9 +369,19 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
                 Index++;
             }
 
-            // Add entire chunk batch to queue at once
+            // Add entire chunk batch to queue at once with overflow protection
             if (ChunkSpawnData.Num() > 0)
             {
+                const int32 MaxSpawnQueueSize = 1000;
+                if (SpawnQueue.Num() + ChunkSpawnData.Num() >= MaxSpawnQueueSize)
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"), 
+                        SpawnQueue.Num(), MaxSpawnQueueSize);
+                    
+                    // Remove oldest entries to make room
+                    int32 NumToRemove = (SpawnQueue.Num() + ChunkSpawnData.Num()) - MaxSpawnQueueSize + 1;
+                    SpawnQueue.RemoveAt(0, NumToRemove);
+                }
                 SpawnQueue.Append(ChunkSpawnData);
             }
         }
@@ -395,7 +414,13 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
             }
             else if (Item != E_Item::None)
             {
-                // Queue the spawn instead of spawning immediately
+                // Queue the spawn instead of spawning immediately with overflow protection
+                const int32 MaxSpawnQueueSize = 1000;
+                if (SpawnQueue.Num() >= MaxSpawnQueueSize)
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
+                    SpawnQueue.RemoveAt(0);
+                }
                 SpawnQueue.Add(FSpawnQueueData(Item, dojoPos, false, Gatherable));
             }
         }
@@ -427,7 +452,13 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
             }
             else if (Item != E_Item::None)
             {
-                // Queue the spawn instead of spawning immediately
+                // Queue the spawn instead of spawning immediately with overflow protection
+                const int32 MaxSpawnQueueSize = 1000;
+                if (SpawnQueue.Num() >= MaxSpawnQueueSize)
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
+                    SpawnQueue.RemoveAt(0);
+                }
                 SpawnQueue.Add(FSpawnQueueData(Item, dojoPos, false, Structure));
             }
         }
