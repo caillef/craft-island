@@ -225,6 +225,25 @@ public:
     bool Destroyed;
 };
 
+// RAII wrapper for Dojo resources
+template<typename T>
+struct TDojoDeleter
+{
+    void (*Deleter)(T*);
+    TDojoDeleter(void (*deleter)(T*)) : Deleter(deleter) {}
+    void operator()(T* ptr) const
+    {
+        if (ptr && Deleter)
+        {
+            Deleter(ptr);
+        }
+    }
+};
+
+// Smart pointer types for Dojo resources
+template<typename T>
+using TDojoUniquePtr = TUniquePtr<T, TDojoDeleter<T>>;
+
 UCLASS()
 class ADojoHelpers : public AActor
 {
@@ -241,6 +260,12 @@ private:
     struct Subscription *subscription;
 
     static ADojoHelpers* Instance;
+    static FCriticalSection InstanceMutex;
+    
+    // Track allocated accounts for cleanup
+    TArray<Account*> AllocatedAccounts;
+    TArray<Provider*> AllocatedProviders;
+    FCriticalSection ResourceMutex;
 
     void ControllerAccountCallback(ControllerAccount *account);
 
@@ -271,8 +296,18 @@ public:
     ADojoHelpers();
     ~ADojoHelpers();
 
-    ADojoHelpers* GetGlobalInstance();
+    // Override EndPlay to ensure cleanup
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    static ADojoHelpers* GetGlobalInstance();
     void SetGlobalInstance(ADojoHelpers* instance);
+    
+    // Resource cleanup methods
+    void CleanupResources();
+    
+    // Resource tracking for debugging
+    UFUNCTION(BlueprintCallable, Category = "Dojo Debug")
+    void LogResourceUsage() const;
 
     UFUNCTION(BlueprintCallable)
     void Connect(const FString& torii_url, const FString& world);

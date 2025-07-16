@@ -9,31 +9,175 @@
 
 
 ADojoHelpers* ADojoHelpers::Instance = nullptr;
+FCriticalSection ADojoHelpers::InstanceMutex;
+
+// Global memory tracking counters
+static int32 GlobalActiveToriiClients = 0;
+static int32 GlobalActiveAccounts = 0;
+static int32 GlobalActiveProviders = 0;
+static int32 GlobalActiveSubscriptions = 0;
 
 ADojoHelpers::ADojoHelpers()
 {
-    Instance = this;
+    {
+        FScopeLock Lock(&InstanceMutex);
+        Instance = this;
+    }
     subscribed = false;
+    toriiClient = nullptr;
+    subscription = nullptr;
 }
 
 ADojoHelpers::~ADojoHelpers()
 {
-    if (subscribed) {
-        FDojoModule::SubscriptionCancel(subscription);
+    CleanupResources();
+    
+    {
+        FScopeLock Lock(&InstanceMutex);
+        if (Instance == this)
+        {
+            Instance = nullptr;
+        }
     }
+}
+
+void ADojoHelpers::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    CleanupResources();
+    Super::EndPlay(EndPlayReason);
+}
+
+void ADojoHelpers::CleanupResources()
+{
+    UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Starting resource cleanup"));
+    
+    // Cancel subscription if active
+    if (subscribed && subscription)
+    {
+        FDojoModule::SubscriptionCancel(subscription);
+        subscription = nullptr;
+        subscribed = false;
+        GlobalActiveSubscriptions--;
+        UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Subscription cancelled"));
+    }
+    
+    // Free Torii client
+    if (toriiClient)
+    {
+        client_free(toriiClient);
+        toriiClient = nullptr;
+        GlobalActiveToriiClients--;
+        UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Torii client freed"));
+    }
+    
+    // Free all allocated accounts
+    {
+        FScopeLock Lock(&ResourceMutex);
+        int32 AccountCount = AllocatedAccounts.Num();
+        for (Account* account : AllocatedAccounts)
+        {
+            if (account)
+            {
+                account_free(account);
+                GlobalActiveAccounts--;
+            }
+        }
+        AllocatedAccounts.Empty();
+        
+        // Free all allocated providers
+        int32 ProviderCount = AllocatedProviders.Num();
+        for (Provider* provider : AllocatedProviders)
+        {
+            if (provider)
+            {
+                provider_free(provider);
+                GlobalActiveProviders--;
+            }
+        }
+        AllocatedProviders.Empty();
+        
+        UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Freed %d accounts and %d providers"), 
+            AccountCount, ProviderCount);
+    }
+}
+
+void ADojoHelpers::LogResourceUsage() const
+{
+    FScopeLock Lock(&ResourceMutex);
+    
+    UE_LOG(LogTemp, Warning, TEXT("=== Dojo Resource Usage ==="));
+    UE_LOG(LogTemp, Warning, TEXT("Local Resources:"));
+    UE_LOG(LogTemp, Warning, TEXT("  Active Accounts: %d"), AllocatedAccounts.Num());
+    UE_LOG(LogTemp, Warning, TEXT("  Active Providers: %d"), AllocatedProviders.Num());
+    UE_LOG(LogTemp, Warning, TEXT("  Torii Client: %s"), toriiClient ? TEXT("Active") : TEXT("Null"));
+    UE_LOG(LogTemp, Warning, TEXT("  Subscription: %s"), subscription ? TEXT("Active") : TEXT("Null"));
+    UE_LOG(LogTemp, Warning, TEXT("  Subscribed: %s"), subscribed ? TEXT("Yes") : TEXT("No"));
+    
+    UE_LOG(LogTemp, Warning, TEXT("Global Resources:"));
+    UE_LOG(LogTemp, Warning, TEXT("  Global Torii Clients: %d"), GlobalActiveToriiClients);
+    UE_LOG(LogTemp, Warning, TEXT("  Global Accounts: %d"), GlobalActiveAccounts);
+    UE_LOG(LogTemp, Warning, TEXT("  Global Providers: %d"), GlobalActiveProviders);
+    UE_LOG(LogTemp, Warning, TEXT("  Global Subscriptions: %d"), GlobalActiveSubscriptions);
+    
+    // Check for leaks
+    if (GlobalActiveAccounts > AllocatedAccounts.Num())
+    {
+        UE_LOG(LogTemp, Error, TEXT("  WARNING: %d Account(s) may be leaked!"), 
+            GlobalActiveAccounts - AllocatedAccounts.Num());
+    }
+    if (GlobalActiveProviders > AllocatedProviders.Num())
+    {
+        UE_LOG(LogTemp, Error, TEXT("  WARNING: %d Provider(s) may be leaked!"), 
+            GlobalActiveProviders - AllocatedProviders.Num());
+    }
+    
+    // Log memory estimates
+    int32 EstimatedMemory = 0;
+    EstimatedMemory += GlobalActiveAccounts * sizeof(Account);
+    EstimatedMemory += GlobalActiveProviders * sizeof(Provider);
+    EstimatedMemory += GlobalActiveToriiClients * sizeof(ToriiClient);
+    EstimatedMemory += GlobalActiveSubscriptions * sizeof(Subscription);
+    
+    UE_LOG(LogTemp, Warning, TEXT("Estimated Global Memory Usage: %d bytes"), EstimatedMemory);
+    UE_LOG(LogTemp, Warning, TEXT("=========================="));
 }
 
 void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
 {
+    // Clean up existing client if any
+    if (toriiClient)
+    {
+        client_free(toriiClient);
+        toriiClient = nullptr;
+        GlobalActiveToriiClients--;
+    }
+    
     std::string torii_url_string = std::string(TCHAR_TO_UTF8(*torii_url));
     std::string world_string = std::string(TCHAR_TO_UTF8(*world));
     toriiClient = FDojoModule::CreateToriiClient(torii_url_string.c_str(), world_string.c_str());
-    UE_LOG(LogTemp, Log, TEXT("Torii Client initialized."));
+    
+    if (toriiClient)
+    {
+        GlobalActiveToriiClients++;
+        UE_LOG(LogTemp, Log, TEXT("Torii Client initialized."));
+    }
 }
 
 void ADojoHelpers::SetContractsAddresses(const TMap<FString,FString>& addresses)
 {
     ContractsAddresses = addresses;
+}
+
+ADojoHelpers* ADojoHelpers::GetGlobalInstance()
+{
+    FScopeLock Lock(&InstanceMutex);
+    return Instance;
+}
+
+void ADojoHelpers::SetGlobalInstance(ADojoHelpers* instance)
+{
+    FScopeLock Lock(&InstanceMutex);
+    Instance = instance;
 }
 
 FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& address, const FString& private_key)
@@ -43,8 +187,26 @@ FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FSt
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
     std::string address_string = std::string(TCHAR_TO_UTF8(*address));
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
+    
+    // Create provider first
+    Provider* provider = provider_new(rpc_url_string.c_str());
+    if (provider)
+    {
+        FScopeLock Lock(&ResourceMutex);
+        AllocatedProviders.Add(provider);
+        GlobalActiveProviders++;
+    }
+    
     account.account = FDojoModule::CreateAccount(rpc_url_string.c_str(), address_string.c_str(), \
              private_key_string.c_str());
+    
+    if (account.account)
+    {
+        FScopeLock Lock(&ResourceMutex);
+        AllocatedAccounts.Add(account.account);
+        GlobalActiveAccounts++;
+    }
+    
     account.Address = address;
     return account;
 }
@@ -57,17 +219,43 @@ FAccount ADojoHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FStr
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
     std::string address_string = std::string(TCHAR_TO_UTF8(*address));
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
+    
+    // Create provider first
+    Provider* provider = provider_new(rpc_url_string.c_str());
+    if (provider)
+    {
+        FScopeLock Lock(&ResourceMutex);
+        AllocatedProviders.Add(provider);
+        GlobalActiveProviders++;
+    }
+    
     Account *master_account = FDojoModule::CreateAccount(rpc_url_string.c_str(), \
              address_string.c_str(), private_key_string.c_str());
     if (master_account == nullptr) {
         account.Address = UTF8_TO_TCHAR("0x0");
         return account;
     }
+    
+    // Track master account
+    {
+        FScopeLock Lock(&ResourceMutex);
+        AllocatedAccounts.Add(master_account);
+        GlobalActiveAccounts++;
+    }
+    
     account.account = FDojoModule::CreateBurner(rpc_url_string.c_str(), master_account);
     if (account.account == nullptr) {
         account.Address = UTF8_TO_TCHAR("0x0");
         return account;
     }
+    
+    // Track burner account
+    {
+        FScopeLock Lock(&ResourceMutex);
+        AllocatedAccounts.Add(account.account);
+        GlobalActiveAccounts++;
+    }
+    
     account.Address = FDojoModule::AccountAddress(account.account);
     return account;
 }
@@ -132,8 +320,9 @@ void ADojoHelpers::ControllerConnect(const FString& rpc_url)
 
 void ADojoHelpers::ControllerCallbackProxy(ControllerAccount *account)
 {
-    if (!Instance) return;
-    Instance->ControllerAccountCallback(account);
+    ADojoHelpers* SafeInstance = GetGlobalInstance();
+    if (!SafeInstance || !IsValid(SafeInstance)) return;
+    SafeInstance->ControllerAccountCallback(account);
 }
 
 void ADojoHelpers::ControllerAccountCallback(ControllerAccount *account)
@@ -218,12 +407,17 @@ void ADojoHelpers::SubscribeOnDojoModelUpdate()
     struct ResultSubscription res =
         FDojoModule::OnEntityUpdate(toriiClient, "{}", nullptr, CallbackProxy);
     subscription = res.ok;
+    if (subscription)
+    {
+        GlobalActiveSubscriptions++;
+    }
 }
 
 void ADojoHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
 {
-    if (!Instance) return;
-    Instance->ParseModelsAndSend(&models);
+    ADojoHelpers* SafeInstance = GetGlobalInstance();
+    if (!SafeInstance || !IsValid(SafeInstance)) return;
+    SafeInstance->ParseModelsAndSend(&models);
 }
 
 template<typename T>
@@ -429,7 +623,7 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
 
 UDojoModel* ADojoHelpers::parseCraftIslandPocketGatherableResourceModel(struct Struct* model)
 {
-    UDojoModelCraftIslandPocketGatherableResource* Model = NewObject<UDojoModelCraftIslandPocketGatherableResource>();
+    UDojoModelCraftIslandPocketGatherableResource* Model = NewObject<UDojoModelCraftIslandPocketGatherableResource>(GetTransientPackage());
     CArrayMember* members = &model->children;
 
     for (int k = 0; k < members->data_len; k++) {
@@ -453,7 +647,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketGatherableResourceModel(struct S
 
 UDojoModel* ADojoHelpers::parseCraftIslandPocketInventoryModel(struct Struct* model)
 {
-    UDojoModelCraftIslandPocketInventory* Model = NewObject<UDojoModelCraftIslandPocketInventory>();
+    UDojoModelCraftIslandPocketInventory* Model = NewObject<UDojoModelCraftIslandPocketInventory>(GetTransientPackage());
     CArrayMember* members = &model->children;
 
     for (int k = 0; k < members->data_len; k++) {
@@ -476,7 +670,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketInventoryModel(struct Struct* mo
 
 UDojoModel* ADojoHelpers::parseCraftIslandPocketIslandChunkModel(struct Struct* model)
 {
-    UDojoModelCraftIslandPocketIslandChunk* Model = NewObject<UDojoModelCraftIslandPocketIslandChunk>();
+    UDojoModelCraftIslandPocketIslandChunk* Model = NewObject<UDojoModelCraftIslandPocketIslandChunk>(GetTransientPackage());
     CArrayMember* members = &model->children;
 
     for (int k = 0; k < members->data_len; k++) {
@@ -495,7 +689,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketIslandChunkModel(struct Struct* 
 
 UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerDataModel(struct Struct* model)
 {
-    UDojoModelCraftIslandPocketPlayerData* Model = NewObject<UDojoModelCraftIslandPocketPlayerData>();
+    UDojoModelCraftIslandPocketPlayerData* Model = NewObject<UDojoModelCraftIslandPocketPlayerData>(GetTransientPackage());
     CArrayMember* members = &model->children;
 
     for (int k = 0; k < members->data_len; k++) {
@@ -513,7 +707,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerDataModel(struct Struct* m
 
 UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerStatsModel(struct Struct* model)
 {
-    UDojoModelCraftIslandPocketPlayerStats* Model = NewObject<UDojoModelCraftIslandPocketPlayerStats>();
+    UDojoModelCraftIslandPocketPlayerStats* Model = NewObject<UDojoModelCraftIslandPocketPlayerStats>(GetTransientPackage());
     CArrayMember* members = &model->children;
 
     for (int k = 0; k < members->data_len; k++) {
@@ -533,7 +727,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerStatsModel(struct Struct* 
 
 UDojoModel* ADojoHelpers::parseCraftIslandPocketWorldStructureModel(struct Struct* model)
 {
-    UDojoModelCraftIslandPocketWorldStructure* Model = NewObject<UDojoModelCraftIslandPocketWorldStructure>();
+    UDojoModelCraftIslandPocketWorldStructure* Model = NewObject<UDojoModelCraftIslandPocketWorldStructure>(GetTransientPackage());
     CArrayMember* members = &model->children;
 
     for (int k = 0; k < members->data_len; k++) {

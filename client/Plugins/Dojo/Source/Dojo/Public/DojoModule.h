@@ -16,6 +16,58 @@
 
 using namespace dojo_bindings;
 
+// RAII wrapper for FieldElement arrays
+class FFieldElementArrayWrapper
+{
+private:
+    FieldElement* Data;
+    size_t Size;
+    
+public:
+    FFieldElementArrayWrapper(size_t InSize) : Size(InSize)
+    {
+        if (Size > 0)
+        {
+            Data = static_cast<FieldElement*>(FMemory::Malloc(sizeof(FieldElement) * Size));
+            FMemory::Memzero(Data, sizeof(FieldElement) * Size);
+        }
+        else
+        {
+            Data = nullptr;
+        }
+    }
+    
+    ~FFieldElementArrayWrapper()
+    {
+        if (Data)
+        {
+            FMemory::Free(Data);
+        }
+    }
+    
+    // Delete copy constructor and assignment
+    FFieldElementArrayWrapper(const FFieldElementArrayWrapper&) = delete;
+    FFieldElementArrayWrapper& operator=(const FFieldElementArrayWrapper&) = delete;
+    
+    // Move semantics
+    FFieldElementArrayWrapper(FFieldElementArrayWrapper&& Other) noexcept
+        : Data(Other.Data), Size(Other.Size)
+    {
+        Other.Data = nullptr;
+        Other.Size = 0;
+    }
+    
+    FieldElement* Get() { return Data; }
+    const FieldElement* Get() const { return Data; }
+    size_t GetSize() const { return Size; }
+    
+    FieldElement& operator[](size_t Index)
+    {
+        check(Index < Size);
+        return Data[Index];
+    }
+};
+
 typedef void (*ControllerAccountCallback)(struct ControllerAccount*);
 //typedef void (*ControllerUrlCallback)(const char *);
 typedef void (*EntityUpdateCallback)(struct FieldElement, struct CArrayStruct);

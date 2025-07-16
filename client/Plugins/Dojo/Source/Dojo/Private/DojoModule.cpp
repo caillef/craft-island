@@ -166,6 +166,7 @@ Account *FDojoModule::CreateAccount(const char* rpc_url, const char *player_addr
     ResultAccount resAccount = account_new(provider, private_key, player_address);
     if (resAccount.tag == ErrAccount) {
         UE_LOG(LogTemp, Log, TEXT("Failed to create account: %hs"), resAccount.err.message);
+        provider_free(provider);  // Clean up provider on failure
         return nullptr;
     }
     Account *account = resAccount.ok;
@@ -191,6 +192,7 @@ Account *FDojoModule::CreateBurner(const char* rpc_url, Account *master_account)
     if (resBurner.tag == ErrAccount)
     {
         UE_LOG(LogTemp, Log, TEXT("Failed to create burner: %hs"), resBurner.err.message);
+        provider_free(provider);  // Clean up provider on failure
         return nullptr;
     }
     Account *account = resBurner.ok;
@@ -203,15 +205,13 @@ void FDojoModule::ExecuteRaw(Account *account, const char *to, const char *selec
     struct FieldElement actions;
     FDojoModule::string_to_bytes(to, actions.data, 32);
 
-    struct FieldElement *felts = nullptr;
     int nbFelts = feltsStr.Num();
-
-    if (nbFelts > 0) {
-        felts = reinterpret_cast<struct FieldElement *>(malloc(sizeof(*felts) * nbFelts));
-        memset(felts, 0, sizeof(*felts) * nbFelts);
-        for (int i = 0; i < nbFelts; i++) {
-            FDojoModule::string_to_bytes(feltsStr[i].c_str(), felts[i].data, 32);
-        }
+    
+    // Use RAII wrapper for automatic cleanup
+    FFieldElementArrayWrapper feltsWrapper(nbFelts);
+    
+    for (int i = 0; i < nbFelts; i++) {
+        FDojoModule::string_to_bytes(feltsStr[i].c_str(), feltsWrapper[i].data, 32);
     }
 
     struct Call call = {
@@ -219,15 +219,12 @@ void FDojoModule::ExecuteRaw(Account *account, const char *to, const char *selec
         .selector = selector,
         .calldata = {
             .data_len = nbFelts,
-            .data = felts
+            .data = feltsWrapper.Get()
         }
     };
 
     account_execute_raw(account, &call, 1);
-
-    if (felts) {
-        free(felts);
-    }
+    // No manual cleanup needed - RAII wrapper handles it
 }
 
 void FDojoModule::ExecuteFromOutside(ControllerAccount *account, const char *to, const char *selector, const TArray<std::string>& feltsStr)
@@ -235,15 +232,13 @@ void FDojoModule::ExecuteFromOutside(ControllerAccount *account, const char *to,
     struct FieldElement actions;
     FDojoModule::string_to_bytes(to, actions.data, 32);
 
-    struct FieldElement *felts = nullptr;
     int nbFelts = feltsStr.Num();
-
-    if (nbFelts > 0) {
-        felts = reinterpret_cast<struct FieldElement *>(malloc(sizeof(*felts) * nbFelts));
-        memset(felts, 0, sizeof(*felts) * nbFelts);
-        for (int i = 0; i < nbFelts; i++) {
-            FDojoModule::string_to_bytes(feltsStr[i].c_str(), felts[i].data, 32);
-        }
+    
+    // Use RAII wrapper for automatic cleanup
+    FFieldElementArrayWrapper feltsWrapper(nbFelts);
+    
+    for (int i = 0; i < nbFelts; i++) {
+        FDojoModule::string_to_bytes(feltsStr[i].c_str(), feltsWrapper[i].data, 32);
     }
 
     struct Call call = {
@@ -251,15 +246,12 @@ void FDojoModule::ExecuteFromOutside(ControllerAccount *account, const char *to,
         .selector = selector,
         .calldata = {
             .data_len = nbFelts,
-            .data = felts
+            .data = feltsWrapper.Get()
         }
     };
 
     controller_execute_from_outside(account, &call, 1);
-
-    if (felts) {
-        free(felts);
-    }
+    // No manual cleanup needed - RAII wrapper handles it
 }
 
 FString FDojoModule::AccountAddress(Account *account)
