@@ -157,9 +157,6 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
 
     FIntVector TestVector(X, Y, Z);
 
-    // Debug logging for TestVector
-    UE_LOG(LogTemp, Log, TEXT("TestVector: (%d, %d, %d)"), TestVector.X, TestVector.Y, TestVector.Z);
-
     // Step 4: Check if in Actors array
     bool bFound = Actors.Contains(TestVector);
 
@@ -168,9 +165,6 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
 
     // Step 6: Rebuild target vector
     FVector FinalTargetVector(TargetLocation.X, TargetLocation.Y, TargetLocation.Z + ZValue);
-
-    // Debug logging for FinalTargetVector
-    UE_LOG(LogTemp, Log, TEXT("FinalTargetVector: (%f, %f, %f)"), FinalTargetVector.X, FinalTargetVector.Y, FinalTargetVector.Z);
 
     // Step 7: Set on GameInstance
     if (UGameInstance* GI = GetGameInstance())
