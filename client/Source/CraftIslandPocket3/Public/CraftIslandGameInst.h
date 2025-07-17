@@ -88,11 +88,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Debug")
     void LogDojoMemoryUsage();
     
-    // Override Init to start memory logging timer
+    // Override Init
     virtual void Init() override;
-    
-private:
-    // Timer handle for memory logging
-    FTimerHandle MemoryLogTimerHandle;
 
 };

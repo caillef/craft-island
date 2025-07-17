@@ -28,13 +28,14 @@ mod actions {
         Inventory, InventoryTrait
     };
     use craft_island_pocket::models::islandchunk::{
-        place_block, remove_block, update_block, IslandChunkTrait
+        IslandChunk, place_block, remove_block, update_block, IslandChunkTrait
     };
     use craft_island_pocket::models::worldstructure::{WorldStructureTrait};
     use craft_island_pocket::helpers::{
         utils::{get_position_id},
         craft::{craftmatch},
         init::{init},
+        math::{fast_power_2},
     };
 
     use dojo::model::{ModelStorage};
@@ -52,6 +53,35 @@ mod actions {
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
+        
+        // Check if the block below is suitable for planting
+        assert!(z > 0, "Error: Cannot plant at z=0");
+        let below_z = z - 1;
+        let below_chunk_id: u128 = get_position_id(x / 4, y / 4, below_z / 4);
+        let below_chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, below_chunk_id));
+        
+        // Calculate position of block below in its chunk
+        let below_x_local = x % 4;
+        let below_y_local = y % 4;
+        let below_z_local = below_z % 2;
+        
+        // Determine which blocks storage to use based on z position (chunks store blocks in two 128-bit values)
+        let blocks = if (below_z % 4) < 2 { below_chunk.blocks2 } else { below_chunk.blocks1 };
+        
+        // Extract block ID at position from packed storage (each block uses 4 bits)
+        let shift: u128 = fast_power_2(((below_x_local + below_y_local * 4 + below_z_local * 16) * 4).into()).into();
+        let block_below: u64 = ((blocks / shift) % 8).try_into().unwrap();
+        
+        // For seeds (wheat seed id 47), check if there's farmland (tilled dirt) below
+        if item_id == 47 {
+            assert!(block_below == 2, "Error: Wheat seeds need farmland (tilled dirt) below");
+        }
+        
+        // For saplings (oak sapling id 46), check if there's dirt or grass below
+        if item_id == 46 {
+            assert!(block_below == 1 || block_below == 2, "Error: Saplings need dirt or grass below");
+        }
+        
         resource.resource_id = item_id;
 
         let mut inventory: Inventory = world.read_model((player, 0));

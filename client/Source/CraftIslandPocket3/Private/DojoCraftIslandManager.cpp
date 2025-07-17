@@ -460,7 +460,24 @@ FIntVector ADojoCraftIslandManager::HexStringToVector(const FString& Source)
 
 void ADojoCraftIslandManager::RequestPlaceUse()
 {
-    DojoHelpers->CallCraftIslandPocketActionsUseItem(Account, TargetBlock.X + 8192, TargetBlock.Y + 8192, TargetBlock.Z + 8192);
+    // Check if there's an actor at the target position
+    int32 X = FMath::TruncToInt32((float)(TargetBlock.X + 8192));
+    int32 Y = FMath::TruncToInt32((float)(TargetBlock.Y + 8192));
+    int32 Z = FMath::TruncToInt32((float)(TargetBlock.Z + 8192));
+    FIntVector TargetPosition(X, Y, Z);
+
+    bool bActorExists = Actors.Contains(TargetPosition);
+
+    // If there's an actor at the target position, place on top (+1 Z)
+    // If there's no actor, use the target position as is (which already has -1 from the targeting system)
+    int32 ZOffset = bActorExists ? 1 : 0;
+
+    DojoHelpers->CallCraftIslandPocketActionsUseItem(
+        Account,
+        TargetBlock.X + 8192,
+        TargetBlock.Y + 8192,
+        TargetBlock.Z + 8192 + ZOffset
+    );
 }
 
 void ADojoCraftIslandManager::RequestSpawn()
@@ -540,13 +557,13 @@ void ADojoCraftIslandManager::QueueSpawnWithOverflowProtection(const FSpawnQueue
 void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray<FSpawnQueueData>& SpawnDataBatch)
 {
     if (SpawnDataBatch.Num() == 0) return;
-    
+
     const int32 MaxSpawnQueueSize = 1000;
     if (SpawnQueue.Num() + SpawnDataBatch.Num() >= MaxSpawnQueueSize)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"), 
+        UE_LOG(LogTemp, Warning, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"),
             SpawnQueue.Num(), MaxSpawnQueueSize);
-        
+
         // Remove oldest entries to make room
         int32 NumToRemove = (SpawnQueue.Num() + SpawnDataBatch.Num()) - MaxSpawnQueueSize + 1;
         SpawnQueue.RemoveAt(0, NumToRemove);
@@ -557,7 +574,7 @@ void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray
 void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPosition, EActorSpawnType RequiredType)
 {
     if (!Actors.Contains(DojoPosition)) return;
-    
+
     if (ActorSpawnInfo.Contains(DojoPosition))
     {
         FActorSpawnInfo SpawnInfo = ActorSpawnInfo[DojoPosition];
@@ -589,45 +606,45 @@ void ADojoCraftIslandManager::ProcessChunkBlock(uint8 Byte, const FIntVector& Do
 void ADojoCraftIslandManager::ProcessIslandChunk(UDojoModelCraftIslandPocketIslandChunk* Chunk)
 {
     if (!Chunk || Chunk->IslandOwner != Account.Address) return;
-    
+
     FString Blocks = Chunk->Blocks1.Mid(2) + Chunk->Blocks2.Mid(2);
-    
+
     // Validate chunk data length
     if (Blocks.Len() != 64)
     {
-        UE_LOG(LogTemp, Error, TEXT("Invalid chunk data length: %d, expected 64 for chunk %s"), 
+        UE_LOG(LogTemp, Error, TEXT("Invalid chunk data length: %d, expected 64 for chunk %s"),
             Blocks.Len(), *Chunk->ChunkId);
         return;
     }
-    
+
     FString SubStr = Blocks.Reverse();
     FIntVector ChunkOffset = HexStringToVector(Chunk->ChunkId);
-    
+
     // Process chunk data and batch add to queue
     TArray<FSpawnQueueData> ChunkSpawnData;
-    
+
     int32 Index = 0;
     for (TCHAR Char : SubStr)
     {
         uint8 Byte = FParse::HexDigit(Char);
         E_Item Item = static_cast<E_Item>(Byte);
         FIntVector DojoPos = GetWorldPositionFromLocal(Index, ChunkOffset);
-        
+
         ProcessChunkBlock(Byte, DojoPos, Item, ChunkSpawnData);
         Index++;
     }
-    
+
     QueueSpawnBatchWithOverflowProtection(ChunkSpawnData);
 }
 
 void ADojoCraftIslandManager::ProcessGatherableResource(UDojoModelCraftIslandPocketGatherableResource* Gatherable)
 {
     if (!Gatherable || Gatherable->IslandOwner != Account.Address) return;
-    
+
     FIntVector ChunkOffset = HexStringToVector(Gatherable->ChunkId);
     E_Item Item = static_cast<E_Item>(Gatherable->ResourceId);
     FIntVector DojoPos = GetWorldPositionFromLocal(Gatherable->Position, ChunkOffset);
-    
+
     if (Item == E_Item::None)
     {
         RemoveActorAtPosition(DojoPos, EActorSpawnType::GatherableResource);
@@ -641,11 +658,11 @@ void ADojoCraftIslandManager::ProcessGatherableResource(UDojoModelCraftIslandPoc
 void ADojoCraftIslandManager::ProcessWorldStructure(UDojoModelCraftIslandPocketWorldStructure* Structure)
 {
     if (!Structure || Structure->IslandOwner != Account.Address) return;
-    
+
     FIntVector ChunkOffset = HexStringToVector(Structure->ChunkId);
     E_Item Item = static_cast<E_Item>(Structure->StructureType);
     FIntVector DojoPos = GetWorldPositionFromLocal(Structure->Position, ChunkOffset);
-    
+
     if (Item == E_Item::None)
     {
         RemoveActorAtPosition(DojoPos, EActorSpawnType::WorldStructure);
@@ -660,15 +677,15 @@ void ADojoCraftIslandManager::LoadChunkFromCache(const FString& ChunkId)
 {
     FString IslandKey = GetCurrentIslandKey();
     if (!ChunkCache.Contains(IslandKey)) return;
-    
+
     FSpaceChunks& SpaceData = ChunkCache[IslandKey];
-    
+
     // Load chunk blocks
     if (SpaceData.Chunks.Contains(ChunkId))
     {
         ProcessIslandChunk(SpaceData.Chunks[ChunkId]);
     }
-    
+
     // Load gatherables for this chunk
     for (const auto& Pair : SpaceData.Gatherables)
     {
@@ -677,7 +694,7 @@ void ADojoCraftIslandManager::LoadChunkFromCache(const FString& ChunkId)
             ProcessGatherableResource(Pair.Value);
         }
     }
-    
+
     // Load structures for this chunk
     for (const auto& Pair : SpaceData.Structures)
     {
@@ -692,7 +709,7 @@ void ADojoCraftIslandManager::LoadChunksFromCache(const FIntVector& CenterChunk,
 {
     FString IslandKey = GetCurrentIslandKey();
     if (!ChunkCache.Contains(IslandKey)) return;
-    
+
     // Load all chunks within radius
     for (int32 X = -Radius; X <= Radius; X++)
     {
@@ -701,13 +718,13 @@ void ADojoCraftIslandManager::LoadChunksFromCache(const FIntVector& CenterChunk,
             for (int32 Z = -Radius; Z <= Radius; Z++)
             {
                 FIntVector ChunkPos = CenterChunk + FIntVector(X, Y, Z);
-                
+
                 // Convert chunk position to chunk ID format (0x + 10 hex chars for each coordinate)
-                FString ChunkId = FString::Printf(TEXT("0x%010x%010x%010x"), 
-                    ChunkPos.X + 2048, 
-                    ChunkPos.Y + 2048, 
+                FString ChunkId = FString::Printf(TEXT("0x%010x%010x%010x"),
+                    ChunkPos.X + 2048,
+                    ChunkPos.Y + 2048,
                     ChunkPos.Z + 2048);
-                
+
                 LoadChunkFromCache(ChunkId);
             }
         }
