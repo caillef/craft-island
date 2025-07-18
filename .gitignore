@@ -67,3 +67,4 @@
 **/**/target
 
 contracts/sozo
+contracts/dojo_sepolia.toml
