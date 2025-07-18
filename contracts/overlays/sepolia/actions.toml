@@ -1,0 +1,8 @@
+tag = "craft_island_pocket-actions"
+writes = [
+    "craft_island_pocket-IslandChunk",
+    "craft_island_pocket-Inventory",
+    "craft_island_pocket-PlayerStats",
+    "craft_island_pocket-PlayerData",
+    "craft_island_pocket-GatherableResource",
+]

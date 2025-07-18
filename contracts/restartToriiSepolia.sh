@@ -1,0 +1,1 @@
+slot d delete craftislandsepolia torii -f ; slot d create craftislandsepolia torii --version v1.6.0-alpha.2 --rpc https://api.cartridge.gg/x/starknet/sepolia --world 0x0563a8a0cbb6949d501017182b852167952e488ff0052e6418ef8c9ca65a7d2b && slot d logs craftislandsepolia torii -f
