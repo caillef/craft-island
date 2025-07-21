@@ -29,11 +29,10 @@ void ADojoCraftIslandManager::BeginPlay()
     // Step 3: Bind custom event to delegate
     DojoHelpers->OnDojoModelUpdated.AddDynamic(this, &ADojoCraftIslandManager::HandleDojoModel);
 
-    // Step 4: Subscribe to dojo model updates
-    DojoHelpers->SubscribeOnDojoModelUpdate();
-
-    // Step 1: Create burner account
-    Account = DojoHelpers->CreateBurnerDeprecated(RpcUrl, PlayerAddress, PrivateKey);
+    // NOTE: Moved subscription to after delay to ensure Torii client is fully ready
+    
+    // Step 4: Create burner account
+    Account = DojoHelpers->CreateAccountDeprecated(RpcUrl, PlayerAddress, PrivateKey);
 
     // Step 2: Call custom spawn function
     CraftIslandSpawn();
@@ -71,11 +70,14 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
 
 void ADojoCraftIslandManager::ContinueAfterDelay()
 {
-    // Step 4: Fetch existing models
-    if (DojoHelpers)
-    {
-        DojoHelpers->FetchExistingModels();
-    }
+    if (!DojoHelpers) return;
+    
+    // Step 4: Subscribe to dojo model updates (moved here to ensure Torii client is ready)
+    UE_LOG(LogTemp, Log, TEXT("ContinueAfterDelay: Subscribing to model updates"));
+    DojoHelpers->SubscribeOnDojoModelUpdate();
+    
+    // Step 5: Fetch existing models
+    DojoHelpers->FetchExistingModels();
 }
 
 void ADojoCraftIslandManager::InitUIAndActors()

@@ -266,10 +266,26 @@ FString FDojoModule::ControllerAccountAddress(ControllerAccount *account)
 
 struct ResultSubscription FDojoModule::OnEntityUpdate(ToriiClient *client, const char *query_str, void *user_data, EntityUpdateCallback callback)
 {
+    UE_LOG(LogTemp, Log, TEXT("FDojoModule::OnEntityUpdate - Entry"));
+    UE_LOG(LogTemp, Log, TEXT("  Client pointer: %p"), client);
+    UE_LOG(LogTemp, Log, TEXT("  Query: %hs"), query_str ? query_str : "null");
+    UE_LOG(LogTemp, Log, TEXT("  Callback pointer: %p"), callback);
+    
     COptionClause clause = {
         .tag = NoneClause
     };
-    return client_on_entity_state_update(client, clause, callback);
+    
+    UE_LOG(LogTemp, Log, TEXT("FDojoModule::OnEntityUpdate - About to call client_on_entity_state_update"));
+    struct ResultSubscription result = client_on_entity_state_update(client, clause, callback);
+    UE_LOG(LogTemp, Log, TEXT("FDojoModule::OnEntityUpdate - client_on_entity_state_update returned"));
+    
+    if (result.tag == ErrSubscription) {
+        UE_LOG(LogTemp, Error, TEXT("FDojoModule::OnEntityUpdate - Error: %hs"), result.err.message);
+    } else {
+        UE_LOG(LogTemp, Log, TEXT("FDojoModule::OnEntityUpdate - Success, subscription pointer: %p"), result.ok);
+    }
+    
+    return result;
 }
 
 void FDojoModule::SubscriptionCancel(struct Subscription *subscription)

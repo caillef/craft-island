@@ -151,9 +151,14 @@ void ADojoHelpers::LogResourceUsage() const
 
 void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
 {
+    UE_LOG(LogTemp, Log, TEXT("ADojoHelpers::Connect - Starting connection"));
+    UE_LOG(LogTemp, Log, TEXT("  Torii URL: %s"), *torii_url);
+    UE_LOG(LogTemp, Log, TEXT("  World: %s"), *world);
+    
     // Clean up existing client if any
     if (toriiClient)
     {
+        UE_LOG(LogTemp, Warning, TEXT("Cleaning up existing Torii client"));
         client_free(toriiClient);
         toriiClient = nullptr;
         GlobalActiveToriiClients--;
@@ -161,12 +166,18 @@ void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
     
     std::string torii_url_string = std::string(TCHAR_TO_UTF8(*torii_url));
     std::string world_string = std::string(TCHAR_TO_UTF8(*world));
+    
+    UE_LOG(LogTemp, Log, TEXT("Creating new Torii client..."));
     toriiClient = FDojoModule::CreateToriiClient(torii_url_string.c_str(), world_string.c_str());
     
     if (toriiClient)
     {
         GlobalActiveToriiClients++;
-        UE_LOG(LogTemp, Log, TEXT("Torii Client initialized."));
+        UE_LOG(LogTemp, Log, TEXT("Torii Client initialized successfully. Pointer: %p"), toriiClient);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to initialize Torii Client!"));
     }
 }
 
@@ -403,23 +414,52 @@ void ADojoHelpers::FetchExistingModels()
 
 void ADojoHelpers::SubscribeOnDojoModelUpdate()
 {
-    UE_LOG(LogTemp, Log, TEXT("Subscribing to entity update."));
+    UE_LOG(LogTemp, Log, TEXT("SubscribeOnDojoModelUpdate called"));
     if (subscribed) {
-        UE_LOG(LogTemp, Log, TEXT("Warning: cancelled, already subscribed."));
+        UE_LOG(LogTemp, Warning, TEXT("Warning: cancelled, already subscribed."));
         return;
     }
     if (toriiClient == nullptr) {
-        UE_LOG(LogTemp, Log, TEXT("Error: Torii Client is not initialized."));
+        UE_LOG(LogTemp, Error, TEXT("Error: Torii Client is not initialized."));
         return;
     }
-    subscribed = true;
-    struct ResultSubscription res =
-        FDojoModule::OnEntityUpdate(toriiClient, "{}", nullptr, CallbackProxy);
-    subscription = res.ok;
-    if (subscription)
-    {
-        GlobalActiveSubscriptions++;
-    }
+    
+    UE_LOG(LogTemp, Log, TEXT("Starting subscription in async thread..."));
+    
+    // Run subscription in a background thread to avoid blocking the game thread
+    Async(EAsyncExecution::Thread, [this]() {
+        UE_LOG(LogTemp, Log, TEXT("Async thread: Starting entity subscription"));
+        UE_LOG(LogTemp, Log, TEXT("Async thread: ToriiClient pointer: %p"), toriiClient);
+        
+        UE_LOG(LogTemp, Log, TEXT("Async thread: About to call FDojoModule::OnEntityUpdate..."));
+        struct ResultSubscription res =
+            FDojoModule::OnEntityUpdate(toriiClient, "{}", nullptr, CallbackProxy);
+        UE_LOG(LogTemp, Log, TEXT("Async thread: FDojoModule::OnEntityUpdate returned"));
+        
+        // Process result back on game thread
+        Async(EAsyncExecution::TaskGraphMainThread, [this, res]() {
+            // Check if subscription was successful
+            if (res.tag == ErrSubscription)
+            {
+                UE_LOG(LogTemp, Error, TEXT("Failed to create subscription: %hs"), res.err.message);
+                subscribed = false;
+                return;
+            }
+            
+            if (res.tag == OkSubscription && res.ok != nullptr)
+            {
+                subscription = res.ok;
+                subscribed = true;
+                GlobalActiveSubscriptions++;
+                UE_LOG(LogTemp, Log, TEXT("Entity subscription created successfully"));
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("Subscription returned OK but with null subscription pointer"));
+                subscribed = false;
+            }
+        });
+    });
 }
 
 void ADojoHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
