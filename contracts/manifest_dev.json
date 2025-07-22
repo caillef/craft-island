@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x7746f30d2b8494780387ed469797ecb5c62c7b6f49f4939a5e60e0f7ae5f99e",
-    "address": "0x55097e2bf8fff22ca69ad7c0c13bf7ad522041df38f39c2b84c8d82fee9be89",
+    "class_hash": "0x685ed02eefa98fe7e208aa295042e9bbad8029b0d3d6f0ba2b32546efe0a1f9",
+    "address": "0x563a8a0cbb6949d501017182b852167952e488ff0052e6418ef8c9ca65a7d2b",
     "seed": "craft_island_pocket",
     "name": "Dojo starter",
     "entrypoints": [
@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x50acd20e4c3bfebf516db8d6286d08e8ca27e65cc1d102594bb24c3fe8e4188",
-      "class_hash": "0x4b420825d26da22558dc18b78cb89e89db16bc0c709307a2e9d7e1975061159",
+      "address": "0x2ebe0a0bc233034319e12f911a69bc9c254db8e9880ef56393e8433dd81c183",
+      "class_hash": "0x3ba1ced3dff1b08dc06cbe44acde8101863638b67ceea1f3fbd01575b779fda",
       "abi": [
         {
           "type": "impl",
@@ -1678,7 +1678,7 @@
       ]
     },
     {
-      "address": "0x1a1031b53deb125e4777d38016773048136444791cd463bf9bb814ef28d0a08",
+      "address": "0x4abf7c0f04e846af6a847847da9511755ed13b88a8fc9a120336531a4da3f5e",
       "class_hash": "0x7edb1c95dc0aa4aaad4d55203f4d85bc6a8906b9394d36f610d4466621708cd",
       "abi": [
         {

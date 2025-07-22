@@ -1,0 +1,76 @@
+{
+  "semaine_1": {
+    "objectif": "Implémenter la boucle de farming de base (plantation, récolte, vente, achat)",
+    "cairo": [
+      "init_player(address)",
+      "Struct Inventory (graines, légumes, outils, coins)",
+      "Struct FieldTile { seed_type, planted_at, watered }",
+      "plant_seed(tile_id, seed_type)",
+      "harvest(tile_id)",
+      "buy_seeds(seed_type, quantity)",
+      "sell(item_type, quantity)",
+      "Map de prix, timers, rendements"
+    ],
+    "unreal": [
+      "Générer terrain avec 6 tuiles cultivables",
+      "UI inventaire (coins, graines, légumes)",
+      "Interaction avec tuiles (planter/récolter)",
+      "Afficher timers de croissance",
+      "Bridge vers contrats Cairo (plant, harvest, buy, sell)",
+      "Commandes debug (give coins, skip timer)"
+    ]
+  },
+  "semaine_2": {
+    "objectif": "Implémenter les bâtiments, ressources et outils de base",
+    "cairo": [
+      "Types de ressources (bois, pierre, planche)",
+      "gather_resource(type)",
+      "build(building_type)",
+      "water(tile_id)",
+      "craft(tool_type)",
+      "expand_field()"
+    ],
+    "unreal": [
+      "Afficher bâtiments construits (puit)",
+      "UI menu construction avec prérequis",
+      "UI et interaction arrosoir",
+      "Extension du champ via outil houe",
+      "Spots de récolte (bois, pierre)",
+      "Menu de craft outils et bâtiments"
+    ]
+  },
+  "semaine_3": {
+    "objectif": "Gérer les animaux, la cuisine et les décorations",
+    "cairo": [
+      "buy_egg()",
+      "hatch_egg(egg_id)",
+      "Stockage pet équipé + bonus",
+      "cook(recipe_id)",
+      "craft_deco(item)",
+      "place_deco(slot, item)"
+    ],
+    "unreal": [
+      "Animation pose œuf + timer + éclosion",
+      "UI gestion pets + application bonus",
+      "Débloquer cuisine + UI recettes",
+      "Animation cuisson",
+      "Menu craft déco + placement libre"
+    ]
+  },
+  "semaine_4": {
+    "objectif": "Polish global, boutique, teasing automation",
+    "cairo": [
+      "buy_cosmetic(item_id)",
+      "Ajustement équilibrage (prix, timers, rendement)",
+      "build(storage)",
+      "store(item, qty)",
+      "Tag teasing automation"
+    ],
+    "unreal": [
+      "UI responsive complète",
+      "Boutique cosmétiques avec preview",
+      "Modèle 3D entrepôt + tooltip teasing",
+      "Checklist QA et tests debug"
+    ]
+  }
+}

@@ -72,9 +72,9 @@ mod actions {
         let shift: u128 = fast_power_2(((below_x_local + below_y_local * 4 + below_z_local * 16) * 4).into()).into();
         let block_below: u64 = ((blocks / shift) % 8).try_into().unwrap();
         
-        // For seeds (wheat seed id 47), check if there's farmland (tilled dirt) below
-        if item_id == 47 {
-            assert!(block_below == 2, "Error: Wheat seeds need farmland (tilled dirt) below");
+        // For seeds (wheat seed id 47, carrot seed id 51, potato id 53), check if there's farmland (tilled dirt) below
+        if item_id == 47 || item_id == 51 || item_id == 53 {
+            assert!(block_below == 2, "Error: Seeds and potatoes need farmland (tilled dirt) below");
         }
         
         // For saplings (oak sapling id 46), check if there's dirt or grass below
@@ -107,7 +107,20 @@ mod actions {
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id > 0 && !resource.destroyed, "Error: Resource does not exists");
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
-        assert!(resource.next_harvest_at <= timestamp, "Error: Can't harvest now");
+        
+        // If crop is not ready yet, return the seed
+        if resource.next_harvest_at > timestamp {
+            if resource.resource_id == 47 || resource.resource_id == 51 || resource.resource_id == 53 {
+                // Return the seed
+                InventoryTrait::add_to_player_inventories(ref world, player.into(), resource.resource_id, 1);
+                // Destroy the resource
+                resource.destroyed = true;
+                resource.resource_id = 0;
+                world.write_model(@resource);
+                return;
+            }
+            assert!(false, "Error: Can't harvest now");
+        }
         let mut inventory: Inventory = world.read_model((player, 0));
         let tool: u16 = inventory.get_hotbar_selected_item_type();
         if resource.resource_id == 46 { // sapling
@@ -122,14 +135,24 @@ mod actions {
         let mut item_id = resource.resource_id;
         if item_id == 49 { // Boulder
             item_id = 33; // Rock
-        }
-
-        InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
-        if item_id == 47 { // Wheat seed
-            InventoryTrait::add_to_player_inventories(ref world, player.into(), 48, 1);
-        }
-        if item_id == 46 { // Oak Tree
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
+        } else if item_id == 46 { // Oak Tree
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 46, 1);
             InventoryTrait::add_to_player_inventories(ref world, player.into(), 44, 1);
+        } else if item_id == 47 { // Wheat seed
+            // Give 1-2 wheat (no seeds)
+            let seed = timestamp % 2;
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 48, 1 + seed.try_into().unwrap());
+        } else if item_id == 51 { // Carrot seed
+            // Give 2-3 carrots (no seeds)
+            let seed = timestamp % 2;
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 52, 2 + seed.try_into().unwrap());
+        } else if item_id == 53 { // Potato seed
+            // Give 2-3 potatoes (no seeds)
+            let seed = timestamp % 2;
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 54, 2 + seed.try_into().unwrap());
+        } else {
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
         }
 
         if resource.max_harvest == 255 {

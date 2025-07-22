@@ -1,23 +1,27 @@
 Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft,ActorClass
-1,1,Grass,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_1.items_icons_ItemIcon_1',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Grass.B_Grass_C'
-2,2,Dirt,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_2.items_icons_ItemIcon_2',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Dirt.B_Dirt_C'
-3,3,Stone,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_3.items_icons_ItemIcon_3',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Stone.B_Stone_C'
-32,32,Wooden Stick,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_32.items_icons_ItemIcon_32',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_WoodenStick.B_WoodenStick_C'
-33,33,Rock,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_33.items_icons_ItemIcon_33',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Rock.B_Rock_C'
-34,34,Stone Axe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_34.items_icons_ItemIcon_34',,
-35,35,Stone Axe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_35.items_icons_ItemIcon_35',0x0000000000000000000000000000000000000800000000000000000000880000,
-36,36,Stone Pickaxe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_36.items_icons_ItemIcon_36',,
-37,37,Stone Pickaxe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_37.items_icons_ItemIcon_37',0x0000000000000000000000000000000000000800000000000000000000900000,
-38,38,Stone Shovel Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_38.items_icons_ItemIcon_38',,
-39,39,Stone Shovel,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_39.items_icons_ItemIcon_39',0x0000000000000000000000000000000000000800000000000000000000980000,
-40,40,Stone Hoe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_40.items_icons_ItemIcon_40',,
-41,41,Stone Hoe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_41.items_icons_ItemIcon_41',0x0000000000000000000000000000000000000800000000000000000000A00000,
-42,42,Stone Hammer Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_42.items_icons_ItemIcon_42',,
-43,43,Stone Hammer,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_43.items_icons_ItemIcon_43',0x0000000000000000000000000000000000000800000000000000000000A80000,
-44,44,Oak Log,item,16,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_44.items_icons_ItemIcon_44',,
-45,45,Oak Plank,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_45.items_icons_ItemIcon_45',,
-46,46,Oak Sapling,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_46.items_icons_ItemIcon_46',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_OakSapling.B_OakSapling_C'
-47,47,Wheat Seed,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_47.items_icons_ItemIcon_47',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_WheatSeed.B_WheatSeed_C'
-48,48,Wheat,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_48.items_icons_ItemIcon_48',,
-49,49,Boulder,object,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_49.items_icons_ItemIcon_49',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Boulder.B_Boulder_C'
-50,50,House Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_ItemIcon_50.items_icons_ItemIcon_50',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_House.B_House_C'
+1,1,Grass,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_1.items_icons_1',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Grass.B_Grass_C'
+2,2,Dirt,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_2.items_icons_2',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Dirt.B_Dirt_C'
+3,3,Stone,block,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_3.items_icons_3',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Stone.B_Stone_C'
+32,32,Wooden Stick,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_32.items_icons_32',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_WoodenStick.B_WoodenStick_C'
+33,33,Rock,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_33.items_icons_33',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Rock.B_Rock_C'
+34,34,Stone Axe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_34.items_icons_34',,
+35,35,Stone Axe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_35.items_icons_35',0x0000000000000000000000000000000000000800000000000000000000880000,
+36,36,Stone Pickaxe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_36.items_icons_36',,
+37,37,Stone Pickaxe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_37.items_icons_37',0x0000000000000000000000000000000000000800000000000000000000900000,
+38,38,Stone Shovel Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_38.items_icons_38',,
+39,39,Stone Shovel,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_39.items_icons_39',0x0000000000000000000000000000000000000800000000000000000000980000,
+40,40,Stone Hoe Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_40.items_icons_40',,
+41,41,Stone Hoe,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_41.items_icons_41',0x0000000000000000000000000000000000000800000000000000000000A00000,
+42,42,Stone Hammer Head,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_42.items_icons_42',,
+43,43,Stone Hammer,tool,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_43.items_icons_43',0x0000000000000000000000000000000000000800000000000000000000A80000,
+44,44,Oak Log,item,16,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_44.items_icons_44',,
+45,45,Oak Plank,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_45.items_icons_45',,
+46,46,Oak Sapling,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_46.items_icons_46',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_OakSapling.B_OakSapling_C'
+47,47,Wheat Seed,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_47.items_icons_47',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_WheatSeed.B_WheatSeed_C'
+48,48,Wheat,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_48.items_icons_48',,
+49,49,Boulder,object,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_49.items_icons_49',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Boulder.B_Boulder_C'
+50,50,House Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_50.items_icons_50',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_House.B_House_C'
+51,51,Carrot Seed,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_51.items_icons_51',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_CarrotSeed.B_CarrotSeed_C'
+52,52,Carrot,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_52.items_icons_52',,
+53,53,Potato Seed,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_53.items_icons_53',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_PotatoSeed.B_PotatoSeed_C'
+54,54,Potato,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_54.items_icons_54',,

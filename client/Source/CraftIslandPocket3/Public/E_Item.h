@@ -17,7 +17,7 @@ enum class E_Item : uint8
     Grass UMETA(DisplayName = "Grass"),
     Dirt UMETA(DisplayName = "Dirt"),
     Stone UMETA(DisplayName = "Stone"),
-    
+
     NewEnumerator4,
     NewEnumerator5,
     NewEnumerator6,
@@ -66,4 +66,8 @@ enum class E_Item : uint8
     Wheat UMETA(DisplayName = "Wheat"),
     Boulder UMETA(DisplayName = "Boulder"),
     HousePattern UMETA(DisplayName = "House Pattern"),
+    CarrotSeed UMETA(DisplayName = "Carrot Seed"),
+    Carrot UMETA(DisplayName = "Carrot"),
+    PotatoSeed UMETA(DisplayName = "Potato Seed"),
+    Potato UMETA(DisplayName = "Potato"),
 };

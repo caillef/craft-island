@@ -32,7 +32,7 @@ ADojoHelpers::ADojoHelpers()
 ADojoHelpers::~ADojoHelpers()
 {
     CleanupResources();
-    
+
     {
         FScopeLock Lock(&InstanceMutex);
         if (Instance == this)
@@ -51,7 +51,7 @@ void ADojoHelpers::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ADojoHelpers::CleanupResources()
 {
     UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Starting resource cleanup"));
-    
+
     // Cancel subscription if active
     if (subscribed && subscription)
     {
@@ -61,7 +61,7 @@ void ADojoHelpers::CleanupResources()
         GlobalActiveSubscriptions--;
         UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Subscription cancelled"));
     }
-    
+
     // Free Torii client
     if (toriiClient)
     {
@@ -70,7 +70,7 @@ void ADojoHelpers::CleanupResources()
         GlobalActiveToriiClients--;
         UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Torii client freed"));
     }
-    
+
     // Free all allocated accounts
     {
         FScopeLock Lock(&ResourceMutex);
@@ -84,7 +84,7 @@ void ADojoHelpers::CleanupResources()
             }
         }
         AllocatedAccounts.Empty();
-        
+
         // Free all allocated providers
         int32 ProviderCount = AllocatedProviders.Num();
         for (Provider* provider : AllocatedProviders)
@@ -96,8 +96,8 @@ void ADojoHelpers::CleanupResources()
             }
         }
         AllocatedProviders.Empty();
-        
-        UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Freed %d accounts and %d providers"), 
+
+        UE_LOG(LogTemp, Log, TEXT("DojoHelpers: Freed %d accounts and %d providers"),
             AccountCount, ProviderCount);
     }
 }
@@ -105,7 +105,7 @@ void ADojoHelpers::CleanupResources()
 void ADojoHelpers::LogResourceUsage() const
 {
     FScopeLock Lock(const_cast<FCriticalSection*>(&ResourceMutex));
-    
+
     UE_LOG(LogTemp, Warning, TEXT("=== Dojo Resource Usage ==="));
     UE_LOG(LogTemp, Warning, TEXT("Local Resources:"));
     UE_LOG(LogTemp, Warning, TEXT("  Active Accounts: %d"), AllocatedAccounts.Num());
@@ -113,38 +113,38 @@ void ADojoHelpers::LogResourceUsage() const
     UE_LOG(LogTemp, Warning, TEXT("  Torii Client: %s"), toriiClient ? TEXT("Active") : TEXT("Null"));
     UE_LOG(LogTemp, Warning, TEXT("  Subscription: %s"), subscription ? TEXT("Active") : TEXT("Null"));
     UE_LOG(LogTemp, Warning, TEXT("  Subscribed: %s"), subscribed ? TEXT("Yes") : TEXT("No"));
-    
+
     UE_LOG(LogTemp, Warning, TEXT("Global Resources:"));
     UE_LOG(LogTemp, Warning, TEXT("  Global Torii Clients: %d"), GlobalActiveToriiClients);
     UE_LOG(LogTemp, Warning, TEXT("  Global Accounts: %d"), GlobalActiveAccounts);
     UE_LOG(LogTemp, Warning, TEXT("  Global Providers: %d"), GlobalActiveProviders);
     UE_LOG(LogTemp, Warning, TEXT("  Global Subscriptions: %d"), GlobalActiveSubscriptions);
-    
+
     // Check for leaks
     if (GlobalActiveAccounts > AllocatedAccounts.Num())
     {
-        UE_LOG(LogTemp, Error, TEXT("  WARNING: %d Account(s) may be leaked!"), 
+        UE_LOG(LogTemp, Error, TEXT("  WARNING: %d Account(s) may be leaked!"),
             GlobalActiveAccounts - AllocatedAccounts.Num());
     }
     if (GlobalActiveProviders > AllocatedProviders.Num())
     {
-        UE_LOG(LogTemp, Error, TEXT("  WARNING: %d Provider(s) may be leaked!"), 
+        UE_LOG(LogTemp, Error, TEXT("  WARNING: %d Provider(s) may be leaked!"),
             GlobalActiveProviders - AllocatedProviders.Num());
     }
-    
+
     // Log memory estimates
     // Note: Using estimated sizes as these are opaque types
     const int32 EstimatedAccountSize = 256;  // Estimated size
     const int32 EstimatedProviderSize = 128; // Estimated size
     const int32 EstimatedClientSize = 512;   // Estimated size
     const int32 EstimatedSubscriptionSize = 64; // Estimated size
-    
+
     int32 EstimatedMemory = 0;
     EstimatedMemory += GlobalActiveAccounts * EstimatedAccountSize;
     EstimatedMemory += GlobalActiveProviders * EstimatedProviderSize;
     EstimatedMemory += GlobalActiveToriiClients * EstimatedClientSize;
     EstimatedMemory += GlobalActiveSubscriptions * EstimatedSubscriptionSize;
-    
+
     UE_LOG(LogTemp, Warning, TEXT("Estimated Global Memory Usage: %d bytes"), EstimatedMemory);
     UE_LOG(LogTemp, Warning, TEXT("=========================="));
 }
@@ -154,7 +154,7 @@ void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
     UE_LOG(LogTemp, Log, TEXT("ADojoHelpers::Connect - Starting connection"));
     UE_LOG(LogTemp, Log, TEXT("  Torii URL: %s"), *torii_url);
     UE_LOG(LogTemp, Log, TEXT("  World: %s"), *world);
-    
+
     // Clean up existing client if any
     if (toriiClient)
     {
@@ -163,13 +163,13 @@ void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
         toriiClient = nullptr;
         GlobalActiveToriiClients--;
     }
-    
+
     std::string torii_url_string = std::string(TCHAR_TO_UTF8(*torii_url));
     std::string world_string = std::string(TCHAR_TO_UTF8(*world));
-    
+
     UE_LOG(LogTemp, Log, TEXT("Creating new Torii client..."));
     toriiClient = FDojoModule::CreateToriiClient(torii_url_string.c_str(), world_string.c_str());
-    
+
     if (toriiClient)
     {
         GlobalActiveToriiClients++;
@@ -205,7 +205,7 @@ FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FSt
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
     std::string address_string = std::string(TCHAR_TO_UTF8(*address));
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
-    
+
     // Create provider first
     ResultProvider resProvider = provider_new(rpc_url_string.c_str());
     if (resProvider.tag == OkProvider)
@@ -215,17 +215,17 @@ FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FSt
         AllocatedProviders.Add(provider);
         GlobalActiveProviders++;
     }
-    
+
     account.account = FDojoModule::CreateAccount(rpc_url_string.c_str(), address_string.c_str(), \
              private_key_string.c_str());
-    
+
     if (account.account)
     {
         FScopeLock Lock(&ResourceMutex);
         AllocatedAccounts.Add(account.account);
         GlobalActiveAccounts++;
     }
-    
+
     account.Address = address;
     return account;
 }
@@ -238,7 +238,7 @@ FAccount ADojoHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FStr
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
     std::string address_string = std::string(TCHAR_TO_UTF8(*address));
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
-    
+
     // Create provider first
     ResultProvider resProvider = provider_new(rpc_url_string.c_str());
     if (resProvider.tag == OkProvider)
@@ -248,34 +248,34 @@ FAccount ADojoHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FStr
         AllocatedProviders.Add(provider);
         GlobalActiveProviders++;
     }
-    
+
     Account *master_account = FDojoModule::CreateAccount(rpc_url_string.c_str(), \
              address_string.c_str(), private_key_string.c_str());
     if (master_account == nullptr) {
         account.Address = UTF8_TO_TCHAR("0x0");
         return account;
     }
-    
+
     // Track master account
     {
         FScopeLock Lock(&ResourceMutex);
         AllocatedAccounts.Add(master_account);
         GlobalActiveAccounts++;
     }
-    
+
     account.account = FDojoModule::CreateBurner(rpc_url_string.c_str(), master_account);
     if (account.account == nullptr) {
         account.Address = UTF8_TO_TCHAR("0x0");
         return account;
     }
-    
+
     // Track burner account
     {
         FScopeLock Lock(&ResourceMutex);
         AllocatedAccounts.Add(account.account);
         GlobalActiveAccounts++;
     }
-    
+
     account.Address = FDojoModule::AccountAddress(account.account);
     return account;
 }
@@ -397,18 +397,30 @@ void ADojoHelpers::ExecuteFromOutside(const FControllerAccount& account, const F
 void ADojoHelpers::FetchExistingModels()
 {
     Async(EAsyncExecution::Thread, [this]() {
+        UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Starting to fetch entities"));
+        UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: ToriiClient pointer: %p"), toriiClient);
+
         ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, 1000, nullptr);
         if (resEntities.tag == ErrPageEntity) {
-            UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
+            UE_LOG(LogTemp, Error, TEXT("FetchExistingModels: Failed to fetch entities: %hs"), \
             resEntities.err.message);
             return;
         }
+
+        UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Successfully fetched entities"));
         CArrayEntity *entities = &resEntities.ok.items;
+        UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Processing %d entities"), entities->data_len);
+
         for (int i = 0; i < entities->data_len; i++) {
+            UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Processing entity %d of %d"), i + 1, entities->data_len);
             CArrayStruct* models = &entities->data[i].models;
+            UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Entity %d has %d models"), i, models->data_len);
             this->ParseModelsAndSend(models);
         }
+
+        UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Cleaning up entity data"));
         FDojoModule::CArrayFree(entities->data, entities->data_len);
+        UE_LOG(LogTemp, Log, TEXT("FetchExistingModels: Completed successfully"));
     });
 }
 
@@ -423,19 +435,19 @@ void ADojoHelpers::SubscribeOnDojoModelUpdate()
         UE_LOG(LogTemp, Error, TEXT("Error: Torii Client is not initialized."));
         return;
     }
-    
+
     UE_LOG(LogTemp, Log, TEXT("Starting subscription in async thread..."));
-    
+
     // Run subscription in a background thread to avoid blocking the game thread
     Async(EAsyncExecution::Thread, [this]() {
         UE_LOG(LogTemp, Log, TEXT("Async thread: Starting entity subscription"));
         UE_LOG(LogTemp, Log, TEXT("Async thread: ToriiClient pointer: %p"), toriiClient);
-        
+
         UE_LOG(LogTemp, Log, TEXT("Async thread: About to call FDojoModule::OnEntityUpdate..."));
         struct ResultSubscription res =
             FDojoModule::OnEntityUpdate(toriiClient, "{}", nullptr, CallbackProxy);
         UE_LOG(LogTemp, Log, TEXT("Async thread: FDojoModule::OnEntityUpdate returned"));
-        
+
         // Process result back on game thread
         Async(EAsyncExecution::TaskGraphMainThread, [this, res]() {
             // Check if subscription was successful
@@ -445,7 +457,7 @@ void ADojoHelpers::SubscribeOnDojoModelUpdate()
                 subscribed = false;
                 return;
             }
-            
+
             if (res.tag == OkSubscription && res.ok != nullptr)
             {
                 subscription = res.ok;
@@ -464,9 +476,18 @@ void ADojoHelpers::SubscribeOnDojoModelUpdate()
 
 void ADojoHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
 {
+    UE_LOG(LogTemp, Log, TEXT("CallbackProxy: Callback triggered with models"));
+
     ADojoHelpers* SafeInstance = GetGlobalInstance();
-    if (!SafeInstance || !IsValid(SafeInstance)) return;
+    if (!SafeInstance || !IsValid(SafeInstance))
+    {
+        UE_LOG(LogTemp, Error, TEXT("CallbackProxy: SafeInstance is null or invalid"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("CallbackProxy: Valid SafeInstance found, calling ParseModelsAndSend"));
     SafeInstance->ParseModelsAndSend(&models);
+    UE_LOG(LogTemp, Log, TEXT("CallbackProxy: ParseModelsAndSend completed"));
 }
 
 template<typename T>

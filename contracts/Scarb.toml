@@ -10,7 +10,7 @@ sierra-replace-ids = true
 migrate = "sozo build && sozo migrate"
 
 [dependencies]
-dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.6.0-alpha.2" }
+dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.6.0" }
 
 [[target.starknet-contract]]
 build-external-contracts = ["dojo::world::world_contract::world"]
@@ -20,6 +20,6 @@ casm = true
 
 [dev-dependencies]
 cairo_test = "*"
-dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.6.0-alpha.2" }
+dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.6.0" }
 
 [profile.sepolia]

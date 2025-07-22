@@ -188,5 +188,27 @@
     "type": "item",
     "maxStackSize": 1,
     "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_House.B_House_C'"
+  },
+  "51": {
+    "name": "Carrot Seed",
+    "type": "item",
+    "maxStackSize": 64,
+    "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_CarrotSeed.B_CarrotSeed_C'"
+  },
+  "52": {
+    "name": "Carrot",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "53": {
+    "name": "Potato Seed",
+    "type": "item",
+    "maxStackSize": 64,
+    "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_PotatoSeed.B_PotatoSeed_C'"
+  },
+  "54": {
+    "name": "Potato",
+    "type": "item",
+    "maxStackSize": 64
   }
 }

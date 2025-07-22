@@ -65,6 +65,12 @@ pub impl GatherableResourceImpl of GatherableResourceTrait {
     fn calculate_next_harvest_time(resource_id: u16, timestamp: u64) -> u64 {
         if resource_id == 32 || resource_id == 33 { // wooden sticks or rock
             0 // instant
+        } else if resource_id == 51 { // carrot seed
+            timestamp + 30 // 30 seconds
+        } else if resource_id == 53 { // potato
+            timestamp + 180 // 3 minutes
+        } else if resource_id == 47 { // wheat seed
+            timestamp + 1500 // 25 minutes
         } else {
             timestamp + 10
         }

@@ -29,10 +29,12 @@ void ADojoCraftIslandManager::BeginPlay()
     // Step 3: Bind custom event to delegate
     DojoHelpers->OnDojoModelUpdated.AddDynamic(this, &ADojoCraftIslandManager::HandleDojoModel);
 
-    // NOTE: Moved subscription to after delay to ensure Torii client is fully ready
-    
     // Step 4: Create burner account
-    Account = DojoHelpers->CreateAccountDeprecated(RpcUrl, PlayerAddress, PrivateKey);
+    Account = DojoHelpers->CreateBurnerDeprecated(RpcUrl, PlayerAddress, PrivateKey);
+
+    ConnectGameInstanceEvents();
+
+    DojoHelpers->SubscribeOnDojoModelUpdate();
 
     // Step 2: Call custom spawn function
     CraftIslandSpawn();
@@ -45,8 +47,6 @@ void ADojoCraftIslandManager::BeginPlay()
         1.0f,
         false
     );
-
-    ConnectGameInstanceEvents();
 }
 
 void ADojoCraftIslandManager::ConnectGameInstanceEvents()
@@ -71,12 +71,12 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
 void ADojoCraftIslandManager::ContinueAfterDelay()
 {
     if (!DojoHelpers) return;
-    
+
     // Step 4: Subscribe to dojo model updates (moved here to ensure Torii client is ready)
     UE_LOG(LogTemp, Log, TEXT("ContinueAfterDelay: Subscribing to model updates"));
-    DojoHelpers->SubscribeOnDojoModelUpdate();
-    
+
     // Step 5: Fetch existing models
+    //TODO: seems to fetch nothing, check query maybe
     DojoHelpers->FetchExistingModels();
 }
 
@@ -311,6 +311,7 @@ FIntVector ADojoCraftIslandManager::GetWorldPositionFromLocal(int Position, cons
 
 void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
 {
+    UE_LOG(LogTemp, Warning, TEXT("HandleDojoModel: Processing model %s"), *Model->DojoModelType);
     FString Name = Model->DojoModelType;
 
     // First, update the chunk cache

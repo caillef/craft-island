@@ -292,7 +292,7 @@ public:
         return result;
     }
 
-    
+
 };
 
 template<typename T>
@@ -380,7 +380,7 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
             return strings;
         }
     }
-    
+
     // Default return value padded to 64 characters
     return TArray<FString>{TEXT("0x") + FString::ChrN(64, TEXT('0'))};
 }
@@ -425,7 +425,7 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
             output = TypeConverter::ConvertToBool(member);
         }
     }
-    
+
 }
 
 
@@ -578,7 +578,7 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         }
 
         UDojoModel* ParsedModel = nullptr;
-        
+
         if (strcmp(ModelName, "craft_island_pocket-GatherableResource") == 0)
         {
             ParsedModel = \
@@ -636,16 +636,34 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
 
     if (ParsedModels.Num() > 0)
     {
+        UE_LOG(LogTemp, Log, TEXT("ParseModelsAndSend: Broadcasting %d parsed models to GameThread"), ParsedModels.Num());
+
         AsyncTask(ENamedThreads::GameThread, [this, ParsedModels = MoveTemp(ParsedModels)]()
         {
+            UE_LOG(LogTemp, Log, TEXT("ParseModelsAndSend: Processing models on GameThread"));
+
+            int32 BroadcastCount = 0;
             for (UDojoModel* Model : ParsedModels)
             {
                 if (IsValid(Model))
                 {
+                    UE_LOG(LogTemp, Log, TEXT("ParseModelsAndSend: Broadcasting model %s"),
+                        *Model->DojoModelType);
                     OnDojoModelUpdated.Broadcast(Model);
+                    BroadcastCount++;
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("ParseModelsAndSend: Invalid model found, skipping broadcast"));
                 }
             }
+
+            UE_LOG(LogTemp, Log, TEXT("ParseModelsAndSend: Successfully broadcasted %d models"), BroadcastCount);
         });
+    }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("ParseModelsAndSend: No parsed models to broadcast"));
     }
 
     // Cleanup
@@ -658,7 +676,7 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
 
 void ADojoHelpers::CallCraftIslandPocketActionsSpawn(const FAccount& account) {
     TArray<FString> args;
-    
+
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("spawn"), FString::Join(args, TEXT(",")));
 }
@@ -666,7 +684,7 @@ void ADojoHelpers::CallCraftIslandPocketActionsSpawn(const FAccount& account) {
 void ADojoHelpers::CallControllerCraftIslandPocketActionsSpawn(const FControllerAccount& \
                      account) {
     TArray<FString> args;
-    
+
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("spawn"), FString::Join(args, TEXT(",")));
 }
@@ -848,7 +866,7 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsVisit(const FController
 
 void ADojoHelpers::CallCraftIslandPocketActionsVisitNewIsland(const FAccount& account) {
     TArray<FString> args;
-    
+
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("visit_new_island"), FString::Join(args, TEXT(",")));
 }
@@ -856,7 +874,7 @@ void ADojoHelpers::CallCraftIslandPocketActionsVisitNewIsland(const FAccount& ac
 void ADojoHelpers::CallControllerCraftIslandPocketActionsVisitNewIsland(const FControllerAccount& \
                      account) {
     TArray<FString> args;
-    
+
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("visit_new_island"), FString::Join(args, TEXT(",")));
 }
@@ -881,4 +899,3 @@ void ADojoHelpers::CallControllerCraftIslandPocketAdminGiveSelf(const FControlle
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-admin"], \
                      TEXT("give_self"), FString::Join(args, TEXT(",")));
 }
-
