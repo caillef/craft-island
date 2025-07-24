@@ -18,7 +18,7 @@ public:
     FString DojoModelType;
 };
 
-    
+
 
 // Model definition for `craft_island_pocket::models::gatherableresource::GatherableResource` model
 UCLASS(BlueprintType)
@@ -152,6 +152,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int CurrentSpaceId;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int Coins;
 };
 
 
@@ -261,7 +264,7 @@ private:
 
     static ADojoHelpers* Instance;
     static FCriticalSection InstanceMutex;
-    
+
     // Track allocated accounts for cleanup
     TArray<Account*> AllocatedAccounts;
     TArray<Provider*> AllocatedProviders;
@@ -301,10 +304,10 @@ public:
 
     static ADojoHelpers* GetGlobalInstance();
     void SetGlobalInstance(ADojoHelpers* instance);
-    
+
     // Resource cleanup methods
     void CleanupResources();
-    
+
     // Resource tracking for debugging
     UFUNCTION(BlueprintCallable, Category = "Dojo Debug")
     void LogResourceUsage() const;
@@ -351,7 +354,7 @@ public:
     FOnDojoControllerAccount FOnDojoControllerAccount;
 
     // CALLS
-    
+
     UFUNCTION(BlueprintCallable, Category = "Calls")
     void CallCraftIslandPocketActionsSpawn(const FAccount& account);
 
@@ -411,5 +414,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketAdminGiveSelf(const FControllerAccount& account, int item, int qty);
+
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsSell(const FAccount& account);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsSell(const FControllerAccount& account);
 
 };

@@ -43,10 +43,11 @@ fn init_island(ref world: WorldStorage, player: ContractAddress) {
 fn init_player(ref world: WorldStorage, player: ContractAddress) {
     let mut player_data: PlayerData = PlayerData {
         player: player,
-        last_inventory_created_id: 2, // hotbar, inventory, craft
+        last_inventory_created_id: 3, // hotbar, inventory, craft, sell
         last_space_created_id: 1, // own island
         current_space_owner: player.into(),
         current_space_id: 1,
+        coins: 0,
     };
     world.write_model(@player_data);
 }
@@ -75,6 +76,9 @@ fn init_inventory(ref world: WorldStorage, player: ContractAddress) {
 
     let craft: Inventory = InventoryTrait::new(2, 2, 9, player);
     world.write_model(@craft);
+
+    let sell: Inventory = InventoryTrait::new(3, 3, 18, player);
+    world.write_model(@sell);
 }
 
 pub fn init(ref world: WorldStorage, player: ContractAddress) {

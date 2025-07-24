@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x2ebe0a0bc233034319e12f911a69bc9c254db8e9880ef56393e8433dd81c183",
-      "class_hash": "0x3ba1ced3dff1b08dc06cbe44acde8101863638b67ceea1f3fbd01575b779fda",
+      "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
+      "class_hash": "0x51f2282291ee325cfbe26d8074cad6a028fbafe63e297a40098aced3e3ed7b5",
       "abi": [
         {
           "type": "impl",
@@ -1393,6 +1393,13 @@
             {
               "type": "function",
               "name": "spawn",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "sell",
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
@@ -1666,6 +1673,7 @@
       "selector": "0x2421825019faf473c80afccd4a206fb7d24b2e1e0203119018ea28e4bf653aa",
       "systems": [
         "spawn",
+        "sell",
         "hit_block",
         "use_item",
         "select_hotbar_slot",
@@ -1910,7 +1918,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x669e43fe8b05151a97941e231e17205f160785641ae0518e7987fc4e4f1b66f",
+      "class_hash": "0x26c55e37840ea837a9129ad0c08c9369898fa05815d3135e2b3131e119c3ca0",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },

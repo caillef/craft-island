@@ -59,13 +59,13 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
 
     CraftIslandGI->RequestPlaceUse.AddDynamic(this, &ADojoCraftIslandManager::RequestPlaceUse);
     CraftIslandGI->RequestSpawn.AddDynamic(this, &ADojoCraftIslandManager::RequestSpawn);
-    CraftIslandGI->UpdateInventory.AddDynamic(this, &ADojoCraftIslandManager::UpdateInventory);
     CraftIslandGI->InventorySelectHotbar.AddDynamic(this, &ADojoCraftIslandManager::InventorySelectHotbar);
     CraftIslandGI->RequestHit.AddDynamic(this, &ADojoCraftIslandManager::RequestHit);
     CraftIslandGI->RequestInventoryMoveItem.AddDynamic(this, &ADojoCraftIslandManager::RequestInventoryMoveItem);
     CraftIslandGI->RequestCraft.AddDynamic(this, &ADojoCraftIslandManager::RequestCraft);
-//    CraftIslandGI->RequestGiveItem.AddDynamic(this, &ADojoCraftIslandManager::RequestGiveItem);
+    //    CraftIslandGI->RequestGiveItem.AddDynamic(this, &ADojoCraftIslandManager::RequestGiveItem);
     CraftIslandGI->SetTargetBlock.AddDynamic(this, &ADojoCraftIslandManager::SetTargetBlock);
+    CraftIslandGI->RequestSell.AddDynamic(this, &ADojoCraftIslandManager::RequestSell);
 }
 
 void ADojoCraftIslandManager::ContinueAfterDelay()
@@ -102,6 +102,15 @@ void ADojoCraftIslandManager::InitUIAndActors()
             bLoaded = false; // bool variable
         }
     }
+
+    // if (SellInterfaceWidgetClass)
+    // {
+    //     SellUI = CreateWidget<UUserWidget>(GetWorld(), SellInterfaceWidgetClass);
+    //     if (SellUI)
+    //     {
+    //         SellUI->AddToViewport();
+    //     }
+    // }
 
     // === 3. Spawn Dojo Helpers Actor ===
     if (true) {
@@ -294,6 +303,29 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     }
 }
 
+void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
+{
+    if (!Object) return;
+
+    UDojoModelCraftIslandPocketPlayerData* PlayerData = Cast<UDojoModelCraftIslandPocketPlayerData>(Object);
+    if (!PlayerData) return;
+
+    // Check if this is the current player
+    if (IsCurrentPlayer())
+    {
+        // Get GameInstance and cast to your custom subclass
+        UGameInstance* GameInstance = GetGameInstance();
+        if (!GameInstance) return;
+
+        // Cast directly to the custom GameInstance class
+        UCraftIslandGameInst* CraftIslandGI = Cast<UCraftIslandGameInst>(GameInstance);
+        if (CraftIslandGI)
+        {
+            CraftIslandGI->UpdatePlayerData.Broadcast(PlayerData);
+        }
+    }
+}
+
 bool ADojoCraftIslandManager::IsCurrentPlayer() const
 {
     // Placeholder logic — replace this with your actual check
@@ -329,6 +361,9 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
     }
     else if (Name == "craft_island_pocket-Inventory") {
         HandleInventory(Model);
+    }
+    else if (Name == "craft_island_pocket-PlayerData") {
+        HandlePlayerData(Model);
     }
 
     if (!bLoaded)
@@ -488,11 +523,6 @@ void ADojoCraftIslandManager::RequestSpawn()
     DojoHelpers->CallCraftIslandPocketActionsSpawn(Account);
 }
 
-void ADojoCraftIslandManager::UpdateInventory(UDojoModelCraftIslandPocketInventory* Inventory)
-{
-    // Up to you — usually this is UI-side, no server call needed
-}
-
 void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
 {
     if (!Slot) return;
@@ -528,6 +558,11 @@ void ADojoCraftIslandManager::RequestCraft(int32 Item)
 void ADojoCraftIslandManager::RequestGiveItem()
 {
     DojoHelpers->CallCraftIslandPocketAdminGiveSelf(Account, CurrentItemId, 1);
+}
+
+void ADojoCraftIslandManager::RequestSell()
+{
+    DojoHelpers->CallCraftIslandPocketActionsSell(Account);
 }
 
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)

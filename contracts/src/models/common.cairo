@@ -9,6 +9,7 @@ pub struct PlayerData {
     pub last_space_created_id: u16,
     pub current_space_owner: felt252,
     pub current_space_id: u16,
+    pub coins: u32,
 }
 
 // Not Used Yet

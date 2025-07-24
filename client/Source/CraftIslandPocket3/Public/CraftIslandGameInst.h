@@ -13,6 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestPlaceBlock);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestExecute);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestSpawn);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdateInventory, UDojoModelCraftIslandPocketInventory*, Inventory);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePlayerData, UDojoModelCraftIslandPocketPlayerData*, PlayerData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventorySelectHotbar, UObject*, Slot);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestHit);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestPlaceUse);
@@ -24,6 +25,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestVisitNewIsland);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestGoBackHome);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestExploreIslandPart);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShipClicked);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestSell);
 
 /**
  *
@@ -50,6 +52,9 @@ public:
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FUpdateInventory UpdateInventory;
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FUpdatePlayerData UpdatePlayerData;
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FInventorySelectHotbar InventorySelectHotbar;
@@ -83,11 +88,14 @@ public:
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FOnShipClicked OnShipClicked;
-    
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FRequestSell RequestSell;
+
     // Debug function to log Dojo memory usage
     UFUNCTION(BlueprintCallable, Category = "Debug")
     void LogDojoMemoryUsage();
-    
+
     // Override Init
     virtual void Init() override;
 

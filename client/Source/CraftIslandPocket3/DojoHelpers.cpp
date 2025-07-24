@@ -769,6 +769,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerDataModel(struct Struct* m
         ConvertTyToUnrealEngineType(member, "last_space_created_id", "u16", Model->LastSpaceCreatedId);
         ConvertTyToUnrealEngineType(member, "current_space_owner", "felt252", Model->CurrentSpaceOwner);
         ConvertTyToUnrealEngineType(member, "current_space_id", "u16", Model->CurrentSpaceId);
+        ConvertTyToUnrealEngineType(member, "coins", "u32", Model->Coins);
     }
 
     FDojoModule::CArrayFree(members->data, members->data_len);
@@ -1141,4 +1142,17 @@ void ADojoHelpers::CallControllerCraftIslandPocketAdminGiveSelf(const FControlle
                                  "u32"));
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-admin"], \
                      TEXT("give_self"), FString::Join(args, TEXT(",")));
+}
+
+
+void ADojoHelpers::CallCraftIslandPocketActionsSell(const FAccount& account) {
+    TArray<FString> args;
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("sell"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsSell(const FControllerAccount& account) {
+    TArray<FString> args;
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("sell"), FString::Join(args, TEXT(",")));
 }

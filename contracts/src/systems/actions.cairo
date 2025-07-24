@@ -2,7 +2,7 @@
 trait IActions<T> {
     fn spawn(ref self: T);
     //fn buy(ref self: T, item_id: u32, quantity: u32);
-    //fn sell(ref self: T, item_id: u32, quantity: u32);
+    fn sell(ref self: T);
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
     fn use_item(ref self: T, x: u64, y: u64, z: u64);
     fn select_hotbar_slot(ref self: T, slot: u8);
@@ -53,35 +53,35 @@ mod actions {
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
-        
+
         // Check if the block below is suitable for planting
         assert!(z > 0, "Error: Cannot plant at z=0");
         let below_z = z - 1;
         let below_chunk_id: u128 = get_position_id(x / 4, y / 4, below_z / 4);
         let below_chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, below_chunk_id));
-        
+
         // Calculate position of block below in its chunk
         let below_x_local = x % 4;
         let below_y_local = y % 4;
         let below_z_local = below_z % 2;
-        
+
         // Determine which blocks storage to use based on z position (chunks store blocks in two 128-bit values)
         let blocks = if (below_z % 4) < 2 { below_chunk.blocks2 } else { below_chunk.blocks1 };
-        
+
         // Extract block ID at position from packed storage (each block uses 4 bits)
         let shift: u128 = fast_power_2(((below_x_local + below_y_local * 4 + below_z_local * 16) * 4).into()).into();
         let block_below: u64 = ((blocks / shift) % 8).try_into().unwrap();
-        
+
         // For seeds (wheat seed id 47, carrot seed id 51, potato id 53), check if there's farmland (tilled dirt) below
         if item_id == 47 || item_id == 51 || item_id == 53 {
             assert!(block_below == 2, "Error: Seeds and potatoes need farmland (tilled dirt) below");
         }
-        
+
         // For saplings (oak sapling id 46), check if there's dirt or grass below
         if item_id == 46 {
             assert!(block_below == 1 || block_below == 2, "Error: Saplings need dirt or grass below");
         }
-        
+
         resource.resource_id = item_id;
 
         let mut inventory: Inventory = world.read_model((player, 0));
@@ -107,7 +107,7 @@ mod actions {
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id > 0 && !resource.destroyed, "Error: Resource does not exists");
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
-        
+
         // If crop is not ready yet, return the seed
         if resource.next_harvest_at > timestamp {
             if resource.resource_id == 47 || resource.resource_id == 51 || resource.resource_id == 53 {
@@ -172,9 +172,42 @@ mod actions {
     ) { //let player = get_caller_address();
     }
 
-    fn sell(
-        ref self: ContractState, item_id: u32, quantity: u32
-    ) { //let player = get_caller_address();
+    fn sell(ref self: ContractState) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+        
+        // Get sell inventory (id = 3)
+        let mut sell_inventory: Inventory = world.read_model((player, 3));
+        let mut player_data: PlayerData = world.read_model((player));
+        
+        let mut total_coins: u32 = 0;
+        
+        // Count coins for each item type
+        let carrot_amount = sell_inventory.get_item_amount(52);  // Carrot
+        let potato_amount = sell_inventory.get_item_amount(54);  // Potato
+        let wheat_amount = sell_inventory.get_item_amount(48);   // Wheat
+        
+        total_coins += carrot_amount * 2;   // 2 coins per carrot
+        total_coins += potato_amount * 8;   // 8 coins per potato
+        total_coins += wheat_amount * 10;   // 10 coins per wheat
+        
+        // Remove sold items
+        if carrot_amount > 0 {
+            sell_inventory.remove_items(52, carrot_amount);
+        }
+        if potato_amount > 0 {
+            sell_inventory.remove_items(54, potato_amount);
+        }
+        if wheat_amount > 0 {
+            sell_inventory.remove_items(48, wheat_amount);
+        }
+        
+        // Update player coins
+        player_data.coins += total_coins;
+        
+        // Save changes
+        world.write_model(@player_data);
+        world.write_model(@sell_inventory);
     }
 
     fn try_inventory_craft(ref self: ContractState) {
@@ -233,6 +266,10 @@ mod actions {
             let mut world = get_world(ref self);
             let player = get_caller_address();
             init(ref world, player);
+        }
+
+        fn sell(ref self: ContractState) {
+            sell(ref self);
         }
 
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
@@ -427,7 +464,7 @@ mod actions {
             let position = ((seed * 13) % 16 + 16).try_into().unwrap(); // 16 positions in base layer (16-31)
 
             let resource_id = *resource_types.at(resource_index);
-            
+
             // Calculate chunk_id dynamically instead of using array
             let chunk_index: u32 = ((seed * 7) % 16).try_into().unwrap();
             let x_part: u32 = chunk_index % 4;

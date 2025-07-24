@@ -38,10 +38,10 @@ struct FItemDataRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     UPaperSprite* Icon;
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FString Craft;
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TSubclassOf<AActor> ActorClass;
 };
@@ -185,9 +185,6 @@ class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
     void RequestSpawn();
 
     UFUNCTION()
-    void UpdateInventory(UDojoModelCraftIslandPocketInventory* Inventory);
-
-    UFUNCTION()
     void InventorySelectHotbar(UObject* Slot);
 
     UFUNCTION()
@@ -205,6 +202,9 @@ class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
     UFUNCTION()
     void SetTargetBlock(FVector Location);
 
+    UFUNCTION()
+    void RequestSell();
+
 public:
 	// Sets default values for this actor's properties
 	ADojoCraftIslandManager();
@@ -212,7 +212,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-    
+
     UFUNCTION()
     void ContinueAfterDelay();
 
@@ -232,6 +232,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
     TSubclassOf<UUserWidget> UserInterfaceWidgetClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> SellInterfaceWidgetClass;
 
     UPROPERTY(EditAnywhere, Category = "Config")
     TSubclassOf<APawn> PlayerPawnClass;
@@ -255,25 +258,30 @@ public:
     UUserWidget* UI;
 
     UPROPERTY()
+    UUserWidget* SellUI;
+
+    UPROPERTY()
     AActor* FloatingShip;
-    
+
     FIntVector TargetBlock;
 
     bool bLoaded = false;
-    
+
     void InitUIAndActors();
-    
+
 	FIntVector HexToIntVector(const FString& Source);
     int HexToInteger(const FString& Hex);
-	
-	void HandleInventory(UDojoModel* Object);
-    
+
+    void HandleInventory(UDojoModel* Object);
+
+    void HandlePlayerData(UDojoModel* Object);
+
     bool IsCurrentPlayer() const;
-    
+
     // Assignable in editor or spawned
     UPROPERTY(EditAnywhere, Category = "Config")
     FString WorldAddress;
-    
+
     // Assignable in editor or spawned
     UPROPERTY(EditAnywhere, Category = "Config")
     FString ToriiUrl;
@@ -297,9 +305,9 @@ public:
     FString PrivateKey;
 
     void CraftIslandSpawn();
-    
+
     void OnUIDelayedLoad();
-    
+
     // UPROPERTYs assumed available:
     FIntVector ActionDojoPosition;
 
@@ -311,31 +319,27 @@ public:
 
     UPROPERTY()
     TArray<FSpawnQueueData> SpawnQueue;
-    
 
-    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
     UDataTable* ItemDataTable;
-    
+
     AActor* PlaceAssetInWorld(E_Item Item, const FIntVector& DojoPosition, bool Validated, EActorSpawnType SpawnType = EActorSpawnType::ChunkBlock);
 
     int32 DojoPositionToLocalPosition(const FIntVector& DojoPosition);
 
     FTransform DojoPositionToTransform(const FIntVector& DojoPosition);
-    
-    FIntVector GetWorldPositionFromLocal(int Position, const FIntVector& ChunkOffset);
-    
-    FIntVector HexStringToVector(const FString& Source);
-    
 
-    
+    FIntVector GetWorldPositionFromLocal(int Position, const FIntVector& ChunkOffset);
+
+    FIntVector HexStringToVector(const FString& Source);
+
     void ConnectGameInstanceEvents();
     int32 CurrentItemId;
-    
+
     // Chunk caching system
     UPROPERTY()
     TMap<FString, FSpaceChunks> ChunkCache;
-    
+
     // Helper functions to reduce code duplication
     void QueueSpawnWithOverflowProtection(const FSpawnQueueData& SpawnData);
     void QueueSpawnBatchWithOverflowProtection(const TArray<FSpawnQueueData>& SpawnDataBatch);
@@ -344,10 +348,10 @@ public:
     void ProcessGatherableResource(UDojoModelCraftIslandPocketGatherableResource* Gatherable);
     void ProcessWorldStructure(UDojoModelCraftIslandPocketWorldStructure* Structure);
     void ProcessIslandChunk(UDojoModelCraftIslandPocketIslandChunk* Chunk);
-    
+
     // Get current player's island key for chunk cache
     FString GetCurrentIslandKey() const;
-    
+
     // Load chunks from cache for a specific area
     void LoadChunksFromCache(const FIntVector& CenterChunk, int32 Radius);
     void LoadChunkFromCache(const FString& ChunkId);
