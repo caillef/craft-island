@@ -1,7 +1,7 @@
 #[starknet::interface]
 trait IActions<T> {
     fn spawn(ref self: T);
-    //fn buy(ref self: T, item_id: u32, quantity: u32);
+    fn buy(ref self: T, item_ids: Array<u16>, quantities: Array<u32>);
     fn sell(ref self: T);
     fn hit_block(ref self: T, x: u64, y: u64, z: u64, hp: u32);
     fn use_item(ref self: T, x: u64, y: u64, z: u64);
@@ -168,8 +168,66 @@ mod actions {
     }
 
     fn buy(
-        ref self: ContractState, item_id: u32, quantity: u32
-    ) { //let player = get_caller_address();
+        ref self: ContractState, item_ids: Array<u16>, quantities: Array<u32>
+    ) {
+        let mut world = get_world(ref self);
+        let player = get_caller_address();
+        let mut player_data: PlayerData = world.read_model((player));
+        
+        // Validate input arrays have same length
+        assert(item_ids.len() == quantities.len(), 'Arrays must have same length');
+        assert(item_ids.len() > 0, 'Must buy at least one item');
+        
+        // Calculate total cost and validate items
+        let mut total_cost: u32 = 0;
+        let mut i: u32 = 0;
+        loop {
+            if i >= item_ids.len() {
+                break;
+            }
+            
+            let item_id = *item_ids.at(i);
+            let quantity = *quantities.at(i);
+            
+            // Get price for each item
+            let price_per_item = if item_id == 47 {
+                10 // Wheat seed - 10 coins
+            } else if item_id == 53 {
+                5  // Potato seed - 5 coins
+            } else if item_id == 51 {
+                2  // Carrot seed - 2 coins
+            } else {
+                assert(false, 'Item not available for purchase');
+                0
+            };
+            
+            total_cost += price_per_item * quantity;
+            i += 1;
+        };
+        
+        // Check if player has enough coins
+        assert(player_data.coins >= total_cost, 'Not enough coins');
+        
+        // Deduct coins
+        player_data.coins -= total_cost;
+        
+        // Add items to player inventory
+        i = 0;
+        loop {
+            if i >= item_ids.len() {
+                break;
+            }
+            
+            let item_id = *item_ids.at(i);
+            let quantity = *quantities.at(i);
+            
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, quantity);
+            
+            i += 1;
+        };
+        
+        // Save player data
+        world.write_model(@player_data);
     }
 
     fn sell(ref self: ContractState) {
@@ -270,6 +328,10 @@ mod actions {
 
         fn sell(ref self: ContractState) {
             sell(ref self);
+        }
+
+        fn buy(ref self: ContractState, item_ids: Array<u16>, quantities: Array<u32>) {
+            buy(ref self, item_ids, quantities);
         }
 
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {

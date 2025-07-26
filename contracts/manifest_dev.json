@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x51f2282291ee325cfbe26d8074cad6a028fbafe63e297a40098aced3e3ed7b5",
+      "class_hash": "0x76c7fc892b3d03aa6e3390fec1c64af065043c124f8e4e4164f835ddab94f27",
       "abi": [
         {
           "type": "impl",
@@ -1394,6 +1394,22 @@
               "type": "function",
               "name": "spawn",
               "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "buy",
+              "inputs": [
+                {
+                  "name": "item_ids",
+                  "type": "core::array::Array::<core::integer::u16>"
+                },
+                {
+                  "name": "quantities",
+                  "type": "core::array::Array::<core::integer::u32>"
+                }
+              ],
               "outputs": [],
               "state_mutability": "external"
             },
@@ -1673,6 +1689,7 @@
       "selector": "0x2421825019faf473c80afccd4a206fb7d24b2e1e0203119018ea28e4bf653aa",
       "systems": [
         "spawn",
+        "buy",
         "sell",
         "hit_block",
         "use_item",
@@ -1687,7 +1704,7 @@
     },
     {
       "address": "0x4abf7c0f04e846af6a847847da9511755ed13b88a8fc9a120336531a4da3f5e",
-      "class_hash": "0x7edb1c95dc0aa4aaad4d55203f4d85bc6a8906b9394d36f610d4466621708cd",
+      "class_hash": "0x3a7cc263e3cb58b8326cef1c154dae27b41abbb708f6889075b6340e4a2d162",
       "abi": [
         {
           "type": "impl",
@@ -1758,6 +1775,18 @@
                 },
                 {
                   "name": "qty",
+                  "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "give_coins",
+              "inputs": [
+                {
+                  "name": "amount",
                   "type": "core::integer::u32"
                 }
               ],
@@ -1886,6 +1915,7 @@
       "selector": "0x43d62c14f6442be7460cfd2aff92839bc505c6f7acc2904971a87319a4b1dde",
       "systems": [
         "give_self",
+        "give_coins",
         "upgrade"
       ]
     }
