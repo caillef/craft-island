@@ -140,6 +140,12 @@ pub impl InventoryImpl of InventoryTrait {
         let to_data = to_inventory.get_slot_data(to_slot);
 
         assert(!from_data.is_empty(), 'From slot empty');
+        
+        // Check if moving to market inventory (ID 3)
+        if to_inventory.id == 3 {
+            // Only allow wheat (48), carrot (52), or potato (54)
+            assert(from_data.item_type == 48 || from_data.item_type == 52 || from_data.item_type == 54, 'Only crops allowed in market');
+        }
         if to_data.is_empty() {
             to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.clear_slot(from_slot);
@@ -170,6 +176,12 @@ pub impl InventoryImpl of InventoryTrait {
         let to_data = self.get_slot_data(to_slot);
 
         assert(!from_data.is_empty(), 'From slot empty');
+        
+        // Check if this is the market inventory (ID 3)
+        if self.id == 3 {
+            // Only allow wheat (48), carrot (52), or potato (54)
+            assert(from_data.item_type == 48 || from_data.item_type == 52 || from_data.item_type == 54, 'Only crops allowed in market');
+        }
         if to_data.is_empty() {
             self.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);
             self.clear_slot(from_slot);
