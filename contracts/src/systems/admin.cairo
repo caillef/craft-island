@@ -11,7 +11,7 @@ mod admin {
     use starknet::{get_caller_address};
     use craft_island_pocket::models::inventory::InventoryTrait;
     use craft_island_pocket::models::common::PlayerData;
-    use dojo::{world::WorldStorage, model::ModelStorage};
+    use dojo::{model::ModelStorage};
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
@@ -24,7 +24,7 @@ mod admin {
             let player = get_caller_address();
             InventoryTrait::add_to_player_inventories(ref world, player.into(), item, qty);
         }
-        
+
         fn give_coins(ref self: ContractState, amount: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
