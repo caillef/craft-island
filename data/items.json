@@ -165,12 +165,14 @@
     "name": "Wheat Seed",
     "type": "item",
     "maxStackSize": 64,
+    "buyPrice": 10,
     "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_WheatSeed.B_WheatSeed_C'"
   },
   "48": {
     "name": "Wheat",
     "type": "item",
-    "maxStackSize": 64
+    "maxStackSize": 64,
+    "sellPrice": 10
   },
   "49": {
     "name": "Boulder",
@@ -193,22 +195,26 @@
     "name": "Carrot Seed",
     "type": "item",
     "maxStackSize": 64,
+    "buyPrice": 2,
     "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_CarrotSeed.B_CarrotSeed_C'"
   },
   "52": {
     "name": "Carrot",
     "type": "item",
-    "maxStackSize": 64
+    "maxStackSize": 64,
+    "sellPrice": 2
   },
   "53": {
     "name": "Potato Seed",
     "type": "item",
     "maxStackSize": 64,
+    "buyPrice": 5,
     "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_PotatoSeed.B_PotatoSeed_C'"
   },
   "54": {
     "name": "Potato",
     "type": "item",
-    "maxStackSize": 64
+    "maxStackSize": 64,
+    "sellPrice": 8
   }
 }

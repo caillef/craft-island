@@ -23,9 +23,21 @@ jq -r 'to_entries
         else
             ""
         end
+        ),
+        buyPrice: (
+        if .value.buyPrice then .value.buyPrice
+        else
+            ""
+        end
+        ),
+        sellPrice: (
+        if .value.sellPrice then .value.sellPrice
+        else
+            ""
+        end
         )
     })
     | sort_by(.index | tonumber)
-    | (["Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft,ActorClass"]
-        + map("\(.index),\(.index),\(.name),\(.type),\(.max),\(.icon),\(.craft),\(.actorClass)"))[]
+    | (["Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft,ActorClass,Buy Price,Sell Price"]
+        + map("\(.index),\(.index),\(.name),\(.type),\(.max),\(.icon),\(.craft),\(.actorClass),\(.buyPrice),\(.sellPrice)"))[]
 ' data/items.json > data/items.csv
