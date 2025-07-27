@@ -170,14 +170,15 @@ mod actions {
     fn buy(
         ref self: ContractState, item_ids: Array<u16>, quantities: Array<u32>
     ) {
+        println!("buy function called with item_ids: {:?}, quantities: {:?}", item_ids, quantities);
         let mut world = get_world(ref self);
         let player = get_caller_address();
         let mut player_data: PlayerData = world.read_model((player));
-        
+
         // Validate input arrays have same length
         assert(item_ids.len() == quantities.len(), 'Arrays must have same length');
         assert(item_ids.len() > 0, 'Must buy at least one item');
-        
+
         // Calculate total cost and validate items
         let mut total_cost: u32 = 0;
         let mut i: u32 = 0;
@@ -185,10 +186,10 @@ mod actions {
             if i >= item_ids.len() {
                 break;
             }
-            
+
             let item_id = *item_ids.at(i);
             let quantity = *quantities.at(i);
-            
+
             // Get price for each item
             let price_per_item = if item_id == 47 {
                 10 // Wheat seed - 10 coins
@@ -200,32 +201,32 @@ mod actions {
                 assert(false, 'Item not available for purchase');
                 0
             };
-            
+
             total_cost += price_per_item * quantity;
             i += 1;
         };
-        
+
         // Check if player has enough coins
         assert(player_data.coins >= total_cost, 'Not enough coins');
-        
+
         // Deduct coins
         player_data.coins -= total_cost;
-        
+
         // Add items to player inventory
         i = 0;
         loop {
             if i >= item_ids.len() {
                 break;
             }
-            
+
             let item_id = *item_ids.at(i);
             let quantity = *quantities.at(i);
-            
+
             InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, quantity);
-            
+
             i += 1;
         };
-        
+
         // Save player data
         world.write_model(@player_data);
     }
@@ -233,22 +234,22 @@ mod actions {
     fn sell(ref self: ContractState) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        
+
         // Get sell inventory (id = 3)
         let mut sell_inventory: Inventory = world.read_model((player, 3));
         let mut player_data: PlayerData = world.read_model((player));
-        
+
         let mut total_coins: u32 = 0;
-        
+
         // Count coins for each item type
         let carrot_amount = sell_inventory.get_item_amount(52);  // Carrot
         let potato_amount = sell_inventory.get_item_amount(54);  // Potato
         let wheat_amount = sell_inventory.get_item_amount(48);   // Wheat
-        
+
         total_coins += carrot_amount * 2;   // 2 coins per carrot
         total_coins += potato_amount * 8;   // 8 coins per potato
         total_coins += wheat_amount * 10;   // 10 coins per wheat
-        
+
         // Remove sold items
         if carrot_amount > 0 {
             sell_inventory.remove_items(52, carrot_amount);
@@ -259,10 +260,10 @@ mod actions {
         if wheat_amount > 0 {
             sell_inventory.remove_items(48, wheat_amount);
         }
-        
+
         // Update player coins
         player_data.coins += total_coins;
-        
+
         // Save changes
         world.write_model(@player_data);
         world.write_model(@sell_inventory);

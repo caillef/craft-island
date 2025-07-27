@@ -26,6 +26,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestGoBackHome);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestExploreIslandPart);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShipClicked);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestSell);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRequestBuy, int32, ItemId, int32, Quantity);
 
 /**
  *
@@ -91,6 +92,9 @@ public:
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FRequestSell RequestSell;
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FRequestBuy RequestBuy;
 
     // Debug function to log Dojo memory usage
     UFUNCTION(BlueprintCallable, Category = "Debug")

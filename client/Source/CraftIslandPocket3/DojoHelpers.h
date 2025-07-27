@@ -421,4 +421,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsSell(const FControllerAccount& account);
 
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsBuy(const FAccount& account, int32 ItemId, int32 Quantity);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsBuy(const FControllerAccount& account, int32 ItemId, int32 Quantity);
+
 };

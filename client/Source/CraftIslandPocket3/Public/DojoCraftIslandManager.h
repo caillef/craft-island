@@ -44,6 +44,12 @@ struct FItemDataRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TSubclassOf<AActor> ActorClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 BuyPrice;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 SellPrice;
 };
 
 USTRUCT(BlueprintType)
@@ -204,6 +210,9 @@ class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
 
     UFUNCTION()
     void RequestSell();
+
+    UFUNCTION()
+    void RequestBuy(int32 ItemId, int32 Quantity);
 
 public:
 	// Sets default values for this actor's properties

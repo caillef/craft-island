@@ -1156,3 +1156,25 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsSell(const FControllerA
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("sell"), FString::Join(args, TEXT(",")));
 }
+
+void ADojoHelpers::CallCraftIslandPocketActionsBuy(const FAccount& account, int32 ItemId, int32 Quantity) {
+    TArray<FString> args;
+    // Create arrays for item_ids and quantities
+    args.Add(FString::Printf(TEXT("1"))); // Array length for item_ids
+    args.Append(ConvertToFeltHexa<int>(ItemId, "u16")); // Item ID as u16
+    args.Add(FString::Printf(TEXT("1"))); // Array length for quantities  
+    args.Append(ConvertToFeltHexa<int>(Quantity, "u32")); // Quantity as u32
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("buy"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsBuy(const FControllerAccount& account, int32 ItemId, int32 Quantity) {
+    TArray<FString> args;
+    // Create arrays for item_ids and quantities
+    args.Add(FString::Printf(TEXT("1"))); // Array length for item_ids
+    args.Append(ConvertToFeltHexa<int>(ItemId, "u16")); // Item ID as u16
+    args.Add(FString::Printf(TEXT("1"))); // Array length for quantities
+    args.Append(ConvertToFeltHexa<int>(Quantity, "u32")); // Quantity as u32
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("buy"), FString::Join(args, TEXT(",")));
+}

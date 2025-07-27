@@ -66,6 +66,7 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
     //    CraftIslandGI->RequestGiveItem.AddDynamic(this, &ADojoCraftIslandManager::RequestGiveItem);
     CraftIslandGI->SetTargetBlock.AddDynamic(this, &ADojoCraftIslandManager::SetTargetBlock);
     CraftIslandGI->RequestSell.AddDynamic(this, &ADojoCraftIslandManager::RequestSell);
+    CraftIslandGI->RequestBuy.AddDynamic(this, &ADojoCraftIslandManager::RequestBuy);
 }
 
 void ADojoCraftIslandManager::ContinueAfterDelay()
@@ -102,15 +103,6 @@ void ADojoCraftIslandManager::InitUIAndActors()
             bLoaded = false; // bool variable
         }
     }
-
-    // if (SellInterfaceWidgetClass)
-    // {
-    //     SellUI = CreateWidget<UUserWidget>(GetWorld(), SellInterfaceWidgetClass);
-    //     if (SellUI)
-    //     {
-    //         SellUI->AddToViewport();
-    //     }
-    // }
 
     // === 3. Spawn Dojo Helpers Actor ===
     if (true) {
@@ -563,6 +555,11 @@ void ADojoCraftIslandManager::RequestGiveItem()
 void ADojoCraftIslandManager::RequestSell()
 {
     DojoHelpers->CallCraftIslandPocketActionsSell(Account);
+}
+
+void ADojoCraftIslandManager::RequestBuy(int32 ItemId, int32 Quantity)
+{
+    DojoHelpers->CallCraftIslandPocketActionsBuy(Account, ItemId, Quantity);
 }
 
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
