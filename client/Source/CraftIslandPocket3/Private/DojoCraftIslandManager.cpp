@@ -221,6 +221,14 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                 if (ABaseWorldStructure* ActorStructure = Cast<ABaseWorldStructure>(SpawnedActor))
                 {
                     ActorStructure->WorldStructure = Structure;
+                    ActorStructure->Constructed = Structure->Completed;
+                    
+                    // If already completed on spawn, call OnConstructed
+                    if (Structure->Completed)
+                    {
+                        ActorStructure->NotifyConstructionCompleted();
+                        UE_LOG(LogTemp, Log, TEXT("PlaceAssetInWorld: Structure spawned completed at position (%d, %d, %d), calling OnConstructed"), SpawnData.DojoPosition.X, SpawnData.DojoPosition.Y, SpawnData.DojoPosition.Z);
+                    }
                 }
             }
         }
@@ -500,7 +508,7 @@ void ADojoCraftIslandManager::RequestPlaceUse()
 
     // If there's an actor at the target position, place on top (+1 Z)
     // If there's no actor, use the target position as is (which already has -1 from the targeting system)
-    int32 ZOffset = bActorExists ? 1 : 0;
+    int32 ZOffset = TargetBlock.Z == 0 && bActorExists ? 1 : 0;
 
     DojoHelpers->CallCraftIslandPocketActionsUseItem(
         Account,
@@ -704,7 +712,36 @@ void ADojoCraftIslandManager::ProcessWorldStructure(UDojoModelCraftIslandPocketW
     }
     else
     {
-        QueueSpawnWithOverflowProtection(FSpawnQueueData(Item, DojoPos, false, Structure));
+        // Check if actor already exists at this position (it's an update)
+        AActor* ExistingActor = nullptr;
+        if (Actors.Contains(DojoPos))
+        {
+            ExistingActor = Actors[DojoPos];
+        }
+
+        if (ExistingActor)
+        {
+            // This is an update to an existing structure
+            ABaseWorldStructure* WorldStructureActor = Cast<ABaseWorldStructure>(ExistingActor);
+            if (WorldStructureActor)
+            {
+                // Update the structure data
+                WorldStructureActor->WorldStructure = Structure;
+                
+                // Check if it just became completed
+                if (Structure->Completed && !WorldStructureActor->Constructed)
+                {
+                    WorldStructureActor->NotifyConstructionCompleted();
+                    UE_LOG(LogTemp, Log, TEXT("ProcessWorldStructure: Structure completed at position (%d, %d, %d), calling OnConstructed"), DojoPos.X, DojoPos.Y, DojoPos.Z);
+                }
+            }
+        }
+        else
+        {
+            // New structure, queue for spawn
+            UE_LOG(LogTemp, Log, TEXT("ProcessWorldStructure: Queueing spawn for Item %d at position (%d, %d, %d)"), static_cast<int32>(Item), DojoPos.X, DojoPos.Y, DojoPos.Z);
+            QueueSpawnWithOverflowProtection(FSpawnQueueData(Item, DojoPos, false, Structure));
+        }
     }
 }
 

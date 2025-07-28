@@ -22,7 +22,7 @@ pub struct WorldStructure {
     pub chunk_id: u128,
     #[key]
     pub position: u8,
-    pub structure_type: u8,
+    pub structure_type: u16,
     pub build_inventory_id: u16,
     pub completed: bool,
     pub linked_space_owner: felt252,
@@ -40,7 +40,7 @@ pub impl WorldStructureImpl of WorldStructureTrait {
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
         let mut structure: WorldStructure = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(structure.structure_type == 0, "Error: World Structure exists");
-        structure.structure_type = 30; // House
+        structure.structure_type = item_id;
 
         let mut inventory: Inventory = world.read_model((player, 0));
         inventory.remove_items(item_id, 1);

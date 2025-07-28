@@ -18,3 +18,12 @@ void ABaseWorldStructure::BeginPlay()
     Constructed = false;
 }
 
+void ABaseWorldStructure::NotifyConstructionCompleted()
+{
+    if (!Constructed)
+    {
+        Constructed = true;
+        OnConstructed();
+    }
+}
+

@@ -348,12 +348,12 @@ mod actions {
                 update_block(ref world, x, y, z - 1, itemType);
                 return;
             }
-            
+
             // Check if trying to break blocks 1, 2, or 3 (dirt, grass, stone)
             let player_data: PlayerData = world.read_model((player));
             let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
             let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
-            
+
             // Get block ID at position
             let x_local = x % 4;
             let y_local = y % 4;
@@ -362,12 +362,12 @@ mod actions {
             let blocks = if lower_layer { chunk.blocks2 } else { chunk.blocks1 };
             let shift: u128 = fast_power_2(((x_local + y_local * 4 + z_local * 16) * 4).into()).into();
             let block_id: u16 = ((blocks / shift) % 16).try_into().unwrap();
-            
+
             // If block is dirt (1), grass (2), or stone (3), require shovel (39)
             if (block_id == 1 || block_id == 2 || block_id == 3) && itemType != 39 {
                 assert!(false, "Error: Need a shovel to break this block");
             }
-            
+
             // handle hp
             if !remove_block(ref world, x, y, z) {
                 harvest(ref self, x, y, z);
@@ -380,9 +380,9 @@ mod actions {
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
 
-
             let item_type: u16 = inventory.get_hotbar_selected_item_type();
 
+            println!("use_item called with item_type: {}, position: ({}, {}, {})", item_type, x, y, z);
             if item_type == 41 { // hoe
                 update_block(ref world, x, y, z, item_type);
             } else if item_type == 43 { // hammer

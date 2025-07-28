@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x1a8aa8ff5d02a28c039e2dd394dc02b03413cef74926c8fe3437ec41aab6821",
+      "class_hash": "0x20f02f59f10add83652bbf098d819336e187e80e534004f1ccfb2c72997b7ef",
       "abi": [
         {
           "type": "impl",
@@ -1960,7 +1960,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x36d1a84754f2670d03f1a60883bcd08e655c360b0646707c5c0e74e4494d1ac",
+      "class_hash": "0x7f033e5327e1825f4596b16e5fca548a07eeb38f6fc5305a93d2e2f865ff83d",
       "tag": "craft_island_pocket-WorldStructure",
       "selector": "0x5df5957a204638a9dc1fe18f016555f1811394279cd5705d8d6a3a60dd890c6"
     }

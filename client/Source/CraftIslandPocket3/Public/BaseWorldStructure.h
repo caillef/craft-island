@@ -12,8 +12,8 @@ UCLASS()
 class CRAFTISLANDPOCKET3_API ABaseWorldStructure : public ABaseBlock
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ABaseWorldStructure();
 
@@ -25,6 +25,8 @@ protected:
     void OnConstructed();
 
 public:
+    // Call this when the structure is completed
+    void NotifyConstructionCompleted();
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Structure")
     bool Constructed;
 
