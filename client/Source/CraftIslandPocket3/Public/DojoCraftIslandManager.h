@@ -373,6 +373,9 @@ public:
 
     // Clear all spawned actors
     void ClearAllSpawnedActors();
+    
+    // Set visibility and collision for a group of actors
+    void SetActorsVisibilityAndCollision(bool bVisible, bool bEnableCollision);
 
     // Current space tracking
     UPROPERTY()
@@ -388,4 +391,11 @@ public:
     // Sky atmosphere reference
     UPROPERTY()
     AActor* SkyAtmosphere;
+    
+    // Track if space 1 actors are hidden
+    bool bSpace1ActorsHidden;
+    
+    // Store player positions for each space
+    UPROPERTY()
+    TMap<FString, FVector> SpacePlayerPositions;
 };
