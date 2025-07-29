@@ -138,6 +138,9 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                     GhostLocation.Y = FMath::RoundToFloat(GhostLocation.Y / 50.0f) * 50.0f;
                     GhostLocation.Z = FMath::RoundToFloat(GhostLocation.Z / 50.0f) * 50.0f;
                     
+                    // Ensure it's above ground
+                    GhostLocation.Z += 50.0f; // One block above current position
+                    
                     // Update ghost position
                     GhostPreviewActor->SetActorLocation(GhostLocation);
                 }
@@ -264,6 +267,8 @@ void ADojoCraftIslandManager::ContinueAfterDelay()
 
 void ADojoCraftIslandManager::InitUIAndActors()
 {
+    // Log ItemDataTable status
+    UE_LOG(LogTemp, Warning, TEXT("InitUIAndActors: ItemDataTable = %s"), ItemDataTable ? TEXT("Valid") : TEXT("NULL"));
     // === 1. Create and Add Onboarding Widget ===
 //    if (OnboardingWidgetClass)
 //    {
@@ -1521,12 +1526,16 @@ void ADojoCraftIslandManager::UpdateGhostPreview()
     
     // Get selected item
     int32 SelectedItemId = GetSelectedItemId();
+    UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: SelectedItemId = %d"), SelectedItemId);
     
     // Only show ghost for building patterns
     if (!IsBuildingPattern(SelectedItemId))
     {
+        UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Not a building pattern, returning"));
         return;
     }
+    
+    UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Is building pattern, proceeding"));
     
     // Get player position and calculate north position
     if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -1545,14 +1554,30 @@ void ADojoCraftIslandManager::UpdateGhostPreview()
             GhostLocation.Y = FMath::RoundToFloat(GhostLocation.Y / 50.0f) * 50.0f;
             GhostLocation.Z = FMath::RoundToFloat(GhostLocation.Z / 50.0f) * 50.0f;
             
+            // Ensure it's above ground
+            GhostLocation.Z += 50.0f; // One block above current position
+            
+            UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Player at %s, Ghost at %s"), 
+                   *PlayerLocation.ToString(), *GhostLocation.ToString());
+            
             // Get the actor class for this item
-            if (!ItemDataTable) return;
+            if (!ItemDataTable) 
+            {
+                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: ItemDataTable is null"));
+                return;
+            }
             
             const FItemDataRow* ItemData = reinterpret_cast<const FItemDataRow*>(
                 DataTableHelpers::FindRowByColumnValue(ItemDataTable, TEXT("ID"), SelectedItemId)
             );
             
-            if (!ItemData || !ItemData->ActorClass) return;
+            if (!ItemData || !ItemData->ActorClass) 
+            {
+                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: ItemData not found or no ActorClass for ID %d"), SelectedItemId);
+                return;
+            }
+            
+            UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Found ActorClass for ID %d"), SelectedItemId);
             
             // Spawn the ghost actor
             FActorSpawnParameters SpawnParams;
@@ -1562,45 +1587,44 @@ void ADojoCraftIslandManager::UpdateGhostPreview()
             
             if (GhostPreviewActor)
             {
+                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Ghost actor spawned at %s"), *GhostLocation.ToString());
+                
+                // Set the whole actor to be translucent
+                GhostPreviewActor->SetActorHiddenInGame(false);
+                GhostPreviewActor->SetActorEnableCollision(false);
+                
                 // Make it semi-transparent and ghostly
                 TArray<UPrimitiveComponent*> Components;
                 GhostPreviewActor->GetComponents<UPrimitiveComponent>(Components);
+                
+                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Found %d components"), Components.Num());
                 
                 for (UPrimitiveComponent* Component : Components)
                 {
                     // Disable collision
                     Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
                     
-                    // Make semi-transparent with custom rendering
+                    // Make visible but translucent
+                    Component->SetVisibility(true);
+                    Component->SetHiddenInGame(false);
+                    
+                    // Make semi-transparent
                     if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
                     {
-                        // Set custom depth stencil for outline effect
+                        UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Processing StaticMeshComponent"));
+                        
+                        // Simple approach - just modify render settings
                         MeshComp->SetRenderCustomDepth(true);
-                        MeshComp->SetCustomDepthStencilValue(1);
+                        MeshComp->SetCustomDepthStencilValue(252); // Special value for ghost
                         
-                        // Set translucent blend mode
-                        MeshComp->SetTranslucentSortPriority(100);
-                        
-                        // Create and apply translucent material
-                        for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
-                        {
-                            UMaterialInterface* Material = MeshComp->GetMaterial(i);
-                            if (Material)
-                            {
-                                UMaterialInstanceDynamic* DynMaterial = UMaterialInstanceDynamic::Create(Material, this);
-                                if (DynMaterial)
-                                {
-                                    // Set opacity and color tint
-                                    DynMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.4f);
-                                    DynMaterial->SetVectorParameterValue(TEXT("BaseColor"), FLinearColor(0.5f, 0.8f, 1.0f, 0.4f));
-                                    
-                                    // Apply the material
-                                    MeshComp->SetMaterial(i, DynMaterial);
-                                }
-                            }
-                        }
+                        // Try to make it translucent through actor opacity if available
+                        MeshComp->SetScalarParameterValueOnMaterials(TEXT("Opacity"), 0.5f);
                     }
                 }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Failed to spawn ghost actor"));
             }
         }
     }
