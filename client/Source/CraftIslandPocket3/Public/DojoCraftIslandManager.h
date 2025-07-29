@@ -244,9 +244,6 @@ protected:
     FAccount Account;
 
 public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
     // Widgets
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
     TSubclassOf<UUserWidget> OnboardingWidgetClass;

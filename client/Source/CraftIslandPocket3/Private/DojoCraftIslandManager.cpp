@@ -149,6 +149,84 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
             RemoveGhostPreview();
         }
     }
+    
+    // Original Tick functionality for handling target blocks and spawn queue
+    APlayerController* PC = GetWorld()->GetFirstPlayerController();
+    if (!PC) return;
+
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn) return;
+
+    FVector TargetLocation = FVector::ZeroVector;
+
+    FProperty* Property = PlayerPawn->GetClass()->FindPropertyByName(FName("TargetBlock"));
+    if (Property)
+    {
+        FStructProperty* StructProp = CastField<FStructProperty>(Property);
+        if (StructProp && StructProp->Struct == TBaseStructure<FVector>::Get())
+        {
+            void* ValuePtr = Property->ContainerPtrToValuePtr<void>(PlayerPawn);
+            TargetLocation = *static_cast<FVector*>(ValuePtr);
+        }
+    }
+
+    // Convert to IntVector, truncate, and modify Z
+    int32 X = FMath::TruncToInt(TargetLocation.X + 8192);
+    int32 Y = FMath::TruncToInt(TargetLocation.Y + 8192);
+    int32 Z = FMath::TruncToInt(TargetLocation.Z + 8192);
+
+    FIntVector TestVector(X, Y, Z);
+
+    // Check if in Actors array
+    bool bFound = Actors.Contains(TestVector);
+
+    // Select Z value based on presence
+    int32 ZValue = bFound ? 0 : -1;
+
+    // Rebuild target vector
+    FVector FinalTargetVector(TargetLocation.X, TargetLocation.Y, TargetLocation.Z + ZValue);
+
+    // Set on GameInstance
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        UCraftIslandGameInst* CI = Cast<UCraftIslandGameInst>(GI);
+        if (CI)
+        {
+            CI->SetTargetBlock.Broadcast(FinalTargetVector);
+        }
+    }
+
+    // Set ActionDojoPosition
+    ActionDojoPosition = FIntVector(X, Y, ZValue);
+
+    // Process spawn queue - spawn up to 10 actors per tick
+    const int32 MaxSpawnsPerFrame = 10;
+    int32 SpawnsProcessed = 0;
+
+    while (SpawnQueue.Num() > 0 && SpawnsProcessed < MaxSpawnsPerFrame)
+    {
+        FSpawnQueueData& SpawnData = SpawnQueue[0];
+        AActor* SpawnedActor = PlaceAssetInWorld(SpawnData.Item, SpawnData.DojoPosition, SpawnData.Validated, SpawnData.SpawnType);
+        
+        if (SpawnedActor)
+        {
+            // If this was a structure spawn, set the world structure data
+            if (SpawnData.SpawnType == EActorSpawnType::WorldStructure && SpawnData.Structure)
+            {
+                if (ABaseWorldStructure* WorldStructureActor = Cast<ABaseWorldStructure>(SpawnedActor))
+                {
+                    WorldStructureActor->WorldStructure = SpawnData.Structure;
+                    if (SpawnData.Structure->Completed)
+                    {
+                        WorldStructureActor->NotifyConstructionCompleted();
+                    }
+                }
+            }
+        }
+        
+        SpawnQueue.RemoveAt(0);
+        SpawnsProcessed++;
+    }
 }
 
 void ADojoCraftIslandManager::ContinueAfterDelay()
@@ -1562,7 +1640,7 @@ void ADojoCraftIslandManager::UpdateGhostPreview()
             // Get the actor class for this item
             if (!ItemDataTable) return;
             
-            const FItemDataStruct* ItemData = reinterpret_cast<const FItemDataStruct*>(
+            const FItemDataRow* ItemData = reinterpret_cast<const FItemDataRow*>(
                 DataTableHelpers::FindRowByColumnValue(ItemDataTable, TEXT("ID"), SelectedItemId)
             );
             
