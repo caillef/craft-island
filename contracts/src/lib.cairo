@@ -8,6 +8,7 @@ pub mod helpers {
     pub mod craft;
     pub mod init;
     pub mod utils;
+    pub mod processing_guard;
 }
 
 pub mod models {
@@ -16,4 +17,5 @@ pub mod models {
     pub mod islandchunk;
     pub mod worldstructure;
     pub mod gatherableresource;
+    pub mod processing;
 }

@@ -115,8 +115,32 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // Ghost preview temporarily disabled
-    // TODO: Re-implement ghost preview without breaking placement
+    // Update ghost preview to follow target location
+    if (CurrentInventory)
+    {
+        int32 SelectedItemId = GetSelectedItemId();
+        if (IsBuildingPattern(SelectedItemId))
+        {
+            // Show ghost at current target location
+            if (!GhostPreviewActor)
+            {
+                // Spawn ghost preview if needed
+                UpdateGhostPreview();
+            }
+            else
+            {
+                // Just update position to follow target
+                FVector GhostLocation(TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
+                GhostLocation.Z += 50.0f; // One block above target for visibility
+                GhostPreviewActor->SetActorLocation(GhostLocation);
+            }
+        }
+        else if (GhostPreviewActor)
+        {
+            // Remove ghost if no building selected
+            RemoveGhostPreview();
+        }
+    }
     
     // Original Tick functionality for handling target blocks and spawn queue
     APlayerController* PC = GetWorld()->GetFirstPlayerController();
@@ -640,6 +664,9 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         TargetBlock.Y + 8192,
         TargetBlock.Z + 8192 + ZOffset
     );
+    
+    // Remove ghost preview after placing
+    RemoveGhostPreview();
 }
 
 void ADojoCraftIslandManager::RequestSpawn()
@@ -662,6 +689,12 @@ void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
     }
 
     DojoHelpers->CallCraftIslandPocketActionsSelectHotbarSlot(Account, SlotIndex);
+    
+    // Update ghost preview when item selection changes
+    if (CurrentInventory)
+    {
+        RemoveGhostPreview(); // Force recreate on next tick
+    }
 }
 
 void ADojoCraftIslandManager::RequestHit()
@@ -1449,105 +1482,61 @@ void ADojoCraftIslandManager::UpdateGhostPreview()
     
     // Get selected item
     int32 SelectedItemId = GetSelectedItemId();
-    UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: SelectedItemId = %d"), SelectedItemId);
     
     // Only show ghost for building patterns
     if (!IsBuildingPattern(SelectedItemId))
     {
-        UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Not a building pattern, returning"));
         return;
     }
     
-    UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Is building pattern, proceeding"));
-    
-    // Get player position and calculate north position
-    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    // Get the actor class for this item
+    if (!ItemDataTable) 
     {
-        if (APawn* PlayerPawn = PC->GetPawn())
+        return;
+    }
+    
+    const FItemDataRow* ItemData = reinterpret_cast<const FItemDataRow*>(
+        DataTableHelpers::FindRowByColumnValue(ItemDataTable, TEXT("ID"), SelectedItemId)
+    );
+    
+    if (!ItemData || !ItemData->ActorClass) 
+    {
+        return;
+    }
+    
+    // Spawn at current target location
+    FVector GhostLocation(TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
+    GhostLocation.Z += 50.0f; // One block above target for visibility
+    
+    // Spawn the ghost actor
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    
+    GhostPreviewActor = GetWorld()->SpawnActor<AActor>(ItemData->ActorClass, GhostLocation, FRotator::ZeroRotator, SpawnParams);
+    
+    if (GhostPreviewActor)
+    {
+        // Set the whole actor to be non-collidable
+        GhostPreviewActor->SetActorEnableCollision(false);
+        
+        // Make it semi-transparent and ghostly
+        TArray<UPrimitiveComponent*> Components;
+        GhostPreviewActor->GetComponents<UPrimitiveComponent>(Components);
+        
+        for (UPrimitiveComponent* Component : Components)
         {
-            FVector PlayerLocation = PlayerPawn->GetActorLocation();
+            // Disable collision
+            Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             
-            // Calculate position one block north of player
-            // In this coordinate system, X is north/south
-            FVector GhostLocation = PlayerLocation;
-            GhostLocation.X -= 50.0f; // One block north (negative X, 50 units = 1 block)
-            
-            // Snap to grid
-            GhostLocation.X = FMath::RoundToFloat(GhostLocation.X / 50.0f) * 50.0f;
-            GhostLocation.Y = FMath::RoundToFloat(GhostLocation.Y / 50.0f) * 50.0f;
-            GhostLocation.Z = FMath::RoundToFloat(GhostLocation.Z / 50.0f) * 50.0f;
-            
-            // Ensure it's above ground
-            GhostLocation.Z += 50.0f; // One block above current position
-            
-            UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Player at %s, Ghost at %s"), 
-                   *PlayerLocation.ToString(), *GhostLocation.ToString());
-            
-            // Get the actor class for this item
-            if (!ItemDataTable) 
+            // Make semi-transparent
+            if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
             {
-                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: ItemDataTable is null"));
-                return;
-            }
-            
-            const FItemDataRow* ItemData = reinterpret_cast<const FItemDataRow*>(
-                DataTableHelpers::FindRowByColumnValue(ItemDataTable, TEXT("ID"), SelectedItemId)
-            );
-            
-            if (!ItemData || !ItemData->ActorClass) 
-            {
-                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: ItemData not found or no ActorClass for ID %d"), SelectedItemId);
-                return;
-            }
-            
-            UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Found ActorClass for ID %d"), SelectedItemId);
-            
-            // Spawn the ghost actor
-            FActorSpawnParameters SpawnParams;
-            SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-            
-            GhostPreviewActor = GetWorld()->SpawnActor<AActor>(ItemData->ActorClass, GhostLocation, FRotator::ZeroRotator, SpawnParams);
-            
-            if (GhostPreviewActor)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Ghost actor spawned at %s"), *GhostLocation.ToString());
+                // Simple approach - just modify render settings
+                MeshComp->SetRenderCustomDepth(true);
+                MeshComp->SetCustomDepthStencilValue(252); // Special value for ghost
                 
-                // Set the whole actor to be translucent
-                GhostPreviewActor->SetActorHiddenInGame(false);
-                GhostPreviewActor->SetActorEnableCollision(false);
-                
-                // Make it semi-transparent and ghostly
-                TArray<UPrimitiveComponent*> Components;
-                GhostPreviewActor->GetComponents<UPrimitiveComponent>(Components);
-                
-                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Found %d components"), Components.Num());
-                
-                for (UPrimitiveComponent* Component : Components)
-                {
-                    // Disable collision
-                    Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-                    
-                    // Make visible but translucent
-                    Component->SetVisibility(true);
-                    Component->SetHiddenInGame(false);
-                    
-                    // Make semi-transparent
-                    if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
-                    {
-                        UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Processing StaticMeshComponent"));
-                        
-                        // Simple approach - just modify render settings
-                        MeshComp->SetRenderCustomDepth(true);
-                        MeshComp->SetCustomDepthStencilValue(252); // Special value for ghost
-                        
-                        // Try to make it translucent through actor opacity if available
-                        MeshComp->SetScalarParameterValueOnMaterials(TEXT("Opacity"), 0.5f);
-                    }
-                }
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("UpdateGhostPreview: Failed to spawn ghost actor"));
+                // Try to make it translucent through actor opacity if available
+                MeshComp->SetScalarParameterValueOnMaterials(TEXT("Opacity"), 0.5f);
             }
         }
     }

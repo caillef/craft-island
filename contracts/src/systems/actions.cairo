@@ -11,6 +11,8 @@ trait IActions<T> {
     fn generate_island_part(ref self: T, x: u64, y: u64, z: u64, island_id: u16);
     fn visit(ref self: T, space_id: u16);
     fn visit_new_island(ref self: T);
+    fn start_processing(ref self: T, process_type: u8);
+    fn cancel_processing(ref self: T);
 }
 
 // dojo decorator
@@ -31,11 +33,15 @@ mod actions {
         IslandChunk, place_block, remove_block, update_block, IslandChunkTrait
     };
     use craft_island_pocket::models::worldstructure::{WorldStructureTrait};
+    use craft_island_pocket::models::processing::{
+        ProcessingLock, ProcessType, get_processing_config, MAX_PROCESSING_TIME
+    };
     use craft_island_pocket::helpers::{
         utils::{get_position_id},
         craft::{craftmatch},
         init::{init},
         math::{fast_power_2},
+        processing_guard::{ensure_not_locked},
     };
 
     use dojo::model::{ModelStorage};
@@ -328,16 +334,31 @@ mod actions {
         }
 
         fn sell(ref self: ContractState) {
+            let world = get_world(ref self);
+            let player = get_caller_address();
+            
+            // Check if player is processing
+            ensure_not_locked(@world, player);
+            
             sell(ref self);
         }
 
         fn buy(ref self: ContractState, item_ids: Array<u16>, quantities: Array<u32>) {
+            let world = get_world(ref self);
+            let player = get_caller_address();
+            
+            // Check if player is processing
+            ensure_not_locked(@world, player);
+            
             buy(ref self, item_ids, quantities);
         }
 
         fn hit_block(ref self: ContractState, x: u64, y: u64, z: u64, hp: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
+            
+            // Check if player is processing
+            ensure_not_locked(@world, player);
 
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
@@ -377,6 +398,9 @@ mod actions {
         fn use_item(ref self: ContractState, x: u64, y: u64, z: u64) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
+            
+            // Check if player is processing
+            ensure_not_locked(@world, player);
             // get inventory and get current slot item id
             let mut inventory: Inventory = world.read_model((player, 0));
 
@@ -426,14 +450,22 @@ mod actions {
         }
 
         fn craft(ref self: ContractState, item: u32, x: u64, y: u64, z: u64) {
+            let world = get_world(ref self);
+            let player = get_caller_address();
+            
+            // Check if player is processing
+            ensure_not_locked(@world, player);
+            
             try_craft(ref self, item.try_into().unwrap(), x, y, z);
         }
 
         fn inventory_move_item(ref self: ContractState, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8) {
             assert(from_inventory != to_inventory_id || from_slot != to_slot, 'Error: same slot');
             let mut world = get_world(ref self);
-
             let player = get_caller_address();
+            
+            // Check if player is processing
+            ensure_not_locked(@world, player);
             let mut inventory: Inventory = world.read_model((player, from_inventory));
             let mut to_inventory: Inventory = world.read_model((player, to_inventory_id));
 
@@ -531,6 +563,121 @@ mod actions {
             spawn_random_resources(ref world, player.into(), island_id, 0x000000080000000008000000000800, 0);
 
             self.visit(island_id);
+        }
+
+        fn start_processing(ref self: ContractState, process_type: u8) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+            let current_time = starknet::get_block_timestamp();
+            
+            // Check if player is already locked
+            let processing_lock: ProcessingLock = world.read_model(player);
+            assert(processing_lock.unlock_time <= current_time, 'Already processing');
+            
+            // Convert u8 to ProcessType
+            let process_type_enum = match process_type {
+                0 => ProcessType::None,
+                1 => ProcessType::GrindWheat,
+                2 => ProcessType::CutLogs,
+                3 => ProcessType::SmeltOre,
+                4 => ProcessType::CrushStone,
+                5 => ProcessType::ProcessClay,
+                _ => panic!("Invalid process type")
+            };
+            
+            assert(process_type_enum != ProcessType::None, 'Invalid process type');
+            
+            // Get processing config
+            let config = get_processing_config(process_type_enum);
+            
+            // Get player inventory
+            let mut inventory: Inventory = world.read_model((player, 0));
+            
+            // Count available input items
+            let available_items = inventory.get_item_amount(config.input_item.try_into().unwrap());
+            assert(available_items > 0, 'No input items');
+            
+            // Calculate batches and time
+            let max_batches = available_items / config.input_amount;
+            let total_time = max_batches.into() * config.time_per_batch;
+            
+            // Cap at max processing time
+            let capped_time = if total_time > MAX_PROCESSING_TIME {
+                MAX_PROCESSING_TIME
+            } else {
+                total_time
+            };
+            let actual_batches = (capped_time / config.time_per_batch).try_into().unwrap();
+            
+            // Calculate actual items to process
+            let items_to_remove = actual_batches * config.input_amount;
+            let items_to_add = actual_batches * config.output_amount;
+            
+            // TODO: Add proper inventory space check
+            // For now, we'll attempt to add and assert if it fails
+            
+            // Remove input items
+            inventory.remove_items(config.input_item.try_into().unwrap(), items_to_remove);
+            
+            // Add output items
+            let remaining = inventory.add_items(config.output_item.try_into().unwrap(), items_to_add);
+            assert(remaining == 0, 'Not enough inventory space');
+            
+            // Write updated inventory
+            world.write_model(@inventory);
+            
+            // Set processing lock
+            let new_lock = ProcessingLock {
+                player,
+                unlock_time: current_time + capped_time,
+                process_type: process_type_enum,
+                batches_processed: actual_batches
+            };
+            world.write_model(@new_lock);
+        }
+        
+        fn cancel_processing(ref self: ContractState) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+            let current_time = starknet::get_block_timestamp();
+            
+            // Get current lock
+            let processing_lock: ProcessingLock = world.read_model(player);
+            assert(processing_lock.unlock_time > current_time, 'Not processing');
+            
+            // Get processing config
+            let config = get_processing_config(processing_lock.process_type);
+            
+            // Calculate remaining batches
+            let remaining_time = processing_lock.unlock_time - current_time;
+            let remaining_batches = (remaining_time / config.time_per_batch).try_into().unwrap();
+            let _completed_batches = processing_lock.batches_processed - remaining_batches;
+            
+            // Get inventory
+            let mut inventory: Inventory = world.read_model((player, 0));
+            
+            // Return unprocessed input items
+            if remaining_batches > 0 {
+                let items_to_return = remaining_batches * config.input_amount;
+                let remaining = inventory.add_items(config.input_item.try_into().unwrap(), items_to_return);
+                assert(remaining == 0, 'Cannot return all input items');
+                
+                // Remove corresponding output items
+                let items_to_remove = remaining_batches * config.output_amount;
+                inventory.remove_items(config.output_item.try_into().unwrap(), items_to_remove);
+            }
+            
+            // Write updated inventory
+            world.write_model(@inventory);
+            
+            // Clear lock
+            let cleared_lock = ProcessingLock {
+                player,
+                unlock_time: 0,
+                process_type: ProcessType::None,
+                batches_processed: 0
+            };
+            world.write_model(@cleared_lock);
         }
     }
 
