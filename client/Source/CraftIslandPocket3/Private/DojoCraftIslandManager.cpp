@@ -203,20 +203,42 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
     const int32 MaxSpawnsPerFrame = 10;
     int32 SpawnsProcessed = 0;
 
-    while (SpawnQueue.Num() > 0 && SpawnsProcessed < MaxSpawnsPerFrame)
+    while (!SpawnQueue.IsEmpty() && SpawnsProcessed < MaxSpawnsPerFrame)
     {
-        FSpawnQueueData& SpawnData = SpawnQueue[0];
-        AActor* SpawnedActor = PlaceAssetInWorld(SpawnData.Item, SpawnData.DojoPosition, SpawnData.Validated, SpawnData.SpawnType);
+        FSpawnQueueData SpawnData = SpawnQueue[0];
+        SpawnQueue.RemoveAt(0);
         
-        if (SpawnedActor)
+        EActorSpawnType SpawnType = EActorSpawnType::ChunkBlock;
+        if (SpawnData.DojoModel)
         {
-            // If this was a structure spawn, set the world structure data
-            if (SpawnData.SpawnType == EActorSpawnType::WorldStructure && SpawnData.Structure)
+            if (Cast<UDojoModelCraftIslandPocketGatherableResource>(SpawnData.DojoModel))
+            {
+                SpawnType = EActorSpawnType::GatherableResource;
+            }
+            else if (Cast<UDojoModelCraftIslandPocketWorldStructure>(SpawnData.DojoModel))
+            {
+                SpawnType = EActorSpawnType::WorldStructure;
+            }
+        }
+        
+        AActor* SpawnedActor = PlaceAssetInWorld(SpawnData.Item, SpawnData.DojoPosition, SpawnData.Validated, SpawnType);
+        
+        // Handle specific actor types based on the queued data
+        if (SpawnedActor && SpawnData.DojoModel)
+        {
+            if (UDojoModelCraftIslandPocketGatherableResource* Gatherable = Cast<UDojoModelCraftIslandPocketGatherableResource>(SpawnData.DojoModel))
+            {
+                if (ABaseObject* ActorObject = Cast<ABaseObject>(SpawnedActor))
+                {
+                    ActorObject->GatherableResourceInfo = Gatherable;
+                }
+            }
+            else if (UDojoModelCraftIslandPocketWorldStructure* Structure = Cast<UDojoModelCraftIslandPocketWorldStructure>(SpawnData.DojoModel))
             {
                 if (ABaseWorldStructure* WorldStructureActor = Cast<ABaseWorldStructure>(SpawnedActor))
                 {
-                    WorldStructureActor->WorldStructure = SpawnData.Structure;
-                    if (SpawnData.Structure->Completed)
+                    WorldStructureActor->WorldStructure = Structure;
+                    if (Structure->Completed)
                     {
                         WorldStructureActor->NotifyConstructionCompleted();
                     }
@@ -224,7 +246,6 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
             }
         }
         
-        SpawnQueue.RemoveAt(0);
         SpawnsProcessed++;
     }
 }
@@ -288,119 +309,6 @@ void ADojoCraftIslandManager::InitUIAndActors()
     // }
 }
 
-// Called every frame
-void ADojoCraftIslandManager::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-    // Step 1: Get Player Pawn and Cast
-    APlayerController* PC = GetWorld()->GetFirstPlayerController();
-    if (!PC) return;
-
-    APawn* PlayerPawn = PC->GetPawn();
-    if (!PlayerPawn) return;
-
-    FVector TargetLocation = FVector::ZeroVector;
-
-    FProperty* Property = PlayerPawn->GetClass()->FindPropertyByName(FName("TargetBlock"));
-    if (Property)
-    {
-        FStructProperty* StructProp = CastField<FStructProperty>(Property);
-        if (StructProp && StructProp->Struct == TBaseStructure<FVector>::Get())
-        {
-            void* ValuePtr = Property->ContainerPtrToValuePtr<void>(PlayerPawn);
-            TargetLocation = *static_cast<FVector*>(ValuePtr);
-        }
-    }
-
-    // Step 3: Convert to IntVector, truncate, and modify Z
-    int32 X = FMath::TruncToInt(TargetLocation.X + 8192);
-    int32 Y = FMath::TruncToInt(TargetLocation.Y + 8192);
-    int32 Z = FMath::TruncToInt(TargetLocation.Z + 8192);
-
-    FIntVector TestVector(X, Y, Z);
-
-    // Step 4: Check if in Actors array
-    bool bFound = Actors.Contains(TestVector);
-
-    // Step 5: Select Z value based on presence
-    int32 ZValue = bFound ? 0 : -1;
-
-    // Step 6: Rebuild target vector
-    FVector FinalTargetVector(TargetLocation.X, TargetLocation.Y, TargetLocation.Z + ZValue);
-
-    // Step 7: Set on GameInstance
-    if (UGameInstance* GI = GetGameInstance())
-    {
-        UCraftIslandGameInst* CI = Cast<UCraftIslandGameInst>(GI);
-        if (CI)
-        {
-            CI->SetTargetBlock.Broadcast(FinalTargetVector);
-        }
-    }
-
-    // Step 8: Set ActionDojoPosition
-    ActionDojoPosition = FIntVector(X, Y, ZValue);
-
-    // Step 9: Process spawn queue - spawn up to 10 actors per tick
-    const int32 MaxSpawnsPerFrame = 10;
-    int32 SpawnsProcessed = 0;
-
-    while (!SpawnQueue.IsEmpty() && SpawnsProcessed < MaxSpawnsPerFrame)
-    {
-        FSpawnQueueData SpawnData = SpawnQueue[0];
-        SpawnQueue.RemoveAt(0);
-
-        EActorSpawnType SpawnType = EActorSpawnType::ChunkBlock;
-        if (SpawnData.DojoModel)
-        {
-            if (Cast<UDojoModelCraftIslandPocketGatherableResource>(SpawnData.DojoModel))
-            {
-                SpawnType = EActorSpawnType::GatherableResource;
-            }
-            else if (Cast<UDojoModelCraftIslandPocketWorldStructure>(SpawnData.DojoModel))
-            {
-                SpawnType = EActorSpawnType::WorldStructure;
-            }
-        }
-
-        AActor* SpawnedActor = PlaceAssetInWorld(SpawnData.Item, SpawnData.DojoPosition, SpawnData.Validated, SpawnType);
-
-        // Handle specific actor types based on the queued data
-        if (SpawnedActor && SpawnData.DojoModel)
-        {
-            if (UDojoModelCraftIslandPocketGatherableResource* Gatherable = Cast<UDojoModelCraftIslandPocketGatherableResource>(SpawnData.DojoModel))
-            {
-                if (ABaseObject* ActorObject = Cast<ABaseObject>(SpawnedActor))
-                {
-                    ActorObject->GatherableResourceInfo = Gatherable;
-                }
-            }
-            else if (UDojoModelCraftIslandPocketWorldStructure* Structure = Cast<UDojoModelCraftIslandPocketWorldStructure>(SpawnData.DojoModel))
-            {
-                if (ABaseWorldStructure* ActorStructure = Cast<ABaseWorldStructure>(SpawnedActor))
-                {
-                    ActorStructure->WorldStructure = Structure;
-
-                    // If already completed on spawn, call NotifyConstructionCompleted
-                    // Note: Don't set Constructed before calling NotifyConstructionCompleted
-                    if (Structure->Completed)
-                    {
-                        ActorStructure->NotifyConstructionCompleted();
-                        UE_LOG(LogTemp, Log, TEXT("Tick: Structure spawned completed at position (%d, %d, %d), calling OnConstructed"), SpawnData.DojoPosition.X, SpawnData.DojoPosition.Y, SpawnData.DojoPosition.Z);
-                    }
-                }
-            }
-        }
-
-        SpawnsProcessed++;
-    }
-
-    if (SpawnsProcessed > 0)
-    {
-        UE_LOG(LogTemp, Log, TEXT("Processed %d spawns this frame, %d items remaining in queue"), SpawnsProcessed, SpawnQueue.Num());
-    }
-}
 
 
 int ADojoCraftIslandManager::HexToInteger(const FString& Hex)
