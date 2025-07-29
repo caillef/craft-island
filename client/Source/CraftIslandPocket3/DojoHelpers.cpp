@@ -476,8 +476,6 @@ void ADojoHelpers::SubscribeOnDojoModelUpdate()
 
 void ADojoHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
 {
-    UE_LOG(LogTemp, Log, TEXT("CallbackProxy: Callback triggered with models"));
-
     ADojoHelpers* SafeInstance = GetGlobalInstance();
     if (!SafeInstance || !IsValid(SafeInstance))
     {
@@ -485,9 +483,7 @@ void ADojoHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct mo
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("CallbackProxy: Valid SafeInstance found, calling ParseModelsAndSend"));
     SafeInstance->ParseModelsAndSend(&models);
-    UE_LOG(LogTemp, Log, TEXT("CallbackProxy: ParseModelsAndSend completed"));
 }
 
 template<typename T>

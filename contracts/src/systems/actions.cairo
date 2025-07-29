@@ -401,8 +401,12 @@ mod actions {
                     // World structures (House Pattern, Workshop, Well, Kitchen, Warehouse, Brewery) only in main island
                     assert(player_data.current_space_id == 1, 'Error: not in main island');
                     WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
+                } else if item_type == 35 || item_type == 37 || item_type == 39 {
+                    // Tools (Axe, Pickaxe, Shovel) - do nothing when used on empty space
+                    // These tools are only used via hit_block function
+                    return;
                 } else {
-                    // Other items (plants, etc.) can be placed anywhere
+                    // Other items (plants, seeds, etc.) can be placed anywhere
                     plant(ref self, x, y, z, item_type);
                 }
             }

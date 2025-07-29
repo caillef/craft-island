@@ -183,6 +183,12 @@ UCLASS()
 class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
 {
 	GENERATED_BODY()
+	
+private:
+    // Constants for spawn positions
+    static const FVector DEFAULT_OUTDOOR_SPAWN_POS;
+    static const FVector DEFAULT_BUILDING_SPAWN_POS;
+    static constexpr float CAMERA_LAG_REENABLE_DELAY = 0.1f;
 
     UFUNCTION()
     void RequestPlaceUse();
@@ -398,4 +404,16 @@ public:
     // Store player positions for each space
     UPROPERTY()
     TMap<FString, FVector> SpacePlayerPositions;
+    
+private:
+    // Helper methods for space transitions
+    FString MakeSpaceKey(const FString& Owner, int32 Id) const;
+    void SaveCurrentPlayerPosition();
+    void HandleSpaceTransition(UDojoModelCraftIslandPocketPlayerData* PlayerData);
+    FVector GetSpawnPositionForSpace(const FString& SpaceKey, bool bHasBlockChunks);
+    void TeleportPlayer(const FVector& NewLocation, bool bImmediate = false);
+    
+    // Camera utility methods
+    void SetCameraLag(APawn* Pawn, bool bEnableLag);
+    void DisableCameraLagDuringTeleport(APawn* Pawn);
 };

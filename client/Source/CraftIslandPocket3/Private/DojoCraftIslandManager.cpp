@@ -4,6 +4,10 @@
 #include "DojoCraftIslandManager.h"
 #include "EngineUtils.h"
 
+// Define static constants
+const FVector ADojoCraftIslandManager::DEFAULT_OUTDOOR_SPAWN_POS(50.0f, 50.0f, 250.0f);
+const FVector ADojoCraftIslandManager::DEFAULT_BUILDING_SPAWN_POS(-40.0f, 180.0f, 100.0f);
+
 // Sets default values
 ADojoCraftIslandManager::ADojoCraftIslandManager()
 {
@@ -337,14 +341,8 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     UDojoModelCraftIslandPocketPlayerData* PlayerData = Cast<UDojoModelCraftIslandPocketPlayerData>(Object);
     if (!PlayerData) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("========== HandlePlayerData START =========="));
-    UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Received PlayerData - Player: %s"), *PlayerData->Player);
-    UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: New space: %s:%d"), 
-        *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
-    UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Current tracking - Owner: %s, Space: %d"), 
-        *CurrentSpaceOwner, CurrentSpaceId);
-    UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Account.Address = %s"), *Account.Address);
-    UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: IsCurrentPlayer() = %s"), IsCurrentPlayer() ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("Received PlayerData - Player: %s, Space: %s:%d"), 
+        *PlayerData->Player, *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
 
     // Check if this is the current player
     if (IsCurrentPlayer())
@@ -353,234 +351,10 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
         bool bSpaceChanged = (CurrentSpaceOwner != PlayerData->CurrentSpaceOwner ||
                              CurrentSpaceId != PlayerData->CurrentSpaceId);
 
-        UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: bSpaceChanged = %s"), bSpaceChanged ? TEXT("true") : TEXT("false"));
-        UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Owner comparison: '%s' != '%s' = %s"), 
-            *CurrentSpaceOwner, *PlayerData->CurrentSpaceOwner, 
-            (CurrentSpaceOwner != PlayerData->CurrentSpaceOwner) ? TEXT("true") : TEXT("false"));
-        UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: SpaceId comparison: %d != %d = %s"), 
-            CurrentSpaceId, PlayerData->CurrentSpaceId,
-            (CurrentSpaceId != PlayerData->CurrentSpaceId) ? TEXT("true") : TEXT("false"));
-
         if (bSpaceChanged)
         {
-            UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: SPACE CHANGE DETECTED!"));
-            UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Space changed from %s:%d to %s:%d"),
-                *CurrentSpaceOwner, CurrentSpaceId,
-                *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
-
-            // Save current player position before changing spaces
-            if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-            {
-                if (APawn* PlayerPawn = PC->GetPawn())
-                {
-                    FString CurrentSpaceKey = CurrentSpaceOwner + FString::FromInt(CurrentSpaceId);
-                    FVector CurrentPos = PlayerPawn->GetActorLocation();
-                    SpacePlayerPositions.Add(CurrentSpaceKey, CurrentPos);
-                    UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Saved position %s for space %s"), 
-                        *CurrentPos.ToString(), *CurrentSpaceKey);
-                }
-            }
-
-            // Check if we're returning to space 1
-            bool bReturningToSpace1 = (PlayerData->CurrentSpaceOwner == Account.Address && PlayerData->CurrentSpaceId == 1);
-            
-            UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: bReturningToSpace1 = %s"), bReturningToSpace1 ? TEXT("true") : TEXT("false"));
-            UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Comparison - PlayerData->CurrentSpaceOwner '%s' == Account.Address '%s' = %s"), 
-                *PlayerData->CurrentSpaceOwner, *Account.Address,
-                (PlayerData->CurrentSpaceOwner == Account.Address) ? TEXT("true") : TEXT("false"));
-            UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Before clear - bSpace1ActorsHidden = %s, Actors.Num() = %d"), 
-                bSpace1ActorsHidden ? TEXT("true") : TEXT("false"), Actors.Num());
-            
-            // Clear all current actors when changing spaces
-            ClearAllSpawnedActors();
-
-            UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: After clear - bSpace1ActorsHidden = %s, Actors.Num() = %d"), 
-                bSpace1ActorsHidden ? TEXT("true") : TEXT("false"), Actors.Num());
-
-            // Update current space tracking
-            CurrentSpaceOwner = PlayerData->CurrentSpaceOwner;
-            CurrentSpaceId = PlayerData->CurrentSpaceId;
-            
-            // If returning to space 1 and actors are hidden, show them
-            if (bReturningToSpace1 && bSpace1ActorsHidden)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Restoring space 1 actors"));
-                SetActorsVisibilityAndCollision(true, true);
-                bSpace1ActorsHidden = false;
-                UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Restored space 1 actors"));
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: NOT restoring space 1 actors - bReturningToSpace1=%s, bSpace1ActorsHidden=%s"), 
-                    bReturningToSpace1 ? TEXT("true") : TEXT("false"),
-                    bSpace1ActorsHidden ? TEXT("true") : TEXT("false"));
-            }
-
-            // Track if current space has block chunks
-            bool bHasBlockChunks = false;
-            
-            // Only load chunks if we're not returning to space 1 with hidden actors
-            if (!(bReturningToSpace1 && !bSpace1ActorsHidden))
-            {
-                // Load chunks from cache for the new space
-                FString NewIslandKey = GetCurrentIslandKey();
-
-                UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Checking cache for key %s"), *NewIslandKey);
-
-                if (ChunkCache.Contains(NewIslandKey))
-                {
-                    FSpaceChunks& SpaceData = ChunkCache[NewIslandKey];
-                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Found cache for space %s with %d chunks"), *NewIslandKey, SpaceData.Chunks.Num());
-
-                    // Check if there are any block chunks
-                    for (const auto& ChunkPair : SpaceData.Chunks)
-                    {
-                        if (ChunkPair.Value && (ChunkPair.Value->Blocks1 != "0x0" || ChunkPair.Value->Blocks2 != "0x0"))
-                        {
-                            bHasBlockChunks = true;
-                            break;
-                        }
-                    }
-
-                    if (bHasBlockChunks)
-                    {
-                        UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Loading cached data for space %s"), *NewIslandKey);
-                        LoadAllChunksFromCache(); // Load all chunks from cache
-                    }
-                    else
-                    {
-                        UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Space %s has no block chunks"), *NewIslandKey);
-                    }
-                }
-                else
-                {
-                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: No cached data for space %s"), *NewIslandKey);
-                }
-            }
-            else
-            {
-                // For space 1, check if it has chunks
-                bHasBlockChunks = !Actors.IsEmpty();
-            }
-
-            // Spawn default building if no block chunks exist
-            if (!bHasBlockChunks && DefaultBuildingClass)
-            {
-                FVector SpawnLocation(0, 0, 0);
-                FRotator SpawnRotation(0, 90, 0); // Pitch=0, Yaw=90, Roll=0
-                FActorSpawnParameters SpawnParams;
-                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-                DefaultBuilding = GetWorld()->SpawnActor<AActor>(DefaultBuildingClass, SpawnLocation, SpawnRotation, SpawnParams);
-
-                if (DefaultBuilding)
-                {
-                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Spawned default building at (0,0,0) with rotation (0,90,0)"));
-                }
-            }
-
-            // Hide or show sky atmosphere based on whether we're in a building
-            if (SkyAtmosphere)
-            {
-                if (bHasBlockChunks)
-                {
-                    // Show sky when in outdoor space
-                    SkyAtmosphere->SetActorHiddenInGame(false);
-                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Showing SkyAtmosphere for outdoor space"));
-                }
-                else
-                {
-                    // Hide sky when inside building
-                    SkyAtmosphere->SetActorHiddenInGame(true);
-                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Hiding SkyAtmosphere for indoor space"));
-                }
-            }
-
-            // Handle player teleportation
-            if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-            {
-                if (APawn* PlayerPawn = PC->GetPawn())
-                {
-                    FString NewSpaceKey = CurrentSpaceOwner + FString::FromInt(CurrentSpaceId);
-                    FVector NewLocation;
-                    
-                    // Check if we have a saved position for this space
-                    if (SpacePlayerPositions.Contains(NewSpaceKey))
-                    {
-                        NewLocation = SpacePlayerPositions[NewSpaceKey];
-                        UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Restoring saved position %s for space %s"), 
-                            *NewLocation.ToString(), *NewSpaceKey);
-                    }
-                    else
-                    {
-                        // Default positions for new spaces
-                        if (bHasBlockChunks)
-                        {
-                            // Normal spawn position for spaces with chunks
-                            NewLocation = FVector(50, 50, 250);
-                        }
-                        else
-                        {
-                            // Position for empty spaces (buildings)
-                            NewLocation = FVector(-40, 180, 100);
-                        }
-                        UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Using default position %s for new space %s"), 
-                            *NewLocation.ToString(), *NewSpaceKey);
-                    }
-                    
-                    // Helper lambda to disable/enable camera lag
-                    auto SetCameraLag = [](APawn* Pawn, bool bEnableLag)
-                    {
-                        if (!Pawn) return;
-                        
-                        // Try to find the SpringArm component
-                        TArray<UActorComponent*> Components = Pawn->GetComponents().Array();
-                        for (UActorComponent* Component : Components)
-                        {
-                            if (Component && Component->GetName().Contains(TEXT("SpringArm")))
-                            {
-                                UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Found component: %s"), *Component->GetName());
-                                // Try to set properties using reflection
-                                UObject* CompObj = Cast<UObject>(Component);
-                                if (CompObj)
-                                {
-                                    // Set bEnableCameraLag
-                                    FBoolProperty* CameraLagProp = FindFProperty<FBoolProperty>(CompObj->GetClass(), TEXT("bEnableCameraLag"));
-                                    if (CameraLagProp)
-                                    {
-                                        CameraLagProp->SetPropertyValue_InContainer(CompObj, bEnableLag);
-                                    }
-                                    
-                                    // Set bEnableCameraRotationLag
-                                    FBoolProperty* RotationLagProp = FindFProperty<FBoolProperty>(CompObj->GetClass(), TEXT("bEnableCameraRotationLag"));
-                                    if (RotationLagProp)
-                                    {
-                                        RotationLagProp->SetPropertyValue_InContainer(CompObj, bEnableLag);
-                                    }
-                                    
-                                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Set camera lag to %s"), bEnableLag ? TEXT("enabled") : TEXT("disabled"));
-                                    break;
-                                }
-                            }
-                        }
-                    };
-                    
-                    // Teleport immediately for all spaces
-                    // Disable camera lag
-                    SetCameraLag(PlayerPawn, false);
-                    
-                    // Teleport
-                    PlayerPawn->SetActorLocation(NewLocation);
-                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Teleported player to %s"), *NewLocation.ToString());
-                    
-                    // Re-enable camera lag after a short delay
-                    FTimerHandle ReenableLagTimer;
-                    GetWorld()->GetTimerManager().SetTimer(ReenableLagTimer, [PlayerPawn, SetCameraLag]()
-                    {
-                        SetCameraLag(PlayerPawn, true);
-                    }, 0.1f, false);
-                }
-            }
+            // Handle the space transition
+            HandleSpaceTransition(PlayerData);
         }
 
         // Get GameInstance and cast to your custom subclass
@@ -596,10 +370,10 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("HandlePlayerData: Not current player, ignoring update"));
+        UE_LOG(LogTemp, VeryVerbose, TEXT("HandlePlayerData: Not current player, ignoring update"));
     }
     
-    UE_LOG(LogTemp, Warning, TEXT("========== HandlePlayerData END =========="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("========== HandlePlayerData END =========="));
 }
 
 bool ADojoCraftIslandManager::IsCurrentPlayer() const
@@ -619,7 +393,7 @@ FIntVector ADojoCraftIslandManager::GetWorldPositionFromLocal(int Position, cons
 
 void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
 {
-    UE_LOG(LogTemp, Warning, TEXT("HandleDojoModel: Processing model %s"), *Model->DojoModelType);
+    UE_LOG(LogTemp, VeryVerbose, TEXT("HandleDojoModel: Processing model %s"), *Model->DojoModelType);
     FString Name = Model->DojoModelType;
 
     // First, update the chunk cache
@@ -730,7 +504,7 @@ AActor* ADojoCraftIslandManager::PlaceAssetInWorld(E_Item Item, const FIntVector
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("No matching row found in DataTable"));
+            UE_LOG(LogTemp, VeryVerbose, TEXT("No matching row found in DataTable"));
         }
     }
 
@@ -886,23 +660,23 @@ void ADojoCraftIslandManager::RequestBuy(int32 ItemId, int32 Quantity)
 
 void ADojoCraftIslandManager::RequestGoBackHome()
 {
-    UE_LOG(LogTemp, Warning, TEXT("========== RequestGoBackHome START =========="));
-    UE_LOG(LogTemp, Warning, TEXT("RequestGoBackHome: Current space: %s:%d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("========== RequestGoBackHome START =========="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Current space: %s:%d"), 
         *CurrentSpaceOwner, CurrentSpaceId);
-    UE_LOG(LogTemp, Warning, TEXT("RequestGoBackHome: Account.Address = %s"), *Account.Address);
-    UE_LOG(LogTemp, Warning, TEXT("RequestGoBackHome: bSpace1ActorsHidden = %s"), bSpace1ActorsHidden ? TEXT("true") : TEXT("false"));
-    UE_LOG(LogTemp, Warning, TEXT("RequestGoBackHome: Actors.Num() = %d"), Actors.Num());
+    UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Account.Address = %s"), *Account.Address);
+    UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: bSpace1ActorsHidden = %s"), bSpace1ActorsHidden ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Actors.Num() = %d"), Actors.Num());
     
     if (DojoHelpers)
     {
-        UE_LOG(LogTemp, Warning, TEXT("RequestGoBackHome: Calling visit with space_id = 1"));
+        UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Calling visit with space_id = 1"));
         DojoHelpers->CallCraftIslandPocketActionsVisit(Account, 1);
     }
     else
     {
         UE_LOG(LogTemp, Error, TEXT("RequestGoBackHome: DojoHelpers is null!"));
     }
-    UE_LOG(LogTemp, Warning, TEXT("========== RequestGoBackHome END =========="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("========== RequestGoBackHome END =========="));
 }
 
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
@@ -917,7 +691,216 @@ void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
 FString ADojoCraftIslandManager::GetCurrentIslandKey() const
 {
     // Use the tracked current space for the cache key
-    return CurrentSpaceOwner + FString::FromInt(CurrentSpaceId);
+    return MakeSpaceKey(CurrentSpaceOwner, CurrentSpaceId);
+}
+
+FString ADojoCraftIslandManager::MakeSpaceKey(const FString& Owner, int32 Id) const
+{
+    return Owner + FString::FromInt(Id);
+}
+
+void ADojoCraftIslandManager::SaveCurrentPlayerPosition()
+{
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        if (APawn* PlayerPawn = PC->GetPawn())
+        {
+            FString CurrentSpaceKey = GetCurrentIslandKey();
+            FVector CurrentPos = PlayerPawn->GetActorLocation();
+            SpacePlayerPositions.Add(CurrentSpaceKey, CurrentPos);
+            UE_LOG(LogTemp, Log, TEXT("Saved position %s for space %s"), 
+                *CurrentPos.ToString(), *CurrentSpaceKey);
+        }
+    }
+}
+
+FVector ADojoCraftIslandManager::GetSpawnPositionForSpace(const FString& SpaceKey, bool bHasBlockChunks)
+{
+    // Check if we have a saved position for this space
+    if (SpacePlayerPositions.Contains(SpaceKey))
+    {
+        FVector SavedPos = SpacePlayerPositions[SpaceKey];
+        UE_LOG(LogTemp, Log, TEXT("Restoring saved position %s for space %s"), 
+            *SavedPos.ToString(), *SpaceKey);
+        return SavedPos;
+    }
+    
+    // Return default position based on space type
+    FVector DefaultPos = bHasBlockChunks ? DEFAULT_OUTDOOR_SPAWN_POS : DEFAULT_BUILDING_SPAWN_POS;
+    UE_LOG(LogTemp, Log, TEXT("Using default position %s for new space %s"), 
+        *DefaultPos.ToString(), *SpaceKey);
+    return DefaultPos;
+}
+
+void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
+{
+    if (!Pawn) return;
+    
+    // Try to find the SpringArm component
+    TArray<UActorComponent*> Components = Pawn->GetComponents().Array();
+    for (UActorComponent* Component : Components)
+    {
+        if (Component && Component->GetName().Contains(TEXT("SpringArm")))
+        {
+            UE_LOG(LogTemp, VeryVerbose, TEXT("Found SpringArm component: %s"), *Component->GetName());
+            
+            // Try to set properties using reflection
+            UObject* CompObj = Cast<UObject>(Component);
+            if (CompObj)
+            {
+                // Set bEnableCameraLag
+                FBoolProperty* CameraLagProp = FindFProperty<FBoolProperty>(CompObj->GetClass(), TEXT("bEnableCameraLag"));
+                if (CameraLagProp)
+                {
+                    CameraLagProp->SetPropertyValue_InContainer(CompObj, bEnableLag);
+                }
+                
+                // Set bEnableCameraRotationLag
+                FBoolProperty* RotationLagProp = FindFProperty<FBoolProperty>(CompObj->GetClass(), TEXT("bEnableCameraRotationLag"));
+                if (RotationLagProp)
+                {
+                    RotationLagProp->SetPropertyValue_InContainer(CompObj, bEnableLag);
+                }
+                
+                UE_LOG(LogTemp, VeryVerbose, TEXT("Set camera lag to %s"), bEnableLag ? TEXT("enabled") : TEXT("disabled"));
+                break;
+            }
+        }
+    }
+}
+
+void ADojoCraftIslandManager::DisableCameraLagDuringTeleport(APawn* Pawn)
+{
+    if (!Pawn) return;
+    
+    // Disable camera lag
+    SetCameraLag(Pawn, false);
+    
+    // Re-enable after a short delay
+    FTimerHandle ReenableLagTimer;
+    GetWorld()->GetTimerManager().SetTimer(ReenableLagTimer, [this, Pawn]()
+    {
+        SetCameraLag(Pawn, true);
+    }, CAMERA_LAG_REENABLE_DELAY, false);
+}
+
+void ADojoCraftIslandManager::TeleportPlayer(const FVector& NewLocation, bool bImmediate)
+{
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        if (APawn* PlayerPawn = PC->GetPawn())
+        {
+            DisableCameraLagDuringTeleport(PlayerPawn);
+            PlayerPawn->SetActorLocation(NewLocation);
+            UE_LOG(LogTemp, Log, TEXT("Teleported player to %s"), *NewLocation.ToString());
+        }
+    }
+}
+
+void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketPlayerData* PlayerData)
+{
+    if (!PlayerData) return;
+    
+    UE_LOG(LogTemp, Log, TEXT("Space changed from %s:%d to %s:%d"),
+        *CurrentSpaceOwner, CurrentSpaceId,
+        *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
+
+    // Save current player position before changing spaces
+    SaveCurrentPlayerPosition();
+
+    // Check if we're returning to space 1
+    bool bReturningToSpace1 = (PlayerData->CurrentSpaceOwner == Account.Address && PlayerData->CurrentSpaceId == 1);
+    
+    // Clear all current actors when changing spaces
+    ClearAllSpawnedActors();
+
+    // Update current space tracking
+    CurrentSpaceOwner = PlayerData->CurrentSpaceOwner;
+    CurrentSpaceId = PlayerData->CurrentSpaceId;
+    
+    // If returning to space 1 and actors are hidden, show them
+    if (bReturningToSpace1 && bSpace1ActorsHidden)
+    {
+        SetActorsVisibilityAndCollision(true, true);
+        bSpace1ActorsHidden = false;
+        UE_LOG(LogTemp, Log, TEXT("Restored space 1 actors"));
+    }
+
+    // Track if current space has block chunks
+    bool bHasBlockChunks = false;
+    
+    // Only load chunks if we're not returning to space 1 with hidden actors
+    if (!(bReturningToSpace1 && !bSpace1ActorsHidden))
+    {
+        // Load chunks from cache for the new space
+        FString NewIslandKey = GetCurrentIslandKey();
+
+        if (ChunkCache.Contains(NewIslandKey))
+        {
+            FSpaceChunks& SpaceData = ChunkCache[NewIslandKey];
+            UE_LOG(LogTemp, Log, TEXT("Found cache for space %s with %d chunks"), *NewIslandKey, SpaceData.Chunks.Num());
+
+            // Check if there are any block chunks
+            for (const auto& ChunkPair : SpaceData.Chunks)
+            {
+                if (ChunkPair.Value && (ChunkPair.Value->Blocks1 != "0x0" || ChunkPair.Value->Blocks2 != "0x0"))
+                {
+                    bHasBlockChunks = true;
+                    break;
+                }
+            }
+
+            if (bHasBlockChunks)
+            {
+                UE_LOG(LogTemp, Log, TEXT("Loading cached data for space %s"), *NewIslandKey);
+                LoadAllChunksFromCache();
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("No cached data for space %s"), *NewIslandKey);
+        }
+    }
+    else
+    {
+        // For space 1, check if it has chunks
+        bHasBlockChunks = !Actors.IsEmpty();
+    }
+
+    // Spawn default building if no block chunks exist
+    if (!bHasBlockChunks && DefaultBuildingClass)
+    {
+        FVector SpawnLocation(0, 0, 0);
+        FRotator SpawnRotation(0, 90, 0);
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        
+        DefaultBuilding = GetWorld()->SpawnActor<AActor>(DefaultBuildingClass, SpawnLocation, SpawnRotation, SpawnParams);
+        if (DefaultBuilding)
+        {
+            UE_LOG(LogTemp, Log, TEXT("Spawned default building"));
+        }
+    }
+
+    // Hide or show sky atmosphere based on whether we're in a building
+    if (SkyAtmosphere)
+    {
+        if (bHasBlockChunks)
+        {
+            SkyAtmosphere->SetActorHiddenInGame(false);
+            UE_LOG(LogTemp, Log, TEXT("Showing SkyAtmosphere for outdoor space"));
+        }
+        else
+        {
+            SkyAtmosphere->SetActorHiddenInGame(true);
+            UE_LOG(LogTemp, Log, TEXT("Hiding SkyAtmosphere for indoor space"));
+        }
+    }
+
+    // Handle player teleportation
+    FString NewSpaceKey = GetCurrentIslandKey();
+    FVector NewLocation = GetSpawnPositionForSpace(NewSpaceKey, bHasBlockChunks);
+    TeleportPlayer(NewLocation, bReturningToSpace1);
 }
 
 void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, bool bEnableCollision)
@@ -934,23 +917,23 @@ void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, boo
 
 void ADojoCraftIslandManager::ClearAllSpawnedActors()
 {
-    UE_LOG(LogTemp, Warning, TEXT("========== ClearAllSpawnedActors START =========="));
-    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors START =========="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"), 
         *CurrentSpaceOwner, CurrentSpaceId);
-    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Account.Address = %s"), *Account.Address);
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Account.Address = %s"), *Account.Address);
     
     // Check if we're currently in space 1
     bool bLeavingSpace1 = (CurrentSpaceOwner == Account.Address && CurrentSpaceId == 1);
     
-    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: bLeavingSpace1 = %s"), bLeavingSpace1 ? TEXT("true") : TEXT("false"));
-    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Owner comparison '%s' == '%s' = %s"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: bLeavingSpace1 = %s"), bLeavingSpace1 ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Owner comparison '%s' == '%s' = %s"), 
         *CurrentSpaceOwner, *Account.Address,
         (CurrentSpaceOwner == Account.Address) ? TEXT("true") : TEXT("false"));
     
     if (bLeavingSpace1)
     {
         // Hide space 1 actors instead of destroying them
-        UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Hiding %d space 1 actors"), Actors.Num());
+        UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Hiding %d space 1 actors"), Actors.Num());
         SetActorsVisibilityAndCollision(false, false);
         bSpace1ActorsHidden = true;
         UE_LOG(LogTemp, Log, TEXT("ClearAllSpawnedActors: Hiding space 1 actors"));
@@ -960,13 +943,13 @@ void ADojoCraftIslandManager::ClearAllSpawnedActors()
         // If we have hidden space 1 actors, don't destroy them!
         if (bSpace1ActorsHidden)
         {
-            UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Keeping %d hidden space 1 actors"), Actors.Num());
+            UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Keeping %d hidden space 1 actors"), Actors.Num());
             // Don't clear Actors or ActorSpawnInfo - they belong to space 1
         }
         else
         {
             // Destroy actors from other spaces
-            UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Destroying %d actors from other space"), Actors.Num());
+            UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Destroying %d actors from other space"), Actors.Num());
             for (auto& Pair : Actors)
             {
                 if (Pair.Value && IsValid(Pair.Value))
@@ -992,9 +975,9 @@ void ADojoCraftIslandManager::ClearAllSpawnedActors()
         UE_LOG(LogTemp, Log, TEXT("ClearAllSpawnedActors: Destroyed default building"));
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: After processing - bSpace1ActorsHidden = %s, Actors.Num() = %d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: After processing - bSpace1ActorsHidden = %s, Actors.Num() = %d"), 
         bSpace1ActorsHidden ? TEXT("true") : TEXT("false"), Actors.Num());
-    UE_LOG(LogTemp, Warning, TEXT("========== ClearAllSpawnedActors END =========="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors END =========="));
 }
 
 void ADojoCraftIslandManager::QueueSpawnWithOverflowProtection(const FSpawnQueueData& SpawnData)
@@ -1002,7 +985,7 @@ void ADojoCraftIslandManager::QueueSpawnWithOverflowProtection(const FSpawnQueue
     const int32 MaxSpawnQueueSize = 1000;
     if (SpawnQueue.Num() >= MaxSpawnQueueSize)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
+        UE_LOG(LogTemp, VeryVerbose, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
         SpawnQueue.RemoveAt(0);
     }
     SpawnQueue.Add(SpawnData);
@@ -1015,7 +998,7 @@ void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray
     const int32 MaxSpawnQueueSize = 1000;
     if (SpawnQueue.Num() + SpawnDataBatch.Num() >= MaxSpawnQueueSize)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"),
+        UE_LOG(LogTemp, VeryVerbose, TEXT("Spawn queue approaching limit (%d/%d), removing oldest entries"),
             SpawnQueue.Num(), MaxSpawnQueueSize);
 
         // Remove oldest entries to make room
@@ -1067,7 +1050,7 @@ void ADojoCraftIslandManager::ProcessIslandChunk(UDojoModelCraftIslandPocketIsla
     // When loading from cache, we should check against CurrentSpaceOwner instead of Account.Address
     if (Chunk->IslandOwner != CurrentSpaceOwner)
     {
-        UE_LOG(LogTemp, Warning, TEXT("ProcessIslandChunk: Skipping chunk due to owner mismatch"));
+        UE_LOG(LogTemp, VeryVerbose, TEXT("ProcessIslandChunk: Skipping chunk due to owner mismatch"));
         return;
     }
 
@@ -1188,10 +1171,10 @@ void ADojoCraftIslandManager::LoadChunkFromCache(const FString& ChunkId)
         static int LogCount = 0;
         if (LogCount < 5)
         {
-            UE_LOG(LogTemp, Warning, TEXT("LoadChunkFromCache: Chunk %s not found in cache. Available chunks:"), *ChunkId);
+            UE_LOG(LogTemp, VeryVerbose, TEXT("LoadChunkFromCache: Chunk %s not found in cache. Available chunks:"), *ChunkId);
             for (const auto& ChunkPair : SpaceData.Chunks)
             {
-                UE_LOG(LogTemp, Warning, TEXT("  - %s"), *ChunkPair.Key);
+                UE_LOG(LogTemp, VeryVerbose, TEXT("  - %s"), *ChunkPair.Key);
             }
             LogCount++;
         }
