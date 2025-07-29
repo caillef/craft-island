@@ -3,6 +3,8 @@
 
 #include "DojoCraftIslandManager.h"
 #include "EngineUtils.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Components/StaticMeshComponent.h"
 
 // Define static constants
 const FVector ADojoCraftIslandManager::DEFAULT_OUTDOOR_SPAWN_POS(50.0f, 50.0f, 250.0f);
@@ -13,7 +15,10 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	
+	// Initialize ghost preview
+	GhostPreviewActor = nullptr;
+	CurrentInventory = nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -104,6 +109,46 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
     CraftIslandGI->RequestSell.AddDynamic(this, &ADojoCraftIslandManager::RequestSell);
     CraftIslandGI->RequestBuy.AddDynamic(this, &ADojoCraftIslandManager::RequestBuy);
     CraftIslandGI->RequestGoBackHome.AddDynamic(this, &ADojoCraftIslandManager::RequestGoBackHome);
+}
+
+void ADojoCraftIslandManager::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    
+    // Update ghost preview position if it exists and a building is selected
+    if (GhostPreviewActor)
+    {
+        int32 SelectedItemId = GetSelectedItemId();
+        if (IsBuildingPattern(SelectedItemId))
+        {
+            // Get player position and calculate north position
+            if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+            {
+                if (APawn* PlayerPawn = PC->GetPawn())
+                {
+                    FVector PlayerLocation = PlayerPawn->GetActorLocation();
+                    
+                    // Calculate position one block north of player
+                    // In this coordinate system, X is north/south
+                    FVector GhostLocation = PlayerLocation;
+                    GhostLocation.X -= 50.0f; // One block north (negative X)
+                    
+                    // Snap to grid
+                    GhostLocation.X = FMath::RoundToFloat(GhostLocation.X / 50.0f) * 50.0f;
+                    GhostLocation.Y = FMath::RoundToFloat(GhostLocation.Y / 50.0f) * 50.0f;
+                    GhostLocation.Z = FMath::RoundToFloat(GhostLocation.Z / 50.0f) * 50.0f;
+                    
+                    // Update ghost position
+                    GhostPreviewActor->SetActorLocation(GhostLocation);
+                }
+            }
+        }
+        else
+        {
+            // Remove ghost if no building is selected
+            RemoveGhostPreview();
+        }
+    }
 }
 
 void ADojoCraftIslandManager::ContinueAfterDelay()
@@ -329,6 +374,9 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     {
         // Store the current inventory
         CurrentInventory = Inventory;
+        
+        // Update ghost preview when inventory changes
+        UpdateGhostPreview();
 
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
@@ -663,6 +711,9 @@ void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
     }
 
     DojoHelpers->CallCraftIslandPocketActionsSelectHotbarSlot(Account, SlotIndex);
+    
+    // Update ghost preview when switching items
+    UpdateGhostPreview();
 }
 
 void ADojoCraftIslandManager::RequestHit()
@@ -718,9 +769,41 @@ void ADojoCraftIslandManager::RequestGoBackHome()
 
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
 {
+    // Check if we have a building pattern selected
+    int32 SelectedItemId = GetSelectedItemId();
+    if (IsBuildingPattern(SelectedItemId))
+    {
+        // For buildings, always target north of player
+        if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+        {
+            if (APawn* PlayerPawn = PC->GetPawn())
+            {
+                FVector PlayerLocation = PlayerPawn->GetActorLocation();
+                
+                // Calculate position one block north of player
+                // In this coordinate system, X is north/south
+                Location = PlayerLocation;
+                Location.X -= 50.0f; // One block north (negative X)
+                
+                // Snap to grid
+                Location.X = FMath::RoundToFloat(Location.X / 50.0f) * 50.0f;
+                Location.Y = FMath::RoundToFloat(Location.Y / 50.0f) * 50.0f;
+                Location.Z = 0.0f; // Buildings go on ground level
+            }
+        }
+    }
+    
     TargetBlock.X = Location.X;
     TargetBlock.Y = Location.Y;
     TargetBlock.Z = Location.Z;
+    
+    // Update ghost preview position if it exists
+    if (GhostPreviewActor && IsBuildingPattern(SelectedItemId))
+    {
+        FVector GhostLocation(TargetBlock);
+        GhostLocation.Z = 50.0f; // One block above ground for preview
+        GhostPreviewActor->SetActorLocation(GhostLocation);
+    }
 }
 
 // Helper function implementations
@@ -1090,6 +1173,9 @@ void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, boo
 
 void ADojoCraftIslandManager::ClearAllSpawnedActors()
 {
+    // Remove ghost preview when clearing actors
+    RemoveGhostPreview();
+    
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors START =========="));
     UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"),
         *CurrentSpaceOwner, CurrentSpaceId);
@@ -1433,5 +1519,112 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
     if (StructuresLoaded > 0)
     {
         UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d structures"), StructuresLoaded);
+    }
+}
+
+bool ADojoCraftIslandManager::IsBuildingPattern(int32 ItemId) const
+{
+    // Building patterns: House (50), Workshop (60), Well (61), Kitchen (62), Warehouse (63), Brewery (64)
+    return ItemId == 50 || (ItemId >= 60 && ItemId <= 64);
+}
+
+void ADojoCraftIslandManager::UpdateGhostPreview()
+{
+    // Remove existing ghost if any
+    RemoveGhostPreview();
+    
+    // Get selected item
+    int32 SelectedItemId = GetSelectedItemId();
+    
+    // Only show ghost for building patterns
+    if (!IsBuildingPattern(SelectedItemId))
+    {
+        return;
+    }
+    
+    // Get player position and calculate north position
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        if (APawn* PlayerPawn = PC->GetPawn())
+        {
+            FVector PlayerLocation = PlayerPawn->GetActorLocation();
+            
+            // Calculate position one block north of player
+            // In this coordinate system, X is north/south
+            FVector GhostLocation = PlayerLocation;
+            GhostLocation.X -= 50.0f; // One block north (negative X, 50 units = 1 block)
+            
+            // Snap to grid
+            GhostLocation.X = FMath::RoundToFloat(GhostLocation.X / 50.0f) * 50.0f;
+            GhostLocation.Y = FMath::RoundToFloat(GhostLocation.Y / 50.0f) * 50.0f;
+            GhostLocation.Z = FMath::RoundToFloat(GhostLocation.Z / 50.0f) * 50.0f;
+            
+            // Get the actor class for this item
+            if (!ItemDataTable) return;
+            
+            const FItemDataStruct* ItemData = reinterpret_cast<const FItemDataStruct*>(
+                DataTableHelpers::FindRowByColumnValue(ItemDataTable, TEXT("ID"), SelectedItemId)
+            );
+            
+            if (!ItemData || !ItemData->ActorClass) return;
+            
+            // Spawn the ghost actor
+            FActorSpawnParameters SpawnParams;
+            SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+            
+            GhostPreviewActor = GetWorld()->SpawnActor<AActor>(ItemData->ActorClass, GhostLocation, FRotator::ZeroRotator, SpawnParams);
+            
+            if (GhostPreviewActor)
+            {
+                // Make it semi-transparent and ghostly
+                TArray<UPrimitiveComponent*> Components;
+                GhostPreviewActor->GetComponents<UPrimitiveComponent>(Components);
+                
+                for (UPrimitiveComponent* Component : Components)
+                {
+                    // Disable collision
+                    Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                    
+                    // Make semi-transparent with custom rendering
+                    if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
+                    {
+                        // Set custom depth stencil for outline effect
+                        MeshComp->SetRenderCustomDepth(true);
+                        MeshComp->SetCustomDepthStencilValue(1);
+                        
+                        // Set translucent blend mode
+                        MeshComp->SetTranslucentSortPriority(100);
+                        
+                        // Create and apply translucent material
+                        for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                        {
+                            UMaterialInterface* Material = MeshComp->GetMaterial(i);
+                            if (Material)
+                            {
+                                UMaterialInstanceDynamic* DynMaterial = UMaterialInstanceDynamic::Create(Material, this);
+                                if (DynMaterial)
+                                {
+                                    // Set opacity and color tint
+                                    DynMaterial->SetScalarParameterValue(TEXT("Opacity"), 0.4f);
+                                    DynMaterial->SetVectorParameterValue(TEXT("BaseColor"), FLinearColor(0.5f, 0.8f, 1.0f, 0.4f));
+                                    
+                                    // Apply the material
+                                    MeshComp->SetMaterial(i, DynMaterial);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void ADojoCraftIslandManager::RemoveGhostPreview()
+{
+    if (GhostPreviewActor)
+    {
+        GhostPreviewActor->Destroy();
+        GhostPreviewActor = nullptr;
     }
 }

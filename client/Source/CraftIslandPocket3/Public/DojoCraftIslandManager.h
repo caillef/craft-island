@@ -230,6 +230,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
 
     UFUNCTION()
     void ContinueAfterDelay();
@@ -415,6 +418,19 @@ public:
     // Track the structure type of the current space (0 if not in a structure)
     UPROPERTY()
     int32 CurrentSpaceStructureType;
+    
+    // Ghost preview for building placement
+    UPROPERTY()
+    AActor* GhostPreviewActor;
+    
+    // Update ghost preview
+    void UpdateGhostPreview();
+    
+    // Remove ghost preview
+    void RemoveGhostPreview();
+    
+    // Check if item is a building pattern
+    bool IsBuildingPattern(int32 ItemId) const;
     
 private:
     // Helper methods for space transitions
