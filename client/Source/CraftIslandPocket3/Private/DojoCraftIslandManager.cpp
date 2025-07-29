@@ -16,7 +16,7 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
-	// Initialize ghost preview
+	// Initialize pointers
 	GhostPreviewActor = nullptr;
 	CurrentInventory = nullptr;
 }
@@ -115,43 +115,8 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // Update ghost preview position if it exists and a building is selected
-    if (GhostPreviewActor)
-    {
-        int32 SelectedItemId = GetSelectedItemId();
-        if (IsBuildingPattern(SelectedItemId))
-        {
-            // Get player position and calculate north position
-            if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-            {
-                if (APawn* PlayerPawn = PC->GetPawn())
-                {
-                    FVector PlayerLocation = PlayerPawn->GetActorLocation();
-                    
-                    // Calculate position one block north of player
-                    // In this coordinate system, X is north/south
-                    FVector GhostLocation = PlayerLocation;
-                    GhostLocation.X -= 50.0f; // One block north (negative X)
-                    
-                    // Snap to grid
-                    GhostLocation.X = FMath::RoundToFloat(GhostLocation.X / 50.0f) * 50.0f;
-                    GhostLocation.Y = FMath::RoundToFloat(GhostLocation.Y / 50.0f) * 50.0f;
-                    GhostLocation.Z = FMath::RoundToFloat(GhostLocation.Z / 50.0f) * 50.0f;
-                    
-                    // Ensure it's above ground
-                    GhostLocation.Z += 50.0f; // One block above current position
-                    
-                    // Update ghost position
-                    GhostPreviewActor->SetActorLocation(GhostLocation);
-                }
-            }
-        }
-        else
-        {
-            // Remove ghost if no building is selected
-            RemoveGhostPreview();
-        }
-    }
+    // Ghost preview temporarily disabled
+    // TODO: Re-implement ghost preview without breaking placement
     
     // Original Tick functionality for handling target blocks and spawn queue
     APlayerController* PC = GetWorld()->GetFirstPlayerController();
@@ -267,8 +232,6 @@ void ADojoCraftIslandManager::ContinueAfterDelay()
 
 void ADojoCraftIslandManager::InitUIAndActors()
 {
-    // Log ItemDataTable status
-    UE_LOG(LogTemp, Warning, TEXT("InitUIAndActors: ItemDataTable = %s"), ItemDataTable ? TEXT("Valid") : TEXT("NULL"));
     // === 1. Create and Add Onboarding Widget ===
 //    if (OnboardingWidgetClass)
 //    {
@@ -365,9 +328,6 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     {
         // Store the current inventory
         CurrentInventory = Inventory;
-        
-        // Update ghost preview when inventory changes
-        UpdateGhostPreview();
 
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
@@ -702,9 +662,6 @@ void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
     }
 
     DojoHelpers->CallCraftIslandPocketActionsSelectHotbarSlot(Account, SlotIndex);
-    
-    // Update ghost preview when switching items
-    UpdateGhostPreview();
 }
 
 void ADojoCraftIslandManager::RequestHit()
@@ -760,41 +717,9 @@ void ADojoCraftIslandManager::RequestGoBackHome()
 
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
 {
-    // Check if we have a building pattern selected
-    int32 SelectedItemId = GetSelectedItemId();
-    if (IsBuildingPattern(SelectedItemId))
-    {
-        // For buildings, always target north of player
-        if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-        {
-            if (APawn* PlayerPawn = PC->GetPawn())
-            {
-                FVector PlayerLocation = PlayerPawn->GetActorLocation();
-                
-                // Calculate position one block north of player
-                // In this coordinate system, X is north/south
-                Location = PlayerLocation;
-                Location.X -= 50.0f; // One block north (negative X)
-                
-                // Snap to grid
-                Location.X = FMath::RoundToFloat(Location.X / 50.0f) * 50.0f;
-                Location.Y = FMath::RoundToFloat(Location.Y / 50.0f) * 50.0f;
-                Location.Z = 0.0f; // Buildings go on ground level
-            }
-        }
-    }
-    
     TargetBlock.X = Location.X;
     TargetBlock.Y = Location.Y;
     TargetBlock.Z = Location.Z;
-    
-    // Update ghost preview position if it exists
-    if (GhostPreviewActor && IsBuildingPattern(SelectedItemId))
-    {
-        FVector GhostLocation(TargetBlock);
-        GhostLocation.Z = 50.0f; // One block above ground for preview
-        GhostPreviewActor->SetActorLocation(GhostLocation);
-    }
 }
 
 // Helper function implementations
@@ -1164,8 +1089,6 @@ void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, boo
 
 void ADojoCraftIslandManager::ClearAllSpawnedActors()
 {
-    // Remove ghost preview when clearing actors
-    RemoveGhostPreview();
     
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors START =========="));
     UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"),
