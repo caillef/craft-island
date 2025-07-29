@@ -43,12 +43,15 @@ void ADojoCraftIslandManager::BeginPlay()
 
     // Initialize default building to nullptr
     DefaultBuilding = nullptr;
-    
+
     // Initialize space 1 actors tracking
     bSpace1ActorsHidden = false;
-    
+
     // Initialize inventory tracking
     CurrentInventory = nullptr;
+
+    // Initialize structure type tracking
+    CurrentSpaceStructureType = 0;
 
     // Find SkyAtmosphere actor in the scene
     SkyAtmosphere = nullptr;
@@ -255,7 +258,7 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                 if (ABaseWorldStructure* ActorStructure = Cast<ABaseWorldStructure>(SpawnedActor))
                 {
                     ActorStructure->WorldStructure = Structure;
-                    
+
                     // If already completed on spawn, call NotifyConstructionCompleted
                     // Note: Don't set Constructed before calling NotifyConstructionCompleted
                     if (Structure->Completed)
@@ -326,7 +329,7 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     {
         // Store the current inventory
         CurrentInventory = Inventory;
-        
+
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
         if (!GameInstance) return;
@@ -347,7 +350,7 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     UDojoModelCraftIslandPocketPlayerData* PlayerData = Cast<UDojoModelCraftIslandPocketPlayerData>(Object);
     if (!PlayerData) return;
 
-    UE_LOG(LogTemp, VeryVerbose, TEXT("Received PlayerData - Player: %s, Space: %s:%d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("Received PlayerData - Player: %s, Space: %s:%d"),
         *PlayerData->Player, *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
 
     // Check if this is the current player
@@ -378,7 +381,7 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     {
         UE_LOG(LogTemp, VeryVerbose, TEXT("HandlePlayerData: Not current player, ignoring update"));
     }
-    
+
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== HandlePlayerData END =========="));
 }
 
@@ -592,7 +595,10 @@ void ADojoCraftIslandManager::RequestPlaceUse()
                 int LinkedSpaceId = WorldStructure->WorldStructure->LinkedSpaceId;
                 if (LinkedSpaceId > 0)
                 {
-                    UE_LOG(LogTemp, Log, TEXT("RequestPlaceUse: Visiting linked space %d"), LinkedSpaceId);
+                    // Store the structure type before visiting
+                    CurrentSpaceStructureType = WorldStructure->WorldStructure->StructureType;
+                    UE_LOG(LogTemp, Log, TEXT("RequestPlaceUse: Visiting linked space %d (structure type %d)"),
+                        LinkedSpaceId, CurrentSpaceStructureType);
                     DojoHelpers->CallCraftIslandPocketActionsVisit(Account, LinkedSpaceId);
                     return;
                 }
@@ -600,16 +606,34 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         }
     }
 
-    // Get current selected item to check if it's a block
+    // Get current selected item to check if it's a block or structure
     int32 SelectedItemId = GetSelectedItemId();
-    
-    // If placing a block (id 1-3), it must be at z=0
-    // If placing other items, allow stacking
+
+    // Determine Z offset based on item type
     int32 ZOffset = 0;
-    if (SelectedItemId > 3 && TargetBlock.Z == 0 && bActorExists)
+    
+    // Calculate the actual Z position we're targeting
+    int32 ActualZ = TargetBlock.Z + 8192;
+    
+    
+    // Blocks (1-3) must be at z=0
+    // World structures (50, 60-64) should be placed one level up
+    // Other items can stack on blocks
+    if (SelectedItemId == 50 || (SelectedItemId >= 60 && SelectedItemId <= 64))
     {
-        ZOffset = 1; // Allow placing non-blocks on top of existing blocks
+        // World structures always go one level up
+        // If targeting ground level (z=0), place at z=1
+        if (ActualZ == 8192)
+        {
+            ZOffset = 1;
+        }
     }
+    else if (SelectedItemId > 3 && TargetBlock.Z == 0 && bActorExists)
+    {
+        // Other non-block items can stack on existing blocks
+        ZOffset = 1;
+    }
+
 
     DojoHelpers->CallCraftIslandPocketActionsUseItem(
         Account,
@@ -674,12 +698,12 @@ void ADojoCraftIslandManager::RequestBuy(int32 ItemId, int32 Quantity)
 void ADojoCraftIslandManager::RequestGoBackHome()
 {
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== RequestGoBackHome START =========="));
-    UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Current space: %s:%d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Current space: %s:%d"),
         *CurrentSpaceOwner, CurrentSpaceId);
     UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Account.Address = %s"), *Account.Address);
     UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: bSpace1ActorsHidden = %s"), bSpace1ActorsHidden ? TEXT("true") : TEXT("false"));
     UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Actors.Num() = %d"), Actors.Num());
-    
+
     if (DojoHelpers)
     {
         UE_LOG(LogTemp, VeryVerbose, TEXT("RequestGoBackHome: Calling visit with space_id = 1"));
@@ -721,7 +745,7 @@ void ADojoCraftIslandManager::SaveCurrentPlayerPosition()
             FString CurrentSpaceKey = GetCurrentIslandKey();
             FVector CurrentPos = PlayerPawn->GetActorLocation();
             SpacePlayerPositions.Add(CurrentSpaceKey, CurrentPos);
-            UE_LOG(LogTemp, Log, TEXT("Saved position %s for space %s"), 
+            UE_LOG(LogTemp, Log, TEXT("Saved position %s for space %s"),
                 *CurrentPos.ToString(), *CurrentSpaceKey);
         }
     }
@@ -733,14 +757,14 @@ FVector ADojoCraftIslandManager::GetSpawnPositionForSpace(const FString& SpaceKe
     if (SpacePlayerPositions.Contains(SpaceKey))
     {
         FVector SavedPos = SpacePlayerPositions[SpaceKey];
-        UE_LOG(LogTemp, Log, TEXT("Restoring saved position %s for space %s"), 
+        UE_LOG(LogTemp, Log, TEXT("Restoring saved position %s for space %s"),
             *SavedPos.ToString(), *SpaceKey);
         return SavedPos;
     }
-    
+
     // Return default position based on space type
     FVector DefaultPos = bHasBlockChunks ? DEFAULT_OUTDOOR_SPAWN_POS : DEFAULT_BUILDING_SPAWN_POS;
-    UE_LOG(LogTemp, Log, TEXT("Using default position %s for new space %s"), 
+    UE_LOG(LogTemp, Log, TEXT("Using default position %s for new space %s"),
         *DefaultPos.ToString(), *SpaceKey);
     return DefaultPos;
 }
@@ -748,7 +772,7 @@ FVector ADojoCraftIslandManager::GetSpawnPositionForSpace(const FString& SpaceKe
 void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
 {
     if (!Pawn) return;
-    
+
     // Try to find the SpringArm component
     TArray<UActorComponent*> Components = Pawn->GetComponents().Array();
     for (UActorComponent* Component : Components)
@@ -756,7 +780,7 @@ void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
         if (Component && Component->GetName().Contains(TEXT("SpringArm")))
         {
             UE_LOG(LogTemp, VeryVerbose, TEXT("Found SpringArm component: %s"), *Component->GetName());
-            
+
             // Try to set properties using reflection
             UObject* CompObj = Cast<UObject>(Component);
             if (CompObj)
@@ -767,14 +791,14 @@ void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
                 {
                     CameraLagProp->SetPropertyValue_InContainer(CompObj, bEnableLag);
                 }
-                
+
                 // Set bEnableCameraRotationLag
                 FBoolProperty* RotationLagProp = FindFProperty<FBoolProperty>(CompObj->GetClass(), TEXT("bEnableCameraRotationLag"));
                 if (RotationLagProp)
                 {
                     RotationLagProp->SetPropertyValue_InContainer(CompObj, bEnableLag);
                 }
-                
+
                 UE_LOG(LogTemp, VeryVerbose, TEXT("Set camera lag to %s"), bEnableLag ? TEXT("enabled") : TEXT("disabled"));
                 break;
             }
@@ -784,15 +808,21 @@ void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
 
 int32 ADojoCraftIslandManager::GetSelectedItemId() const
 {
-    if (!CurrentInventory) return 0;
-    
+    if (!CurrentInventory) 
+    {
+        UE_LOG(LogTemp, Warning, TEXT("GetSelectedItemId: CurrentInventory is null"));
+        return 0;
+    }
+
     int32 SelectedSlot = CurrentInventory->HotbarSelectedSlot;
     if (SelectedSlot >= 36) return 0; // Max 36 slots (9 per felt252)
     
+    UE_LOG(LogTemp, Warning, TEXT("GetSelectedItemId: SelectedSlot=%d"), SelectedSlot);
+
     // Determine which slot field to use
     int32 FeltIndex = SelectedSlot / 9;
     int32 SlotInFelt = SelectedSlot % 9;
-    
+
     FString SlotData;
     switch (FeltIndex)
     {
@@ -802,44 +832,88 @@ int32 ADojoCraftIslandManager::GetSelectedItemId() const
         case 3: SlotData = CurrentInventory->Slots4; break;
         default: return 0;
     }
-    
+
     // Convert hex string to number
     if (SlotData.StartsWith("0x"))
     {
         SlotData = SlotData.Mid(2);
     }
+
+    // Parse the hex string to a big integer
+    // We need to handle this as a 256-bit number
+    TArray<uint8> Bytes;
     
-    // Parse the hex string
-    uint64 SlotsValue = 0;
-    for (int32 i = 0; i < SlotData.Len(); i++)
+    // Convert hex string to bytes
+    for (int32 i = 0; i < SlotData.Len(); i += 2)
     {
-        TCHAR C = SlotData[i];
-        uint8 Value = 0;
+        uint8 Byte = 0;
         
-        if (C >= '0' && C <= '9') Value = C - '0';
-        else if (C >= 'a' && C <= 'f') Value = 10 + (C - 'a');
-        else if (C >= 'A' && C <= 'F') Value = 10 + (C - 'A');
+        // High nibble
+        TCHAR C1 = (i < SlotData.Len()) ? SlotData[i] : '0';
+        if (C1 >= '0' && C1 <= '9') Byte = (C1 - '0') << 4;
+        else if (C1 >= 'a' && C1 <= 'f') Byte = (10 + (C1 - 'a')) << 4;
+        else if (C1 >= 'A' && C1 <= 'F') Byte = (10 + (C1 - 'A')) << 4;
         
-        SlotsValue = (SlotsValue << 4) + Value;
+        // Low nibble
+        TCHAR C2 = (i + 1 < SlotData.Len()) ? SlotData[i + 1] : '0';
+        if (C2 >= '0' && C2 <= '9') Byte |= (C2 - '0');
+        else if (C2 >= 'a' && C2 <= 'f') Byte |= (10 + (C2 - 'a'));
+        else if (C2 >= 'A' && C2 <= 'F') Byte |= (10 + (C2 - 'A'));
+        
+        Bytes.Add(Byte);
     }
     
-    // Extract slot data (28 bits per slot)
-    uint64 Shift = SlotInFelt * 28;
-    uint64 SlotDataValue = (SlotsValue >> Shift) & 0xFFFFFFF;
+    // Cairo stores slots packed from LSB to MSB in the felt252
+    // Each slot is 28 bits: [10 bits item_type][8 bits quantity][10 bits extra]
+    // Slot 0 starts at bit 0, slot 1 at bit 28, etc.
     
-    // Extract item_type (bits 18-27, 10 bits)
+    // Pad bytes array to 32 bytes if needed
+    while (Bytes.Num() < 32)
+    {
+        Bytes.Insert(0, 0); // Pad at the beginning since hex is big-endian
+    }
+    
+    // Calculate bit position for the selected slot
+    uint32 BitOffset = SlotInFelt * 28;
+    
+    // Extract 28 bits from the bytes array
+    // Since felt252 is big-endian but slots are packed from LSB, we need to
+    // work from the right side of the number
+    uint64 SlotDataValue = 0;
+    
+    // Read from the end of the array (LSB) and extract bits
+    for (int32 i = 0; i < 5; i++) // Read 5 bytes to ensure we get all 28 bits
+    {
+        int32 ByteIndex = 31 - (BitOffset / 8) - i;
+        if (ByteIndex >= 0 && ByteIndex < Bytes.Num())
+        {
+            SlotDataValue |= ((uint64)Bytes[ByteIndex]) << (i * 8);
+        }
+    }
+    
+    // Shift to align with the bit offset within the bytes
+    SlotDataValue >>= (BitOffset % 8);
+    
+    // Mask to get only 28 bits
+    SlotDataValue &= 0x0FFFFFFF;
+    
+    // Extract item_type (bits 18-27, top 10 bits of the 28-bit value)
     int32 ItemType = (SlotDataValue >> 18) & 0x3FF;
     
+    // Extract quantity for debugging
+    int32 Quantity = (SlotDataValue >> 10) & 0xFF;
+    
+
     return ItemType;
 }
 
 void ADojoCraftIslandManager::DisableCameraLagDuringTeleport(APawn* Pawn)
 {
     if (!Pawn) return;
-    
+
     // Disable camera lag
     SetCameraLag(Pawn, false);
-    
+
     // Re-enable after a short delay
     FTimerHandle ReenableLagTimer;
     GetWorld()->GetTimerManager().SetTimer(ReenableLagTimer, [this, Pawn]()
@@ -864,7 +938,7 @@ void ADojoCraftIslandManager::TeleportPlayer(const FVector& NewLocation, bool bI
 void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketPlayerData* PlayerData)
 {
     if (!PlayerData) return;
-    
+
     UE_LOG(LogTemp, Log, TEXT("Space changed from %s:%d to %s:%d"),
         *CurrentSpaceOwner, CurrentSpaceId,
         *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
@@ -874,14 +948,20 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
 
     // Check if we're returning to space 1
     bool bReturningToSpace1 = (PlayerData->CurrentSpaceOwner == Account.Address && PlayerData->CurrentSpaceId == 1);
-    
+
     // Clear all current actors when changing spaces
     ClearAllSpawnedActors();
 
     // Update current space tracking
     CurrentSpaceOwner = PlayerData->CurrentSpaceOwner;
     CurrentSpaceId = PlayerData->CurrentSpaceId;
-    
+
+    // Reset structure type if returning to main space
+    if (bReturningToSpace1)
+    {
+        CurrentSpaceStructureType = 0;
+    }
+
     // If returning to space 1 and actors are hidden, show them
     if (bReturningToSpace1 && bSpace1ActorsHidden)
     {
@@ -892,7 +972,7 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
 
     // Track if current space has block chunks
     bool bHasBlockChunks = false;
-    
+
     // Only load chunks if we're not returning to space 1 with hidden actors
     if (!(bReturningToSpace1 && !bSpace1ActorsHidden))
     {
@@ -938,11 +1018,40 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
         FRotator SpawnRotation(0, 90, 0);
         FActorSpawnParameters SpawnParams;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        
+
         DefaultBuilding = GetWorld()->SpawnActor<AActor>(DefaultBuildingClass, SpawnLocation, SpawnRotation, SpawnParams);
         if (DefaultBuilding)
         {
-            UE_LOG(LogTemp, Log, TEXT("Spawned default building"));
+            UE_LOG(LogTemp, Log, TEXT("Spawned default building (structure type %d)"), CurrentSpaceStructureType);
+
+            // Show/hide workshop components based on structure type
+            TArray<UActorComponent*> Components = DefaultBuilding->GetComponents().Array();
+            for (UActorComponent* Component : Components)
+            {
+                if (Component)
+                {
+                    FString ComponentName = Component->GetName();
+
+                    // Check if this is a workshop-specific component
+                    if (ComponentName.Contains(TEXT("Workshop")) ||
+                        ComponentName.Contains(TEXT("B_WoodWorkshop")) ||
+                        ComponentName.Contains(TEXT("B_Workshop")))
+                    {
+                        // Show if structure type is 60 (Workshop), hide otherwise
+                        UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component);
+                        if (PrimComp)
+                        {
+                            bool bShouldBeVisible = (CurrentSpaceStructureType == 60);
+                            PrimComp->SetVisibility(bShouldBeVisible);
+                            PrimComp->SetCollisionEnabled(bShouldBeVisible ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+                            UE_LOG(LogTemp, Log, TEXT("Component %s visibility=%s, collision=%s"),
+                                *ComponentName,
+                                bShouldBeVisible ? TEXT("true") : TEXT("false"),
+                                bShouldBeVisible ? TEXT("enabled") : TEXT("disabled"));
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -982,18 +1091,18 @@ void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, boo
 void ADojoCraftIslandManager::ClearAllSpawnedActors()
 {
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors START =========="));
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"),
         *CurrentSpaceOwner, CurrentSpaceId);
     UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Account.Address = %s"), *Account.Address);
-    
+
     // Check if we're currently in space 1
     bool bLeavingSpace1 = (CurrentSpaceOwner == Account.Address && CurrentSpaceId == 1);
-    
+
     UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: bLeavingSpace1 = %s"), bLeavingSpace1 ? TEXT("true") : TEXT("false"));
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Owner comparison '%s' == '%s' = %s"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Owner comparison '%s' == '%s' = %s"),
         *CurrentSpaceOwner, *Account.Address,
         (CurrentSpaceOwner == Account.Address) ? TEXT("true") : TEXT("false"));
-    
+
     if (bLeavingSpace1)
     {
         // Hide space 1 actors instead of destroying them
@@ -1022,7 +1131,7 @@ void ADojoCraftIslandManager::ClearAllSpawnedActors()
                 }
             }
             Actors.Empty();
-            
+
             // Clear actor spawn info
             ActorSpawnInfo.Empty();
         }
@@ -1039,7 +1148,7 @@ void ADojoCraftIslandManager::ClearAllSpawnedActors()
         UE_LOG(LogTemp, Log, TEXT("ClearAllSpawnedActors: Destroyed default building"));
     }
 
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: After processing - bSpace1ActorsHidden = %s, Actors.Num() = %d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: After processing - bSpace1ActorsHidden = %s, Actors.Num() = %d"),
         bSpace1ActorsHidden ? TEXT("true") : TEXT("false"), Actors.Num());
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors END =========="));
 }
@@ -1281,9 +1390,9 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
     if (!ChunkCache.Contains(IslandKey)) return;
 
     FSpaceChunks& SpaceData = ChunkCache[IslandKey];
-    
+
     UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loading all chunks for key %s"), *IslandKey);
-    
+
     // Load all chunks
     int32 ChunksLoaded = 0;
     for (const auto& ChunkPair : SpaceData.Chunks)
@@ -1295,7 +1404,7 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
         }
     }
     UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d chunks"), ChunksLoaded);
-    
+
     // Load all gatherables
     int32 GatherablesLoaded = 0;
     for (const auto& Pair : SpaceData.Gatherables)
@@ -1310,7 +1419,7 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
     {
         UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d gatherables"), GatherablesLoaded);
     }
-    
+
     // Load all structures
     int32 StructuresLoaded = 0;
     for (const auto& Pair : SpaceData.Structures)

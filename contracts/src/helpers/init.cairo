@@ -54,24 +54,28 @@ fn init_player(ref world: WorldStorage, player: ContractAddress) {
 
 fn init_inventory(ref world: WorldStorage, player: ContractAddress) {
     let mut hotbar: Inventory = InventoryTrait::new(0, 0, 9, player);
-    hotbar.add_items(1, 19);
-    hotbar.add_items(2, 23);
-    hotbar.add_items(41, 1);
-    hotbar.add_items(32, 4);
-    hotbar.add_items(43, 1);
-    hotbar.add_items(50, 1);
-    hotbar.add_items(51, 5);
-    hotbar.add_items(53, 5);
+    // Add building patterns to hotbar (except brewery)
+    hotbar.add_items(50, 1); // House Pattern
+    hotbar.add_items(60, 1); // Workshop Pattern
+    hotbar.add_items(61, 1); // Well Pattern
+    hotbar.add_items(62, 1); // Kitchen Pattern
+    hotbar.add_items(63, 1); // Warehouse Pattern
+    hotbar.add_items(41, 1); // Stone Hoe
+    hotbar.add_items(43, 1); // Stone Hammer
     world.write_model(@hotbar);
 
     let mut inventory: Inventory = InventoryTrait::new(1, 1, 27, player);
-    inventory.add_items(46, 8);
-    inventory.add_items(47, 12);
-    inventory.add_items(41, 1);
-    inventory.add_items(32, 4);
-    inventory.add_items(33, 7);
-    inventory.add_items(36, 1);
-    inventory.add_items(38, 1);
+    // Move resources to inventory
+    inventory.add_items(1, 19);  // Grass
+    inventory.add_items(2, 23);  // Dirt
+    inventory.add_items(32, 8);  // Wooden Sticks (increased from 4)
+    inventory.add_items(33, 7);  // Rocks
+    inventory.add_items(46, 8);  // Oak Saplings
+    inventory.add_items(47, 12); // Wheat Seeds
+    inventory.add_items(51, 5);  // Carrot Seeds
+    inventory.add_items(53, 5);  // Potato Seeds
+    inventory.add_items(36, 1);  // Stone Pickaxe Head
+    inventory.add_items(38, 1);  // Stone Shovel Head
     world.write_model(@inventory);
 
     let craft: Inventory = InventoryTrait::new(2, 2, 9, player);

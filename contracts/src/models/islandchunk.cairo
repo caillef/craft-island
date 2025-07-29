@@ -7,7 +7,7 @@ use craft_island_pocket::models::inventory::{Inventory, InventoryTrait};
 use craft_island_pocket::helpers::utils::get_position_id;
 use dojo::{world::WorldStorage,model::ModelStorage};
 
-fn get_block_at_pos(blocks: u128, x: u64, y: u64, z: u64) -> u64 {
+pub fn get_block_at_pos(blocks: u128, x: u64, y: u64, z: u64) -> u64 {
     let shift: u128 = fast_power_2(((x + y * 4 + z * 16) * 4).into()).into();
     return ((blocks / shift) % 8).try_into().unwrap();
 }

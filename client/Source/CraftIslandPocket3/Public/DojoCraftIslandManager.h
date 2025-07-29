@@ -412,6 +412,10 @@ public:
     // Get currently selected item ID from inventory
     int32 GetSelectedItemId() const;
     
+    // Track the structure type of the current space (0 if not in a structure)
+    UPROPERTY()
+    int32 CurrentSpaceStructureType;
+    
 private:
     // Helper methods for space transitions
     FString MakeSpaceKey(const FString& Owner, int32 Id) const;
