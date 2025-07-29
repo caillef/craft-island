@@ -2,6 +2,7 @@
 
 
 #include "DojoCraftIslandManager.h"
+#include "EngineUtils.h"
 
 // Sets default values
 ADojoCraftIslandManager::ADojoCraftIslandManager()
@@ -31,6 +32,28 @@ void ADojoCraftIslandManager::BeginPlay()
 
     // Step 4: Create burner account
     Account = DojoHelpers->CreateBurnerDeprecated(RpcUrl, PlayerAddress, PrivateKey);
+
+    // Initialize current space tracking
+    CurrentSpaceOwner = Account.Address;
+    CurrentSpaceId = 1;
+
+    // Initialize default building to nullptr
+    DefaultBuilding = nullptr;
+
+    // Find SkyAtmosphere actor in the scene
+    SkyAtmosphere = nullptr;
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), FoundActors);
+
+    for (AActor* Actor : FoundActors)
+    {
+        if (Actor && Actor->GetClass()->GetName().Contains(TEXT("SkyAtmosphere")))
+        {
+            SkyAtmosphere = Actor;
+            UE_LOG(LogTemp, Log, TEXT("Found SkyAtmosphere actor in scene"));
+            break;
+        }
+    }
 
     ConnectGameInstanceEvents();
 
@@ -67,6 +90,7 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
     CraftIslandGI->SetTargetBlock.AddDynamic(this, &ADojoCraftIslandManager::SetTargetBlock);
     CraftIslandGI->RequestSell.AddDynamic(this, &ADojoCraftIslandManager::RequestSell);
     CraftIslandGI->RequestBuy.AddDynamic(this, &ADojoCraftIslandManager::RequestBuy);
+    CraftIslandGI->RequestGoBackHome.AddDynamic(this, &ADojoCraftIslandManager::RequestGoBackHome);
 }
 
 void ADojoCraftIslandManager::ContinueAfterDelay()
@@ -221,13 +245,13 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                 if (ABaseWorldStructure* ActorStructure = Cast<ABaseWorldStructure>(SpawnedActor))
                 {
                     ActorStructure->WorldStructure = Structure;
-                    ActorStructure->Constructed = Structure->Completed;
                     
-                    // If already completed on spawn, call OnConstructed
+                    // If already completed on spawn, call NotifyConstructionCompleted
+                    // Note: Don't set Constructed before calling NotifyConstructionCompleted
                     if (Structure->Completed)
                     {
                         ActorStructure->NotifyConstructionCompleted();
-                        UE_LOG(LogTemp, Log, TEXT("PlaceAssetInWorld: Structure spawned completed at position (%d, %d, %d), calling OnConstructed"), SpawnData.DojoPosition.X, SpawnData.DojoPosition.Y, SpawnData.DojoPosition.Z);
+                        UE_LOG(LogTemp, Log, TEXT("Tick: Structure spawned completed at position (%d, %d, %d), calling OnConstructed"), SpawnData.DojoPosition.X, SpawnData.DojoPosition.Y, SpawnData.DojoPosition.Z);
                     }
                 }
             }
@@ -313,6 +337,120 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     // Check if this is the current player
     if (IsCurrentPlayer())
     {
+        // Check if space has changed
+        bool bSpaceChanged = (CurrentSpaceOwner != PlayerData->CurrentSpaceOwner ||
+                             CurrentSpaceId != PlayerData->CurrentSpaceId);
+
+        if (bSpaceChanged)
+        {
+            UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Space changed from %s:%d to %s:%d"),
+                *CurrentSpaceOwner, CurrentSpaceId,
+                *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
+
+            // Clear all current actors when changing spaces
+            ClearAllSpawnedActors();
+
+            // Update current space tracking
+            CurrentSpaceOwner = PlayerData->CurrentSpaceOwner;
+            CurrentSpaceId = PlayerData->CurrentSpaceId;
+
+            // Load chunks from cache for the new space
+            FString NewIslandKey = GetCurrentIslandKey();
+            bool bHasBlockChunks = false;
+
+            UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Checking cache for key %s"), *NewIslandKey);
+
+            if (ChunkCache.Contains(NewIslandKey))
+            {
+                FSpaceChunks& SpaceData = ChunkCache[NewIslandKey];
+                UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Found cache for space %s with %d chunks"), *NewIslandKey, SpaceData.Chunks.Num());
+
+                // Check if there are any block chunks
+                for (const auto& ChunkPair : SpaceData.Chunks)
+                {
+                    if (ChunkPair.Value && (ChunkPair.Value->Blocks1 != "0x0" || ChunkPair.Value->Blocks2 != "0x0"))
+                    {
+                        bHasBlockChunks = true;
+                        break;
+                    }
+                }
+
+                if (bHasBlockChunks)
+                {
+                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Loading cached data for space %s"), *NewIslandKey);
+                    LoadAllChunksFromCache(); // Load all chunks from cache
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Space %s has no block chunks"), *NewIslandKey);
+                }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: No cached data for space %s"), *NewIslandKey);
+            }
+
+            // Spawn default building if no block chunks exist
+            if (!bHasBlockChunks && DefaultBuildingClass)
+            {
+                FVector SpawnLocation(0, 0, 0);
+                FRotator SpawnRotation(0, 90, 0); // Pitch=0, Yaw=90, Roll=0
+                FActorSpawnParameters SpawnParams;
+                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+                DefaultBuilding = GetWorld()->SpawnActor<AActor>(DefaultBuildingClass, SpawnLocation, SpawnRotation, SpawnParams);
+
+                if (DefaultBuilding)
+                {
+                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Spawned default building at (0,0,0) with rotation (0,90,0)"));
+                }
+            }
+
+            // Hide or show sky atmosphere based on whether we're in a building
+            if (SkyAtmosphere)
+            {
+                if (bHasBlockChunks)
+                {
+                    // Show sky when in outdoor space
+                    SkyAtmosphere->SetActorHiddenInGame(false);
+                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Showing SkyAtmosphere for outdoor space"));
+                }
+                else
+                {
+                    // Hide sky when inside building
+                    SkyAtmosphere->SetActorHiddenInGame(true);
+                    UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Hiding SkyAtmosphere for indoor space"));
+                }
+            }
+
+            // Delay teleport to ensure chunks have time to spawn
+            FTimerHandle TeleportTimer;
+            bool bHasChunks = bHasBlockChunks; // Capture for lambda
+            GetWorld()->GetTimerManager().SetTimer(TeleportTimer, [this, bHasChunks]()
+            {
+                if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+                {
+                    if (APawn* PlayerPawn = PC->GetPawn())
+                    {
+                        FVector NewLocation;
+                        if (bHasChunks)
+                        {
+                            // Normal spawn position for spaces with chunks
+                            NewLocation = FVector(50, 50, 250);
+                        }
+                        else
+                        {
+                            // Different spawn position for empty spaces
+                            NewLocation = FVector(50, 50, 100);
+                        }
+
+                        PlayerPawn->SetActorLocation(NewLocation);
+                        UE_LOG(LogTemp, Log, TEXT("HandlePlayerData: Teleported player to %s"), *NewLocation.ToString());
+                    }
+                }
+            }, 0.5f, false); // 0.5 second delay
+        }
+
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
         if (!GameInstance) return;
@@ -349,15 +487,27 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
     // First, update the chunk cache
     UCraftIslandChunks::HandleCraftIslandModel(Model, ChunkCache);
 
-    // Then process for immediate display
+    // Then process for immediate display if it's for the current space
     if (Name == "craft_island_pocket-IslandChunk") {
-        ProcessIslandChunk(Cast<UDojoModelCraftIslandPocketIslandChunk>(Model));
+        UDojoModelCraftIslandPocketIslandChunk* Chunk = Cast<UDojoModelCraftIslandPocketIslandChunk>(Model);
+        if (Chunk && Chunk->IslandOwner == CurrentSpaceOwner && Chunk->IslandId == CurrentSpaceId)
+        {
+            ProcessIslandChunk(Chunk);
+        }
     }
     else if (Name == "craft_island_pocket-GatherableResource") {
-        ProcessGatherableResource(Cast<UDojoModelCraftIslandPocketGatherableResource>(Model));
+        UDojoModelCraftIslandPocketGatherableResource* Resource = Cast<UDojoModelCraftIslandPocketGatherableResource>(Model);
+        if (Resource && Resource->IslandOwner == CurrentSpaceOwner && Resource->IslandId == CurrentSpaceId)
+        {
+            ProcessGatherableResource(Resource);
+        }
     }
     else if (Name == "craft_island_pocket-WorldStructure") {
-        ProcessWorldStructure(Cast<UDojoModelCraftIslandPocketWorldStructure>(Model));
+        UDojoModelCraftIslandPocketWorldStructure* Structure = Cast<UDojoModelCraftIslandPocketWorldStructure>(Model);
+        if (Structure && Structure->IslandOwner == CurrentSpaceOwner && Structure->IslandId == CurrentSpaceId)
+        {
+            ProcessWorldStructure(Structure);
+        }
     }
     else if (Name == "craft_island_pocket-Inventory") {
         HandleInventory(Model);
@@ -506,6 +656,26 @@ void ADojoCraftIslandManager::RequestPlaceUse()
 
     bool bActorExists = Actors.Contains(TargetPosition);
 
+    // Check if the actor is a completed world structure
+    if (bActorExists)
+    {
+        AActor* TargetActor = Actors[TargetPosition];
+        if (ABaseWorldStructure* WorldStructure = Cast<ABaseWorldStructure>(TargetActor))
+        {
+            if (WorldStructure->WorldStructure && WorldStructure->WorldStructure->Completed)
+            {
+                // This is a completed world structure, visit its linked space
+                int LinkedSpaceId = WorldStructure->WorldStructure->LinkedSpaceId;
+                if (LinkedSpaceId > 0)
+                {
+                    UE_LOG(LogTemp, Log, TEXT("RequestPlaceUse: Visiting linked space %d"), LinkedSpaceId);
+                    DojoHelpers->CallCraftIslandPocketActionsVisit(Account, LinkedSpaceId);
+                    return;
+                }
+            }
+        }
+    }
+
     // If there's an actor at the target position, place on top (+1 Z)
     // If there's no actor, use the target position as is (which already has -1 from the targeting system)
     int32 ZOffset = TargetBlock.Z == 0 && bActorExists ? 1 : 0;
@@ -570,6 +740,11 @@ void ADojoCraftIslandManager::RequestBuy(int32 ItemId, int32 Quantity)
     DojoHelpers->CallCraftIslandPocketActionsBuy(Account, ItemId, Quantity);
 }
 
+void ADojoCraftIslandManager::RequestGoBackHome()
+{
+    DojoHelpers->CallCraftIslandPocketActionsVisit(Account, 1);
+}
+
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
 {
     TargetBlock.X = Location.X;
@@ -581,9 +756,37 @@ void ADojoCraftIslandManager::SetTargetBlock(FVector Location)
 
 FString ADojoCraftIslandManager::GetCurrentIslandKey() const
 {
-    // For now, we'll use player address + island id 0
-    // You may want to make this configurable or get from game state
-    return Account.Address + FString::FromInt(0);
+    // Use the tracked current space for the cache key
+    return CurrentSpaceOwner + FString::FromInt(CurrentSpaceId);
+}
+
+void ADojoCraftIslandManager::ClearAllSpawnedActors()
+{
+    // Clear all spawned actors
+    for (auto& Pair : Actors)
+    {
+        if (Pair.Value && IsValid(Pair.Value))
+        {
+            Pair.Value->Destroy();
+        }
+    }
+    Actors.Empty();
+
+    // Clear actor spawn info
+    ActorSpawnInfo.Empty();
+
+    // Clear spawn queue
+    SpawnQueue.Empty();
+
+    // Destroy default building if it exists
+    if (DefaultBuilding && IsValid(DefaultBuilding))
+    {
+        DefaultBuilding->Destroy();
+        DefaultBuilding = nullptr;
+        UE_LOG(LogTemp, Log, TEXT("ClearAllSpawnedActors: Destroyed default building"));
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("ClearAllSpawnedActors: Cleared all actors for space change"));
 }
 
 void ADojoCraftIslandManager::QueueSpawnWithOverflowProtection(const FSpawnQueueData& SpawnData)
@@ -648,7 +851,20 @@ void ADojoCraftIslandManager::ProcessChunkBlock(uint8 Byte, const FIntVector& Do
 
 void ADojoCraftIslandManager::ProcessIslandChunk(UDojoModelCraftIslandPocketIslandChunk* Chunk)
 {
-    if (!Chunk || Chunk->IslandOwner != Account.Address) return;
+    if (!Chunk) return;
+
+    UE_LOG(LogTemp, Log, TEXT("ProcessIslandChunk: Checking chunk %s, owner=%s, currentOwner=%s, account=%s"),
+        *Chunk->ChunkId, *Chunk->IslandOwner, *CurrentSpaceOwner, *Account.Address);
+
+    // When loading from cache, we should check against CurrentSpaceOwner instead of Account.Address
+    if (Chunk->IslandOwner != CurrentSpaceOwner)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ProcessIslandChunk: Skipping chunk due to owner mismatch"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("ProcessIslandChunk: Processing chunk %s with blocks1=%s, blocks2=%s"),
+        *Chunk->ChunkId, *Chunk->Blocks1, *Chunk->Blocks2);
 
     FString Blocks = Chunk->Blocks1.Mid(2) + Chunk->Blocks2.Mid(2);
 
@@ -682,7 +898,7 @@ void ADojoCraftIslandManager::ProcessIslandChunk(UDojoModelCraftIslandPocketIsla
 
 void ADojoCraftIslandManager::ProcessGatherableResource(UDojoModelCraftIslandPocketGatherableResource* Gatherable)
 {
-    if (!Gatherable || Gatherable->IslandOwner != Account.Address) return;
+    if (!Gatherable || Gatherable->IslandOwner != CurrentSpaceOwner) return;
 
     FIntVector ChunkOffset = HexStringToVector(Gatherable->ChunkId);
     E_Item Item = static_cast<E_Item>(Gatherable->ResourceId);
@@ -700,7 +916,7 @@ void ADojoCraftIslandManager::ProcessGatherableResource(UDojoModelCraftIslandPoc
 
 void ADojoCraftIslandManager::ProcessWorldStructure(UDojoModelCraftIslandPocketWorldStructure* Structure)
 {
-    if (!Structure || Structure->IslandOwner != Account.Address) return;
+    if (!Structure || Structure->IslandOwner != CurrentSpaceOwner) return;
 
     FIntVector ChunkOffset = HexStringToVector(Structure->ChunkId);
     E_Item Item = static_cast<E_Item>(Structure->StructureType);
@@ -727,7 +943,7 @@ void ADojoCraftIslandManager::ProcessWorldStructure(UDojoModelCraftIslandPocketW
             {
                 // Update the structure data
                 WorldStructureActor->WorldStructure = Structure;
-                
+
                 // Check if it just became completed
                 if (Structure->Completed && !WorldStructureActor->Constructed)
                 {
@@ -755,50 +971,103 @@ void ADojoCraftIslandManager::LoadChunkFromCache(const FString& ChunkId)
     // Load chunk blocks
     if (SpaceData.Chunks.Contains(ChunkId))
     {
+        UE_LOG(LogTemp, Log, TEXT("LoadChunkFromCache: Found chunk %s, processing it"), *ChunkId);
         ProcessIslandChunk(SpaceData.Chunks[ChunkId]);
+    }
+    else
+    {
+        // Log the first few attempts to see what we're looking for vs what's in cache
+        static int LogCount = 0;
+        if (LogCount < 5)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("LoadChunkFromCache: Chunk %s not found in cache. Available chunks:"), *ChunkId);
+            for (const auto& ChunkPair : SpaceData.Chunks)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("  - %s"), *ChunkPair.Key);
+            }
+            LogCount++;
+        }
     }
 
     // Load gatherables for this chunk
+    int32 GatherableCount = 0;
     for (const auto& Pair : SpaceData.Gatherables)
     {
         if (Pair.Value && Pair.Value->ChunkId == ChunkId)
         {
             ProcessGatherableResource(Pair.Value);
+            GatherableCount++;
         }
+    }
+    if (GatherableCount > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("LoadChunkFromCache: Processed %d gatherables for chunk %s"), GatherableCount, *ChunkId);
     }
 
     // Load structures for this chunk
+    int32 StructureCount = 0;
     for (const auto& Pair : SpaceData.Structures)
     {
         if (Pair.Value && Pair.Value->ChunkId == ChunkId)
         {
             ProcessWorldStructure(Pair.Value);
+            StructureCount++;
         }
+    }
+    if (StructureCount > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("LoadChunkFromCache: Processed %d structures for chunk %s"), StructureCount, *ChunkId);
     }
 }
 
-void ADojoCraftIslandManager::LoadChunksFromCache(const FIntVector& CenterChunk, int32 Radius)
+void ADojoCraftIslandManager::LoadAllChunksFromCache()
 {
     FString IslandKey = GetCurrentIslandKey();
     if (!ChunkCache.Contains(IslandKey)) return;
 
-    // Load all chunks within radius
-    for (int32 X = -Radius; X <= Radius; X++)
+    FSpaceChunks& SpaceData = ChunkCache[IslandKey];
+    
+    UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loading all chunks for key %s"), *IslandKey);
+    
+    // Load all chunks
+    int32 ChunksLoaded = 0;
+    for (const auto& ChunkPair : SpaceData.Chunks)
     {
-        for (int32 Y = -Radius; Y <= Radius; Y++)
+        if (ChunkPair.Value)
         {
-            for (int32 Z = -Radius; Z <= Radius; Z++)
-            {
-                FIntVector ChunkPos = CenterChunk + FIntVector(X, Y, Z);
-
-                // Convert chunk position to chunk ID format (0x + 10 hex chars for each coordinate)
-                FString ChunkId = FString::Printf(TEXT("0x%010x%010x%010x"),
-                    ChunkPos.X + 2048,
-                    ChunkPos.Y + 2048,
-                    ChunkPos.Z + 2048);
-
-                LoadChunkFromCache(ChunkId);
-            }
+            ProcessIslandChunk(ChunkPair.Value);
+            ChunksLoaded++;
         }
+    }
+    UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d chunks"), ChunksLoaded);
+    
+    // Load all gatherables
+    int32 GatherablesLoaded = 0;
+    for (const auto& Pair : SpaceData.Gatherables)
+    {
+        if (Pair.Value)
+        {
+            ProcessGatherableResource(Pair.Value);
+            GatherablesLoaded++;
+        }
+    }
+    if (GatherablesLoaded > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d gatherables"), GatherablesLoaded);
+    }
+    
+    // Load all structures
+    int32 StructuresLoaded = 0;
+    for (const auto& Pair : SpaceData.Structures)
+    {
+        if (Pair.Value)
+        {
+            ProcessWorldStructure(Pair.Value);
+            StructuresLoaded++;
+        }
+    }
+    if (StructuresLoaded > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d structures"), StructuresLoaded);
     }
 }

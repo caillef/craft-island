@@ -25,3 +25,8 @@ Row Name,Index,Enum,Type,Max Stack Size,Icon,Craft,ActorClass,Buy Price,Sell Pri
 52,52,Carrot,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_52.items_icons_52',,,,2
 53,53,Potato Seed,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_53.items_icons_53',,/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_PotatoSeed.B_PotatoSeed_C',5,
 54,54,Potato,item,64,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_54.items_icons_54',,,,8
+55,55,Workshop Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_55.items_icons_55',,,5,
+56,56,Well Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_56.items_icons_56',,,100,
+57,57,Kitchen Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_57.items_icons_57',,,3000,
+58,58,Warehouse Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_58.items_icons_58',,,500,
+59,59,Brewery Pattern,item,1,/Script/Paper2D.PaperSprite'/Game/CraftIsland/UI/ItemsIconsSprite/items_icons_59.items_icons_59',,,10000,

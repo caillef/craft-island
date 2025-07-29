@@ -214,6 +214,9 @@ class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
     UFUNCTION()
     void RequestBuy(int32 ItemId, int32 Quantity);
 
+    UFUNCTION()
+    void RequestGoBackHome();
+
 public:
 	// Sets default values for this actor's properties
 	ADojoCraftIslandManager();
@@ -256,6 +259,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Config")
     TSubclassOf<AActor> ADefaultWorldStructureClass;
+
+    UPROPERTY(EditAnywhere, Category = "Config")
+    TSubclassOf<AActor> DefaultBuildingClass;
 
     UPROPERTY(EditAnywhere, Category = "Spawning")
     TSubclassOf<AActor> FloatingShipClass;
@@ -361,7 +367,25 @@ public:
     // Get current player's island key for chunk cache
     FString GetCurrentIslandKey() const;
 
-    // Load chunks from cache for a specific area
-    void LoadChunksFromCache(const FIntVector& CenterChunk, int32 Radius);
+    // Load all chunks from cache
+    void LoadAllChunksFromCache();
     void LoadChunkFromCache(const FString& ChunkId);
+
+    // Clear all spawned actors
+    void ClearAllSpawnedActors();
+
+    // Current space tracking
+    UPROPERTY()
+    FString CurrentSpaceOwner;
+
+    UPROPERTY()
+    int32 CurrentSpaceId;
+    
+    // Default building for empty spaces
+    UPROPERTY()
+    AActor* DefaultBuilding;
+    
+    // Sky atmosphere reference
+    UPROPERTY()
+    AActor* SkyAtmosphere;
 };

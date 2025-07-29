@@ -389,13 +389,20 @@ mod actions {
                 WorldStructureTrait::upgrade_structure(ref world, x, y, z);
             } else {
                 assert(item_type > 0, 'Error: item id is zero');
+                
+                // Get player data to check current space
+                let player_data: PlayerData = world.read_model((player));
+                
                 if item_type < 32 {
+                    // Blocks can only be placed in main island (space_id == 1)
+                    assert(player_data.current_space_id == 1, 'Error: not in main island');
                     place_block(ref world, x, y, z, item_type);
-                } else if item_type == 50 {
-                    let mut player_data: PlayerData = world.read_model((player));
+                } else if item_type == 50 || (item_type >= 55 && item_type <= 59) {
+                    // World structures (House Pattern, Workshop, Well, Kitchen, Warehouse, Brewery) only in main island
                     assert(player_data.current_space_id == 1, 'Error: not in main island');
                     WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
                 } else {
+                    // Other items (plants, etc.) can be placed anywhere
                     plant(ref self, x, y, z, item_type);
                 }
             }

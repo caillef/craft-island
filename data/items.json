@@ -216,5 +216,35 @@
     "type": "item",
     "maxStackSize": 64,
     "sellPrice": 8
+  },
+  "55": {
+    "name": "Workshop Pattern",
+    "type": "item",
+    "maxStackSize": 1,
+    "buyPrice": 5
+  },
+  "56": {
+    "name": "Well Pattern",
+    "type": "item",
+    "maxStackSize": 1,
+    "buyPrice": 100
+  },
+  "57": {
+    "name": "Kitchen Pattern",
+    "type": "item",
+    "maxStackSize": 1,
+    "buyPrice": 3000
+  },
+  "58": {
+    "name": "Warehouse Pattern",
+    "type": "item",
+    "maxStackSize": 1,
+    "buyPrice": 500
+  },
+  "59": {
+    "name": "Brewery Pattern",
+    "type": "item",
+    "maxStackSize": 1,
+    "buyPrice": 10000
   }
 }
