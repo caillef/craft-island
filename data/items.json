@@ -218,30 +218,55 @@
     "sellPrice": 8
   },
   "55": {
+    "name": "Bowl",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "56": {
+    "name": "Chest",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "57": {
+    "name": "Wooden Chair",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "58": {
+    "name": "Wooden Table",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "59": {
+    "name": "Wooden Bench",
+    "type": "item",
+    "maxStackSize": 64
+  },
+  "60": {
     "name": "Workshop Pattern",
     "type": "item",
     "maxStackSize": 1,
     "buyPrice": 5
   },
-  "56": {
+  "61": {
     "name": "Well Pattern",
     "type": "item",
     "maxStackSize": 1,
     "buyPrice": 100
   },
-  "57": {
+  "62": {
     "name": "Kitchen Pattern",
     "type": "item",
     "maxStackSize": 1,
     "buyPrice": 3000
   },
-  "58": {
+  "63": {
     "name": "Warehouse Pattern",
     "type": "item",
     "maxStackSize": 1,
     "buyPrice": 500
   },
-  "59": {
+  "64": {
     "name": "Brewery Pattern",
     "type": "item",
     "maxStackSize": 1,

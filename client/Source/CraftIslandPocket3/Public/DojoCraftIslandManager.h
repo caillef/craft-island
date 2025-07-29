@@ -405,6 +405,13 @@ public:
     UPROPERTY()
     TMap<FString, FVector> SpacePlayerPositions;
     
+    // Current player inventory
+    UPROPERTY()
+    UDojoModelCraftIslandPocketInventory* CurrentInventory;
+    
+    // Get currently selected item ID from inventory
+    int32 GetSelectedItemId() const;
+    
 private:
     // Helper methods for space transitions
     FString MakeSpaceKey(const FString& Owner, int32 Id) const;

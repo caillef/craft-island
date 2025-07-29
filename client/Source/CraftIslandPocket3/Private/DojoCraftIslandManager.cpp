@@ -46,6 +46,9 @@ void ADojoCraftIslandManager::BeginPlay()
     
     // Initialize space 1 actors tracking
     bSpace1ActorsHidden = false;
+    
+    // Initialize inventory tracking
+    CurrentInventory = nullptr;
 
     // Find SkyAtmosphere actor in the scene
     SkyAtmosphere = nullptr;
@@ -321,6 +324,9 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     // Check if this is the current player
     if (IsCurrentPlayer())
     {
+        // Store the current inventory
+        CurrentInventory = Inventory;
+        
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
         if (!GameInstance) return;
@@ -594,9 +600,16 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         }
     }
 
-    // If there's an actor at the target position, place on top (+1 Z)
-    // If there's no actor, use the target position as is (which already has -1 from the targeting system)
-    int32 ZOffset = TargetBlock.Z == 0 && bActorExists ? 1 : 0;
+    // Get current selected item to check if it's a block
+    int32 SelectedItemId = GetSelectedItemId();
+    
+    // If placing a block (id 1-3), it must be at z=0
+    // If placing other items, allow stacking
+    int32 ZOffset = 0;
+    if (SelectedItemId > 3 && TargetBlock.Z == 0 && bActorExists)
+    {
+        ZOffset = 1; // Allow placing non-blocks on top of existing blocks
+    }
 
     DojoHelpers->CallCraftIslandPocketActionsUseItem(
         Account,
@@ -767,6 +780,57 @@ void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
             }
         }
     }
+}
+
+int32 ADojoCraftIslandManager::GetSelectedItemId() const
+{
+    if (!CurrentInventory) return 0;
+    
+    int32 SelectedSlot = CurrentInventory->HotbarSelectedSlot;
+    if (SelectedSlot >= 36) return 0; // Max 36 slots (9 per felt252)
+    
+    // Determine which slot field to use
+    int32 FeltIndex = SelectedSlot / 9;
+    int32 SlotInFelt = SelectedSlot % 9;
+    
+    FString SlotData;
+    switch (FeltIndex)
+    {
+        case 0: SlotData = CurrentInventory->Slots1; break;
+        case 1: SlotData = CurrentInventory->Slots2; break;
+        case 2: SlotData = CurrentInventory->Slots3; break;
+        case 3: SlotData = CurrentInventory->Slots4; break;
+        default: return 0;
+    }
+    
+    // Convert hex string to number
+    if (SlotData.StartsWith("0x"))
+    {
+        SlotData = SlotData.Mid(2);
+    }
+    
+    // Parse the hex string
+    uint64 SlotsValue = 0;
+    for (int32 i = 0; i < SlotData.Len(); i++)
+    {
+        TCHAR C = SlotData[i];
+        uint8 Value = 0;
+        
+        if (C >= '0' && C <= '9') Value = C - '0';
+        else if (C >= 'a' && C <= 'f') Value = 10 + (C - 'a');
+        else if (C >= 'A' && C <= 'F') Value = 10 + (C - 'A');
+        
+        SlotsValue = (SlotsValue << 4) + Value;
+    }
+    
+    // Extract slot data (28 bits per slot)
+    uint64 Shift = SlotInFelt * 28;
+    uint64 SlotDataValue = (SlotsValue >> Shift) & 0xFFFFFFF;
+    
+    // Extract item_type (bits 18-27, 10 bits)
+    int32 ItemType = (SlotDataValue >> 18) & 0x3FF;
+    
+    return ItemType;
 }
 
 void ADojoCraftIslandManager::DisableCameraLagDuringTeleport(APawn* Pawn)

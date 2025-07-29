@@ -153,22 +153,6 @@ pub impl IslandChunkImpl of IslandChunkTrait {
         } else {
             self.blocks1 += block_id.into() * shift;
         }
-
-        // If block placed above ground level, check if grass is underneath
-        if z_local == 1 {
-            let block_under_info = get_block_at_pos(blocks, x_local, y_local, 0);
-
-            // Convert grass to dirt when covered
-            if block_under_info == 1 {
-                let under_shift = fast_power_2(((x_local + y_local * 4) * 4).into()).into();
-
-                if lower_layer {
-                    self.blocks2 = self.blocks2 - block_under_info.into() * under_shift + 2 * under_shift;
-                } else {
-                    self.blocks1 = self.blocks1 - block_under_info.into() * under_shift + 2 * under_shift;
-                }
-            }
-        }
     }
 
     fn remove_block(ref self: IslandChunk, x: u64, y: u64, z: u64) -> u16 {

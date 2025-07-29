@@ -396,8 +396,12 @@ mod actions {
                 if item_type < 32 {
                     // Blocks can only be placed in main island (space_id == 1)
                     assert(player_data.current_space_id == 1, 'Error: not in main island');
+                    // Actual blocks (grass, dirt, stone) can only be placed at ground level
+                    if item_type <= 3 {
+                        assert(z == 8192, 'Error: blocks only at z=0');
+                    }
                     place_block(ref world, x, y, z, item_type);
-                } else if item_type == 50 || (item_type >= 55 && item_type <= 59) {
+                } else if item_type == 50 || (item_type >= 60 && item_type <= 64) {
                     // World structures (House Pattern, Workshop, Well, Kitchen, Warehouse, Brewery) only in main island
                     assert(player_data.current_space_id == 1, 'Error: not in main island');
                     WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
