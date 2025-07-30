@@ -3,8 +3,6 @@
 
 #include "DojoCraftIslandManager.h"
 #include "EngineUtils.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "Components/StaticMeshComponent.h"
 
 // Define static constants
 const FVector ADojoCraftIslandManager::DEFAULT_OUTDOOR_SPAWN_POS(50.0f, 50.0f, 250.0f);
@@ -16,9 +14,6 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
-	// Initialize pointers
-	GhostPreviewActor = nullptr;
-	CurrentInventory = nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -115,32 +110,6 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // Update ghost preview to follow target location
-    if (CurrentInventory)
-    {
-        int32 SelectedItemId = GetSelectedItemId();
-        if (IsBuildingPattern(SelectedItemId))
-        {
-            // Show ghost at current target location
-            if (!GhostPreviewActor)
-            {
-                // Spawn ghost preview if needed
-                UpdateGhostPreview();
-            }
-            else
-            {
-                // Just update position to follow target
-                FVector GhostLocation(TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
-                GhostLocation.Z += 50.0f; // One block above target for visibility
-                GhostPreviewActor->SetActorLocation(GhostLocation);
-            }
-        }
-        else if (GhostPreviewActor)
-        {
-            // Remove ghost if no building selected
-            RemoveGhostPreview();
-        }
-    }
     
     // Original Tick functionality for handling target blocks and spawn queue
     APlayerController* PC = GetWorld()->GetFirstPlayerController();
@@ -350,8 +319,6 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     // Check if this is the current player
     if (IsCurrentPlayer())
     {
-        // Store the current inventory
-        CurrentInventory = Inventory;
 
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
@@ -838,106 +805,6 @@ void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
     }
 }
 
-int32 ADojoCraftIslandManager::GetSelectedItemId() const
-{
-    if (!CurrentInventory) 
-    {
-        UE_LOG(LogTemp, Warning, TEXT("GetSelectedItemId: CurrentInventory is null"));
-        return 0;
-    }
-
-    int32 SelectedSlot = CurrentInventory->HotbarSelectedSlot;
-    if (SelectedSlot >= 36) return 0; // Max 36 slots (9 per felt252)
-    
-    UE_LOG(LogTemp, Warning, TEXT("GetSelectedItemId: SelectedSlot=%d"), SelectedSlot);
-
-    // Determine which slot field to use
-    int32 FeltIndex = SelectedSlot / 9;
-    int32 SlotInFelt = SelectedSlot % 9;
-
-    FString SlotData;
-    switch (FeltIndex)
-    {
-        case 0: SlotData = CurrentInventory->Slots1; break;
-        case 1: SlotData = CurrentInventory->Slots2; break;
-        case 2: SlotData = CurrentInventory->Slots3; break;
-        case 3: SlotData = CurrentInventory->Slots4; break;
-        default: return 0;
-    }
-
-    // Convert hex string to number
-    if (SlotData.StartsWith("0x"))
-    {
-        SlotData = SlotData.Mid(2);
-    }
-
-    // Parse the hex string to a big integer
-    // We need to handle this as a 256-bit number
-    TArray<uint8> Bytes;
-    
-    // Convert hex string to bytes
-    for (int32 i = 0; i < SlotData.Len(); i += 2)
-    {
-        uint8 Byte = 0;
-        
-        // High nibble
-        TCHAR C1 = (i < SlotData.Len()) ? SlotData[i] : '0';
-        if (C1 >= '0' && C1 <= '9') Byte = (C1 - '0') << 4;
-        else if (C1 >= 'a' && C1 <= 'f') Byte = (10 + (C1 - 'a')) << 4;
-        else if (C1 >= 'A' && C1 <= 'F') Byte = (10 + (C1 - 'A')) << 4;
-        
-        // Low nibble
-        TCHAR C2 = (i + 1 < SlotData.Len()) ? SlotData[i + 1] : '0';
-        if (C2 >= '0' && C2 <= '9') Byte |= (C2 - '0');
-        else if (C2 >= 'a' && C2 <= 'f') Byte |= (10 + (C2 - 'a'));
-        else if (C2 >= 'A' && C2 <= 'F') Byte |= (10 + (C2 - 'A'));
-        
-        Bytes.Add(Byte);
-    }
-    
-    // Cairo stores slots packed from LSB to MSB in the felt252
-    // Each slot is 28 bits: [10 bits item_type][8 bits quantity][10 bits extra]
-    // Slot 0 starts at bit 0, slot 1 at bit 28, etc.
-    
-    // Pad bytes array to 32 bytes if needed
-    while (Bytes.Num() < 32)
-    {
-        Bytes.Insert(0, 0); // Pad at the beginning since hex is big-endian
-    }
-    
-    // Calculate bit position for the selected slot
-    uint32 BitOffset = SlotInFelt * 28;
-    
-    // Extract 28 bits from the bytes array
-    // Since felt252 is big-endian but slots are packed from LSB, we need to
-    // work from the right side of the number
-    uint64 SlotDataValue = 0;
-    
-    // Read from the end of the array (LSB) and extract bits
-    for (int32 i = 0; i < 5; i++) // Read 5 bytes to ensure we get all 28 bits
-    {
-        int32 ByteIndex = 31 - (BitOffset / 8) - i;
-        if (ByteIndex >= 0 && ByteIndex < Bytes.Num())
-        {
-            SlotDataValue |= ((uint64)Bytes[ByteIndex]) << (i * 8);
-        }
-    }
-    
-    // Shift to align with the bit offset within the bytes
-    SlotDataValue >>= (BitOffset % 8);
-    
-    // Mask to get only 28 bits
-    SlotDataValue &= 0x0FFFFFFF;
-    
-    // Extract item_type (bits 18-27, top 10 bits of the 28-bit value)
-    int32 ItemType = (SlotDataValue >> 18) & 0x3FF;
-    
-    // Extract quantity for debugging
-    int32 Quantity = (SlotDataValue >> 10) & 0xFF;
-    
-
-    return ItemType;
-}
 
 void ADojoCraftIslandManager::DisableCameraLagDuringTeleport(APawn* Pawn)
 {
@@ -1469,84 +1336,3 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
     }
 }
 
-bool ADojoCraftIslandManager::IsBuildingPattern(int32 ItemId) const
-{
-    // Building patterns: House (50), Workshop (60), Well (61), Kitchen (62), Warehouse (63), Brewery (64)
-    return ItemId == 50 || (ItemId >= 60 && ItemId <= 64);
-}
-
-void ADojoCraftIslandManager::UpdateGhostPreview()
-{
-    // Remove existing ghost if any
-    RemoveGhostPreview();
-    
-    // Get selected item
-    int32 SelectedItemId = GetSelectedItemId();
-    
-    // Only show ghost for building patterns
-    if (!IsBuildingPattern(SelectedItemId))
-    {
-        return;
-    }
-    
-    // Get the actor class for this item
-    if (!ItemDataTable) 
-    {
-        return;
-    }
-    
-    const FItemDataRow* ItemData = reinterpret_cast<const FItemDataRow*>(
-        DataTableHelpers::FindRowByColumnValue(ItemDataTable, TEXT("ID"), SelectedItemId)
-    );
-    
-    if (!ItemData || !ItemData->ActorClass) 
-    {
-        return;
-    }
-    
-    // Spawn at current target location
-    FVector GhostLocation(TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
-    GhostLocation.Z += 50.0f; // One block above target for visibility
-    
-    // Spawn the ghost actor
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-    
-    GhostPreviewActor = GetWorld()->SpawnActor<AActor>(ItemData->ActorClass, GhostLocation, FRotator::ZeroRotator, SpawnParams);
-    
-    if (GhostPreviewActor)
-    {
-        // Set the whole actor to be non-collidable
-        GhostPreviewActor->SetActorEnableCollision(false);
-        
-        // Make it semi-transparent and ghostly
-        TArray<UPrimitiveComponent*> Components;
-        GhostPreviewActor->GetComponents<UPrimitiveComponent>(Components);
-        
-        for (UPrimitiveComponent* Component : Components)
-        {
-            // Disable collision
-            Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-            
-            // Make semi-transparent
-            if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
-            {
-                // Simple approach - just modify render settings
-                MeshComp->SetRenderCustomDepth(true);
-                MeshComp->SetCustomDepthStencilValue(252); // Special value for ghost
-                
-                // Try to make it translucent through actor opacity if available
-                MeshComp->SetScalarParameterValueOnMaterials(TEXT("Opacity"), 0.5f);
-            }
-        }
-    }
-}
-
-void ADojoCraftIslandManager::RemoveGhostPreview()
-{
-    if (GhostPreviewActor)
-    {
-        GhostPreviewActor->Destroy();
-        GhostPreviewActor = nullptr;
-    }
-}
