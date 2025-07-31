@@ -11,7 +11,7 @@ trait IActions<T> {
     fn generate_island_part(ref self: T, x: u64, y: u64, z: u64, island_id: u16);
     fn visit(ref self: T, space_id: u16);
     fn visit_new_island(ref self: T);
-    fn start_processing(ref self: T, process_type: u8);
+    fn start_processing(ref self: T, process_type: u8, input_amount: u32);
     fn cancel_processing(ref self: T);
 }
 
@@ -575,7 +575,7 @@ mod actions {
             self.visit(island_id);
         }
 
-        fn start_processing(ref self: ContractState, process_type: u8) {
+        fn start_processing(ref self: ContractState, process_type: u8, input_amount: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
             let current_time = starknet::get_block_timestamp();
@@ -596,20 +596,27 @@ mod actions {
             };
             
             assert(process_type_enum != ProcessType::None, 'Invalid process type');
+            assert(input_amount > 0, 'Input amount must be positive');
             
             // Get processing config
             let config = get_processing_config(process_type_enum);
             
-            // Get player inventory
-            let mut inventory: Inventory = world.read_model((player, 0));
+            // Get player inventories (hotbar and main inventory)
+            let mut hotbar: Inventory = world.read_model((player, 0));
+            let mut inventory: Inventory = world.read_model((player, 1));
             
-            // Count available input items
-            let available_items = inventory.get_item_amount(config.input_item.try_into().unwrap());
-            assert(available_items > 0, 'No input items');
+            // Count available input items in both hotbar and inventory
+            let hotbar_items = hotbar.get_item_amount(config.input_item.try_into().unwrap());
+            let inventory_items = inventory.get_item_amount(config.input_item.try_into().unwrap());
+            let available_items = hotbar_items + inventory_items;
+            assert(available_items >= input_amount, 'Not enough input items');
             
-            // Calculate batches and time
-            let max_batches = available_items / config.input_amount;
-            let total_time = max_batches.into() * config.time_per_batch;
+            // Calculate batches to process based on input amount
+            let batches_to_process = input_amount / config.input_amount;
+            assert(batches_to_process > 0, 'Not enough for one batch');
+            
+            // Calculate processing time
+            let total_time = batches_to_process.into() * config.time_per_batch;
             
             // Cap at max processing time
             let capped_time = if total_time > MAX_PROCESSING_TIME {
@@ -619,21 +626,27 @@ mod actions {
             };
             let actual_batches = (capped_time / config.time_per_batch).try_into().unwrap();
             
-            // Calculate actual items to process
-            let items_to_remove = actual_batches * config.input_amount;
-            let items_to_add = actual_batches * config.output_amount;
+            // Use the exact input amount requested (we already verified it's available)
+            let items_to_remove = input_amount;
             
-            // TODO: Add proper inventory space check
-            // For now, we'll attempt to add and assert if it fails
+            // Remove input items from hotbar first, then inventory
+            let mut items_left_to_remove = items_to_remove;
+            if hotbar_items > 0 {
+                let remove_from_hotbar = if hotbar_items >= items_left_to_remove {
+                    items_left_to_remove
+                } else {
+                    hotbar_items
+                };
+                hotbar.remove_items(config.input_item.try_into().unwrap(), remove_from_hotbar);
+                items_left_to_remove -= remove_from_hotbar;
+            }
             
-            // Remove input items
-            inventory.remove_items(config.input_item.try_into().unwrap(), items_to_remove);
+            if items_left_to_remove > 0 {
+                inventory.remove_items(config.input_item.try_into().unwrap(), items_left_to_remove);
+            }
             
-            // Add output items
-            let remaining = inventory.add_items(config.output_item.try_into().unwrap(), items_to_add);
-            assert(remaining == 0, 'Not enough inventory space');
-            
-            // Write updated inventory
+            // Write updated inventories (only removed input items, no output added yet)
+            world.write_model(@hotbar);
             world.write_model(@inventory);
             
             // Set processing lock
@@ -653,31 +666,59 @@ mod actions {
             
             // Get current lock
             let processing_lock: ProcessingLock = world.read_model(player);
-            assert(processing_lock.unlock_time > current_time, 'Not processing');
+            assert(processing_lock.unlock_time > 0, 'Not processing');
             
             // Get processing config
             let config = get_processing_config(processing_lock.process_type);
             
-            // Calculate remaining batches
-            let remaining_time = processing_lock.unlock_time - current_time;
-            let remaining_batches = (remaining_time / config.time_per_batch).try_into().unwrap();
-            let _completed_batches = processing_lock.batches_processed - remaining_batches;
+            // Calculate completed and remaining batches
+            // Start time = unlock_time - (total_batches * time_per_batch)
+            let total_processing_time = config.time_per_batch * processing_lock.batches_processed.into();
+            let start_time = processing_lock.unlock_time - total_processing_time;
+            let elapsed_time = current_time - start_time;
             
-            // Get inventory
-            let mut inventory: Inventory = world.read_model((player, 0));
+            // Calculate how many batches have been completed so far
+            let completed_batches = (elapsed_time / config.time_per_batch).try_into().unwrap();
+            let completed_batches = if completed_batches > processing_lock.batches_processed {
+                processing_lock.batches_processed
+            } else {
+                completed_batches
+            };
+            
+            let remaining_batches = processing_lock.batches_processed - completed_batches;
+            
+            // Get inventories
+            let mut hotbar: Inventory = world.read_model((player, 0));
+            let mut inventory: Inventory = world.read_model((player, 1));
+            
+            // Add output items for completed batches
+            if completed_batches > 0 {
+                let items_to_add = completed_batches * config.output_amount;
+                // Try to add to hotbar first, then inventory
+                let remaining_in_hotbar = hotbar.add_items(config.output_item.try_into().unwrap(), items_to_add);
+                let remaining_in_inventory = if remaining_in_hotbar > 0 {
+                    inventory.add_items(config.output_item.try_into().unwrap(), remaining_in_hotbar)
+                } else {
+                    0
+                };
+                assert(remaining_in_inventory == 0, 'Not enough space for output');
+            }
             
             // Return unprocessed input items
             if remaining_batches > 0 {
                 let items_to_return = remaining_batches * config.input_amount;
-                let remaining = inventory.add_items(config.input_item.try_into().unwrap(), items_to_return);
-                assert(remaining == 0, 'Cannot return all input items');
-                
-                // Remove corresponding output items
-                let items_to_remove = remaining_batches * config.output_amount;
-                inventory.remove_items(config.output_item.try_into().unwrap(), items_to_remove);
+                // Try to add to hotbar first, then inventory
+                let remaining_in_hotbar = hotbar.add_items(config.input_item.try_into().unwrap(), items_to_return);
+                let remaining_in_inventory = if remaining_in_hotbar > 0 {
+                    inventory.add_items(config.input_item.try_into().unwrap(), remaining_in_hotbar)
+                } else {
+                    0
+                };
+                assert(remaining_in_inventory == 0, 'Cannot return all input items');
             }
             
-            // Write updated inventory
+            // Write updated inventories
+            world.write_model(@hotbar);
             world.write_model(@inventory);
             
             // Clear lock

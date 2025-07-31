@@ -104,6 +104,8 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
     CraftIslandGI->RequestSell.AddDynamic(this, &ADojoCraftIslandManager::RequestSell);
     CraftIslandGI->RequestBuy.AddDynamic(this, &ADojoCraftIslandManager::RequestBuy);
     CraftIslandGI->RequestGoBackHome.AddDynamic(this, &ADojoCraftIslandManager::RequestGoBackHome);
+    CraftIslandGI->RequestStartProcessing.AddDynamic(this, &ADojoCraftIslandManager::RequestStartProcessing);
+    CraftIslandGI->RequestCancelProcessing.AddDynamic(this, &ADojoCraftIslandManager::RequestCancelProcessing);
 }
 
 void ADojoCraftIslandManager::Tick(float DeltaTime)
@@ -380,6 +382,36 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== HandlePlayerData END =========="));
 }
 
+void ADojoCraftIslandManager::HandleProcessingLock(UDojoModel* Object)
+{
+    if (!Object) return;
+
+    UDojoModelCraftIslandPocketProcessingLock* ProcessingLock = Cast<UDojoModelCraftIslandPocketProcessingLock>(Object);
+    if (!ProcessingLock) return;
+
+    UE_LOG(LogTemp, Log, TEXT("Received ProcessingLock - Player: %s, UnlockTime: %lld, ProcessType: %d"), 
+        *ProcessingLock->Player, ProcessingLock->UnlockTime, ProcessingLock->ProcessType);
+
+    // Check if this is the current player
+    if (ProcessingLock->Player == Account.Address)
+    {
+        // Update our local processing lock state
+        CurrentProcessingLock.Player = ProcessingLock->Player;
+        CurrentProcessingLock.UnlockTime = ProcessingLock->UnlockTime;
+        CurrentProcessingLock.ProcessType = ProcessingLock->ProcessType;
+        CurrentProcessingLock.BatchesProcessed = ProcessingLock->BatchesProcessed;
+
+        // Broadcast update for UI
+        UCraftIslandGameInst* CraftIslandGI = Cast<UCraftIslandGameInst>(GetGameInstance());
+        if (CraftIslandGI)
+        {
+            CraftIslandGI->UpdateProcessingLock.Broadcast(ProcessingLock);
+        }
+
+        UE_LOG(LogTemp, Log, TEXT("Updated CurrentProcessingLock for player"));
+    }
+}
+
 bool ADojoCraftIslandManager::IsCurrentPlayer() const
 {
     // Placeholder logic — replace this with your actual check
@@ -430,6 +462,9 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
     }
     else if (Name == "craft_island_pocket-PlayerData") {
         HandlePlayerData(Model);
+    }
+    else if (Name == "craft_island_pocket-ProcessingLock") {
+        HandleProcessingLock(Model);
     }
 
     if (!bLoaded)
@@ -706,6 +741,107 @@ void ADojoCraftIslandManager::RequestGoBackHome()
         UE_LOG(LogTemp, Error, TEXT("RequestGoBackHome: DojoHelpers is null!"));
     }
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== RequestGoBackHome END =========="));
+}
+
+void ADojoCraftIslandManager::RequestStartProcessing(uint8 ProcessType, int32 InputAmount)
+{
+    UE_LOG(LogTemp, Log, TEXT("RequestStartProcessing: ProcessType=%d, InputAmount=%d"), ProcessType, InputAmount);
+    
+    if (DojoHelpers)
+    {
+        DojoHelpers->CallCraftIslandPocketActionsStartProcessing(Account, ProcessType, InputAmount);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("RequestStartProcessing: DojoHelpers is null!"));
+    }
+}
+
+void ADojoCraftIslandManager::RequestCancelProcessing()
+{
+    UE_LOG(LogTemp, Log, TEXT("RequestCancelProcessing"));
+    
+    if (DojoHelpers)
+    {
+        DojoHelpers->CallCraftIslandPocketActionsCancelProcessing(Account);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("RequestCancelProcessing: DojoHelpers is null!"));
+    }
+}
+
+void ADojoCraftIslandManager::StartProcessing(uint8 ProcessType, int32 InputAmount)
+{
+    RequestStartProcessing(ProcessType, InputAmount);
+}
+
+void ADojoCraftIslandManager::CancelProcessing()
+{
+    RequestCancelProcessing();
+}
+
+void ADojoCraftIslandManager::ToggleProcessingUI(uint8 ProcessType, bool bShow)
+{
+    UE_LOG(LogTemp, Log, TEXT("ToggleProcessingUI: ProcessType=%d, bShow=%s"), ProcessType, bShow ? TEXT("true") : TEXT("false"));
+    
+    UCraftIslandGameInst* GameInst = Cast<UCraftIslandGameInst>(GetGameInstance());
+    if (GameInst)
+    {
+        GameInst->ToggleLockUI.Broadcast(ProcessType, bShow);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("ToggleProcessingUI: GameInstance is null or not UCraftIslandGameInst"));
+    }
+}
+
+void ADojoCraftIslandManager::ToggleCraftUI(bool bShow)
+{
+    UE_LOG(LogTemp, Log, TEXT("ToggleCraftUI: bShow=%s"), bShow ? TEXT("true") : TEXT("false"));
+    
+    UCraftIslandGameInst* GameInst = Cast<UCraftIslandGameInst>(GetGameInstance());
+    if (GameInst)
+    {
+        GameInst->ToggleCraftUI.Broadcast(bShow);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("ToggleCraftUI: GameInstance is null or not UCraftIslandGameInst"));
+    }
+}
+
+bool ADojoCraftIslandManager::IsPlayerProcessing() const
+{
+    // Get current timestamp (this would need to be synced with blockchain time)
+    int64 CurrentTime = FDateTime::UtcNow().ToUnixTimestamp();
+    return CurrentProcessingLock.UnlockTime > CurrentTime;
+}
+
+float ADojoCraftIslandManager::GetProcessingTimeRemaining() const
+{
+    if (!IsPlayerProcessing())
+    {
+        return 0.0f;
+    }
+    
+    int64 CurrentTime = FDateTime::UtcNow().ToUnixTimestamp();
+    int64 TimeRemaining = CurrentProcessingLock.UnlockTime - CurrentTime;
+    
+    return FMath::Max(0.0f, static_cast<float>(TimeRemaining));
+}
+
+FString ADojoCraftIslandManager::GetProcessingTypeName(uint8 ProcessType) const
+{
+    switch (ProcessType)
+    {
+        case 1: return TEXT("Grinding Wheat to Flour");
+        case 2: return TEXT("Cutting Logs to Planks");
+        case 3: return TEXT("Smelting Ore to Ingots");
+        case 4: return TEXT("Crushing Stone to Gravel");
+        case 5: return TEXT("Processing Clay to Bricks");
+        default: return TEXT("Unknown Process");
+    }
 }
 
 void ADojoCraftIslandManager::SetTargetBlock(FVector Location)

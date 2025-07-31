@@ -76,6 +76,7 @@ fn init_inventory(ref world: WorldStorage, player: ContractAddress) {
     inventory.add_items(53, 5);  // Potato Seeds
     inventory.add_items(36, 1);  // Stone Pickaxe Head
     inventory.add_items(38, 1);  // Stone Shovel Head
+    inventory.add_items(44, 40); // Oak Logs
     world.write_model(@inventory);
 
     let craft: Inventory = InventoryTrait::new(2, 2, 9, player);

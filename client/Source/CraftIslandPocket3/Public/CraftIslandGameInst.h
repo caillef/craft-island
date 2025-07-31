@@ -14,6 +14,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestExecute);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestSpawn);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdateInventory, UDojoModelCraftIslandPocketInventory*, Inventory);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePlayerData, UDojoModelCraftIslandPocketPlayerData*, PlayerData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdateProcessingLock, UDojoModelCraftIslandPocketProcessingLock*, ProcessingLock);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventorySelectHotbar, UObject*, Slot);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestHit);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestPlaceUse);
@@ -26,8 +27,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestGoBackHome);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestExploreIslandPart);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShipClicked);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestSell);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestOpenCraft);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FToggleCraftUI, bool, bShow);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRequestBuy, int32, ItemId, int32, Quantity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRequestStartProcessing, uint8, ProcessType, int32, InputAmount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRequestCancelProcessing);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FToggleLockUI, uint8, ProcessType, bool, bShow);
 
 /**
  *
@@ -57,6 +61,9 @@ public:
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FUpdatePlayerData UpdatePlayerData;
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FUpdateProcessingLock UpdateProcessingLock;
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
     FInventorySelectHotbar InventorySelectHotbar;
@@ -98,11 +105,33 @@ public:
     FRequestBuy RequestBuy;
 
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
-    FRequestOpenCraft RequestOpenCraft;
+    FToggleCraftUI ToggleCraftUI;
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FRequestStartProcessing RequestStartProcessing;
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FRequestCancelProcessing RequestCancelProcessing;
+
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Event Dispatchers")
+    FToggleLockUI ToggleLockUI;
 
     // Debug function to log Dojo memory usage
     UFUNCTION(BlueprintCallable, Category = "Debug")
     void LogDojoMemoryUsage();
+
+    // UI Toggle Helper Functions
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ShowCraftUI() { ToggleCraftUI.Broadcast(true); }
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideCraftUI() { ToggleCraftUI.Broadcast(false); }
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ShowProcessingUI(uint8 ProcessType) { ToggleLockUI.Broadcast(ProcessType, true); }
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideProcessingUI(uint8 ProcessType) { ToggleLockUI.Broadcast(ProcessType, false); }
 
     // Override Init
     virtual void Init() override;

@@ -49,8 +49,8 @@ pub fn get_processing_config(process_type: ProcessType) -> ProcessingConfig {
             input_item: 44, // Oak Log
             output_item: 45, // Oak Plank
             input_amount: 1,
-            output_amount: 4,
-            time_per_batch: 10,
+            output_amount: 2,
+            time_per_batch: 4,
         },
         ProcessType::SmeltOre => ProcessingConfig {
             input_item: 999, // Iron Ore (TODO: needs to be added to items.json)

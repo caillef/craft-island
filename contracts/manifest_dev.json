@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x5e86c24fbf49355071a3a3f3684b484a3553a73c5e7671c7eb6bb5ff1517369",
+      "class_hash": "0x58495a2f308b882ac401771217c8e07155fd16c507f2f8bd39b97fd30e243e5",
       "abi": [
         {
           "type": "impl",
@@ -1574,6 +1574,10 @@
                 {
                   "name": "process_type",
                   "type": "core::integer::u8"
+                },
+                {
+                  "name": "input_amount",
+                  "type": "core::integer::u32"
                 }
               ],
               "outputs": [],

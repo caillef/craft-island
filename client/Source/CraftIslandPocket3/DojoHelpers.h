@@ -228,6 +228,27 @@ public:
     bool Destroyed;
 };
 
+
+// Model definition for `craft_island_pocket::models::processing::ProcessingLock` model
+UCLASS(BlueprintType)
+class UDojoModelCraftIslandPocketProcessingLock : public UDojoModel
+{
+    GENERATED_BODY()
+
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString Player;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int64 UnlockTime;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int ProcessType;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int BatchesProcessed;
+};
+
 // RAII wrapper for Dojo resources
 template<typename T>
 struct TDojoDeleter
@@ -282,6 +303,7 @@ private:
     UDojoModel* parseCraftIslandPocketPlayerDataModel(struct Struct* model);
     UDojoModel* parseCraftIslandPocketPlayerStatsModel(struct Struct* model);
     UDojoModel* parseCraftIslandPocketWorldStructureModel(struct Struct* model);
+    UDojoModel* parseCraftIslandPocketProcessingLockModel(struct Struct* model);
 
     void ParseModelsAndSend(struct CArrayStruct *models);
 
@@ -426,5 +448,17 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsBuy(const FControllerAccount& account, int32 ItemId, int32 Quantity);
+
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsStartProcessing(const FAccount& account, int32 ProcessType, int32 InputAmount);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsStartProcessing(const FControllerAccount& account, int32 ProcessType, int32 InputAmount);
+
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsCancelProcessing(const FAccount& account);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsCancelProcessing(const FControllerAccount& account);
 
 };

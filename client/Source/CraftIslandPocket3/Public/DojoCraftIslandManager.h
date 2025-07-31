@@ -86,6 +86,32 @@ struct FSpawnQueueData
     }
 };
 
+USTRUCT(BlueprintType)
+struct FProcessingLock
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly)
+    FString Player;
+
+    UPROPERTY(BlueprintReadOnly)
+    int64 UnlockTime;
+
+    UPROPERTY(BlueprintReadOnly)
+    uint8 ProcessType;
+
+    UPROPERTY(BlueprintReadOnly)
+    int32 BatchesProcessed;
+
+    FProcessingLock()
+    {
+        Player = "";
+        UnlockTime = 0;
+        ProcessType = 0;
+        BatchesProcessed = 0;
+    }
+};
+
 UENUM(BlueprintType)
 enum class EActorSpawnType : uint8
 {
@@ -223,6 +249,12 @@ private:
     UFUNCTION()
     void RequestGoBackHome();
 
+    UFUNCTION()
+    void RequestStartProcessing(uint8 ProcessType, int32 InputAmount);
+
+    UFUNCTION()
+    void RequestCancelProcessing();
+
 public:
 	// Sets default values for this actor's properties
 	ADojoCraftIslandManager();
@@ -296,6 +328,8 @@ public:
     void HandleInventory(UDojoModel* Object);
 
     void HandlePlayerData(UDojoModel* Object);
+    
+    void HandleProcessingLock(UDojoModel* Object);
 
     bool IsCurrentPlayer() const;
 
@@ -415,6 +449,32 @@ public:
     // Track the structure type of the current space (0 if not in a structure)
     UPROPERTY()
     int32 CurrentSpaceStructureType;
+    
+    // Processing functions
+    UFUNCTION(BlueprintCallable, Category = "Processing")
+    void StartProcessing(uint8 ProcessType, int32 InputAmount);
+    
+    UFUNCTION(BlueprintCallable, Category = "Processing")
+    void CancelProcessing();
+    
+    UFUNCTION(BlueprintCallable, Category = "Processing")
+    void ToggleProcessingUI(uint8 ProcessType, bool bShow);
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ToggleCraftUI(bool bShow);
+    
+    UFUNCTION(BlueprintCallable, Category = "Processing")
+    bool IsPlayerProcessing() const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Processing")
+    float GetProcessingTimeRemaining() const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Processing")
+    FString GetProcessingTypeName(uint8 ProcessType) const;
+    
+    // Current processing lock state
+    UPROPERTY()
+    FProcessingLock CurrentProcessingLock;
     
     
 private:

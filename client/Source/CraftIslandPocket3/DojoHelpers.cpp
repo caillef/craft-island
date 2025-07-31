@@ -815,6 +815,23 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketWorldStructureModel(struct Struc
     return Model;
 }
 
+UDojoModel* ADojoHelpers::parseCraftIslandPocketProcessingLockModel(struct Struct* model)
+{
+    UDojoModelCraftIslandPocketProcessingLock* Model = NewObject<UDojoModelCraftIslandPocketProcessingLock>(GetTransientPackage());
+    CArrayMember* members = &model->children;
+
+    for (int k = 0; k < members->data_len; k++) {
+        Member* member = &members->data[k];
+        ConvertTyToUnrealEngineType(member, "player", "felt252", Model->Player);
+        ConvertTyToUnrealEngineType(member, "unlock_time", "u64", Model->UnlockTime);
+        ConvertTyToUnrealEngineType(member, "process_type", "u8", Model->ProcessType);
+        ConvertTyToUnrealEngineType(member, "batches_processed", "u32", Model->BatchesProcessed);
+    }
+
+    FDojoModule::CArrayFree(members->data, members->data_len);
+    return Model;
+}
+
 void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
 {
     if (!models || !models->data)
@@ -871,6 +888,12 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         {
             ParsedModel = \
                      ADojoHelpers::parseCraftIslandPocketWorldStructureModel(&\
+                     models->data[Index]);
+        }
+        else if (strcmp(ModelName, "craft_island_pocket-ProcessingLock") == 0)
+        {
+            ParsedModel = \
+                     ADojoHelpers::parseCraftIslandPocketProcessingLockModel(&\
                      models->data[Index]);
         }
         else
@@ -1173,4 +1196,32 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsBuy(const FControllerAc
     args.Append(ConvertToFeltHexa<int>(Quantity, "u32")); // Quantity as u32
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("buy"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallCraftIslandPocketActionsStartProcessing(const FAccount& account, int32 ProcessType, int32 InputAmount) {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(ProcessType, "u8")); // Process type as u8
+    args.Append(ConvertToFeltHexa<int>(InputAmount, "u32")); // Input amount as u32
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("start_processing"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsStartProcessing(const FControllerAccount& account, int32 ProcessType, int32 InputAmount) {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<int>(ProcessType, "u8")); // Process type as u8
+    args.Append(ConvertToFeltHexa<int>(InputAmount, "u32")); // Input amount as u32
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("start_processing"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallCraftIslandPocketActionsCancelProcessing(const FAccount& account) {
+    TArray<FString> args;
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("cancel_processing"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsCancelProcessing(const FControllerAccount& account) {
+    TArray<FString> args;
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("cancel_processing"), FString::Join(args, TEXT(",")));
 }
