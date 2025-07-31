@@ -13,7 +13,7 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 }
 
 // Called when the game starts or when spawned
@@ -109,8 +109,8 @@ void ADojoCraftIslandManager::ConnectGameInstanceEvents()
 void ADojoCraftIslandManager::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    
-    
+
+
     // Original Tick functionality for handling target blocks and spawn queue
     APlayerController* PC = GetWorld()->GetFirstPlayerController();
     if (!PC) return;
@@ -168,7 +168,7 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
     {
         FSpawnQueueData SpawnData = SpawnQueue[0];
         SpawnQueue.RemoveAt(0);
-        
+
         EActorSpawnType SpawnType = EActorSpawnType::ChunkBlock;
         if (SpawnData.DojoModel)
         {
@@ -181,9 +181,9 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                 SpawnType = EActorSpawnType::WorldStructure;
             }
         }
-        
+
         AActor* SpawnedActor = PlaceAssetInWorld(SpawnData.Item, SpawnData.DojoPosition, SpawnData.Validated, SpawnType);
-        
+
         // Handle specific actor types based on the queued data
         if (SpawnedActor && SpawnData.DojoModel)
         {
@@ -206,7 +206,7 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                 }
             }
         }
-        
+
         SpawnsProcessed++;
     }
 }
@@ -319,6 +319,11 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
     // Check if this is the current player
     if (IsCurrentPlayer())
     {
+        // Store the hotbar inventory (Id == 0) for getting selected item
+        if (Inventory->Id == 0)
+        {
+            CurrentInventory = Inventory;
+        }
 
         // Get GameInstance and cast to your custom subclass
         UGameInstance* GameInstance = GetGameInstance();
@@ -598,14 +603,11 @@ void ADojoCraftIslandManager::RequestPlaceUse()
 
     // Get current selected item to check if it's a block or structure
     int32 SelectedItemId = GetSelectedItemId();
-
-    // Determine Z offset based on item type
     int32 ZOffset = 0;
-    
+
     // Calculate the actual Z position we're targeting
     int32 ActualZ = TargetBlock.Z + 8192;
-    
-    
+
     // Blocks (1-3) must be at z=0
     // World structures (50, 60-64) should be placed one level up
     // Other items can stack on blocks
@@ -631,9 +633,6 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         TargetBlock.Y + 8192,
         TargetBlock.Z + 8192 + ZOffset
     );
-    
-    // Remove ghost preview after placing
-    RemoveGhostPreview();
 }
 
 void ADojoCraftIslandManager::RequestSpawn()
@@ -656,12 +655,6 @@ void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
     }
 
     DojoHelpers->CallCraftIslandPocketActionsSelectHotbarSlot(Account, SlotIndex);
-    
-    // Update ghost preview when item selection changes
-    if (CurrentInventory)
-    {
-        RemoveGhostPreview(); // Force recreate on next tick
-    }
 }
 
 void ADojoCraftIslandManager::RequestHit()
@@ -805,6 +798,99 @@ void ADojoCraftIslandManager::SetCameraLag(APawn* Pawn, bool bEnableLag)
     }
 }
 
+int32 ADojoCraftIslandManager::GetSelectedItemId() const
+{
+    if (!CurrentInventory)
+    {
+        return 0;
+    }
+
+    int32 SelectedSlot = CurrentInventory->HotbarSelectedSlot;
+    if (SelectedSlot >= 36) return 0; // Max 36 slots (9 per felt252)
+
+    // Determine which slot field to use
+    int32 FeltIndex = SelectedSlot / 9;
+    int32 SlotInFelt = SelectedSlot % 9;
+
+    FString SlotData;
+    switch (FeltIndex)
+    {
+        case 0: SlotData = CurrentInventory->Slots1; break;
+        case 1: SlotData = CurrentInventory->Slots2; break;
+        case 2: SlotData = CurrentInventory->Slots3; break;
+        case 3: SlotData = CurrentInventory->Slots4; break;
+        default: return 0;
+    }
+
+    // Convert hex string to number
+    if (SlotData.StartsWith("0x"))
+    {
+        SlotData = SlotData.Mid(2);
+    }
+
+    // Parse the hex string to a big integer
+    // We need to handle this as a 256-bit number
+    TArray<uint8> Bytes;
+
+    // Convert hex string to bytes
+    for (int32 i = 0; i < SlotData.Len(); i += 2)
+    {
+        uint8 Byte = 0;
+
+        // High nibble
+        TCHAR C1 = (i < SlotData.Len()) ? SlotData[i] : '0';
+        if (C1 >= '0' && C1 <= '9') Byte = (C1 - '0') << 4;
+        else if (C1 >= 'a' && C1 <= 'f') Byte = (10 + (C1 - 'a')) << 4;
+        else if (C1 >= 'A' && C1 <= 'F') Byte = (10 + (C1 - 'A')) << 4;
+
+        // Low nibble
+        TCHAR C2 = (i + 1 < SlotData.Len()) ? SlotData[i + 1] : '0';
+        if (C2 >= '0' && C2 <= '9') Byte |= (C2 - '0');
+        else if (C2 >= 'a' && C2 <= 'f') Byte |= (10 + (C2 - 'a'));
+        else if (C2 >= 'A' && C2 <= 'F') Byte |= (10 + (C2 - 'A'));
+
+        Bytes.Add(Byte);
+    }
+
+    // Cairo stores slots packed from LSB to MSB in the felt252
+    // Each slot is 28 bits: [10 bits item_type][8 bits quantity][10 bits extra]
+    // Slot 0 starts at bit 0, slot 1 at bit 28, etc.
+
+    // Pad bytes array to 32 bytes if needed
+    while (Bytes.Num() < 32)
+    {
+        Bytes.Insert(0, 0); // Pad at the beginning since hex is big-endian
+    }
+
+    // Calculate bit position for the selected slot
+    uint32 BitOffset = SlotInFelt * 28;
+
+    // Extract 28 bits from the bytes array
+    // Since felt252 is big-endian but slots are packed from LSB, we need to
+    // work from the right side of the number
+    uint64 SlotDataValue = 0;
+
+    // Read from the end of the array (LSB) and extract bits
+    for (int32 i = 0; i < 5; i++) // Read 5 bytes to ensure we get all 28 bits
+    {
+        int32 ByteIndex = 31 - (BitOffset / 8) - i;
+        if (ByteIndex >= 0 && ByteIndex < Bytes.Num())
+        {
+            SlotDataValue |= ((uint64)Bytes[ByteIndex]) << (i * 8);
+        }
+    }
+
+    // Shift to align with the bit offset within the bytes
+    SlotDataValue >>= (BitOffset % 8);
+
+    // Mask to get only 28 bits
+    SlotDataValue &= 0x0FFFFFFF;
+
+    // Extract item_type (bits 18-27, top 10 bits of the 28-bit value)
+    int32 ItemType = (SlotDataValue >> 18) & 0x3FF;
+
+    return ItemType;
+}
 
 void ADojoCraftIslandManager::DisableCameraLagDuringTeleport(APawn* Pawn)
 {
@@ -925,16 +1011,22 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
 
             // Show/hide workshop components based on structure type
             TArray<UActorComponent*> Components = DefaultBuilding->GetComponents().Array();
+            UE_LOG(LogTemp, Log, TEXT("DefaultBuilding has %d components, CurrentSpaceStructureType=%d"),
+                Components.Num(), CurrentSpaceStructureType);
+
             for (UActorComponent* Component : Components)
             {
                 if (Component)
                 {
                     FString ComponentName = Component->GetName();
+                    UE_LOG(LogTemp, Log, TEXT("Checking component: %s"), *ComponentName);
 
                     // Check if this is a workshop-specific component
-                    if (ComponentName.Contains(TEXT("Workshop")) ||
-                        ComponentName.Contains(TEXT("B_WoodWorkshop")) ||
-                        ComponentName.Contains(TEXT("B_Workshop")))
+                    // Look for any component with "Workshop" in the name (case insensitive)
+                    if (ComponentName.Contains(TEXT("Workshop"), ESearchCase::IgnoreCase) ||
+                        ComponentName.Contains(TEXT("WoodWorkshop"), ESearchCase::IgnoreCase) ||
+                        ComponentName.Contains(TEXT("B_Workshop"), ESearchCase::IgnoreCase) ||
+                        ComponentName.Contains(TEXT("workshop"), ESearchCase::IgnoreCase))
                     {
                         // Show if structure type is 60 (Workshop), hide otherwise
                         UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component);
@@ -943,11 +1035,43 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
                             bool bShouldBeVisible = (CurrentSpaceStructureType == 60);
                             PrimComp->SetVisibility(bShouldBeVisible);
                             PrimComp->SetCollisionEnabled(bShouldBeVisible ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
-                            UE_LOG(LogTemp, Log, TEXT("Component %s visibility=%s, collision=%s"),
+                            UE_LOG(LogTemp, Warning, TEXT("Workshop component %s: visibility=%s, collision=%s (structure type=%d)"),
                                 *ComponentName,
                                 bShouldBeVisible ? TEXT("true") : TEXT("false"),
-                                bShouldBeVisible ? TEXT("enabled") : TEXT("disabled"));
+                                bShouldBeVisible ? TEXT("enabled") : TEXT("disabled"),
+                                CurrentSpaceStructureType);
                         }
+                    }
+                }
+            }
+
+            // Also check child actors
+            TArray<AActor*> ChildActors;
+            DefaultBuilding->GetAllChildActors(ChildActors, true);
+            UE_LOG(LogTemp, Log, TEXT("DefaultBuilding has %d child actors"), ChildActors.Num());
+
+            for (AActor* ChildActor : ChildActors)
+            {
+                if (ChildActor)
+                {
+                    FString ActorName = ChildActor->GetName();
+                    UE_LOG(LogTemp, Log, TEXT("Checking child actor: %s"), *ActorName);
+
+                    // Check if this is a workshop-related actor
+                    if (ActorName.Contains(TEXT("Workshop"), ESearchCase::IgnoreCase) ||
+                        ActorName.Contains(TEXT("WoodWorkshop"), ESearchCase::IgnoreCase) ||
+                        ActorName.Contains(TEXT("B_Workshop"), ESearchCase::IgnoreCase) ||
+                        ActorName.Contains(TEXT("workshop"), ESearchCase::IgnoreCase))
+                    {
+                        bool bShouldBeVisible = (CurrentSpaceStructureType == 60);
+                        ChildActor->SetActorHiddenInGame(!bShouldBeVisible);
+                        ChildActor->SetActorEnableCollision(bShouldBeVisible);
+
+                        UE_LOG(LogTemp, Warning, TEXT("Workshop child actor %s: hidden=%s, collision=%s (structure type=%d)"),
+                            *ActorName,
+                            !bShouldBeVisible ? TEXT("true") : TEXT("false"),
+                            bShouldBeVisible ? TEXT("enabled") : TEXT("disabled"),
+                            CurrentSpaceStructureType);
                     }
                 }
             }
@@ -989,7 +1113,7 @@ void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, boo
 
 void ADojoCraftIslandManager::ClearAllSpawnedActors()
 {
-    
+
     UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors START =========="));
     UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"),
         *CurrentSpaceOwner, CurrentSpaceId);
@@ -1335,4 +1459,3 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
         UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d structures"), StructuresLoaded);
     }
 }
-

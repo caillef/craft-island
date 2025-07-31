@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x311618a6aeb788856d4afc380f4f1fd4d9fa7e8d6b84ad56e41665953f5ca7f",
+      "class_hash": "0x5e86c24fbf49355071a3a3f3684b484a3553a73c5e7671c7eb6bb5ff1517369",
       "abi": [
         {
           "type": "impl",
@@ -1566,6 +1566,25 @@
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "start_processing",
+              "inputs": [
+                {
+                  "name": "process_type",
+                  "type": "core::integer::u8"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "cancel_processing",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1699,6 +1718,8 @@
         "generate_island_part",
         "visit",
         "visit_new_island",
+        "start_processing",
+        "cancel_processing",
         "upgrade"
       ]
     },
@@ -1957,6 +1978,12 @@
       "class_hash": "0x2fe5180d2c848281d0c0f32b23bf7452872f76fbd796ec0aed7fc36bdabb2b3",
       "tag": "craft_island_pocket-PlayerStats",
       "selector": "0x2a92edae62771b960421a6c25f61baa8bcb4274809be50f39a103b47ef97fad"
+    },
+    {
+      "members": [],
+      "class_hash": "0x5a6499de45a3380235ca12e2ef6217692fd6a5e83eacbaf6b9b91a5dd0ee26a",
+      "tag": "craft_island_pocket-ProcessingLock",
+      "selector": "0x53c74b393d8b91faf4c42b262fdc898c543a3b2c4de2de06c5231e3edcbbe6e"
     },
     {
       "members": [],

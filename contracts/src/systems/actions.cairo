@@ -203,6 +203,16 @@ mod actions {
                 5  // Potato seed - 5 coins
             } else if item_id == 51 {
                 2  // Carrot seed - 2 coins
+            } else if item_id == 60 {
+                5  // Workshop Pattern - 5 coins
+            } else if item_id == 61 {
+                100  // Well Pattern - 100 coins
+            } else if item_id == 62 {
+                3000  // Kitchen Pattern - 3000 coins
+            } else if item_id == 63 {
+                500  // Warehouse Pattern - 500 coins
+            } else if item_id == 64 {
+                10000  // Brewery Pattern - 10000 coins
             } else {
                 assert(false, 'Item not available for purchase');
                 0

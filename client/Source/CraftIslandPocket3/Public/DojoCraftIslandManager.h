@@ -405,6 +405,12 @@ public:
     UPROPERTY()
     TMap<FString, FVector> SpacePlayerPositions;
     
+    // Current player inventory
+    UPROPERTY()
+    UDojoModelCraftIslandPocketInventory* CurrentInventory;
+    
+    // Get currently selected item ID from inventory
+    int32 GetSelectedItemId() const;
     
     // Track the structure type of the current space (0 if not in a structure)
     UPROPERTY()
