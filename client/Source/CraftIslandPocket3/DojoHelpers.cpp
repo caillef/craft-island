@@ -705,6 +705,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketGatherableResourceModel(struct S
         ConvertTyToUnrealEngineType(member, "max_harvest", "u8", Model->MaxHarvest);
         ConvertTyToUnrealEngineType(member, "remained_harvest", "u8", Model->RemainedHarvest);
         ConvertTyToUnrealEngineType(member, "destroyed", "bool", Model->Destroyed);
+        ConvertTyToUnrealEngineType(member, "tier", "u8", Model->Tier);
     }
 
     FDojoModule::CArrayFree(members->data, members->data_len);

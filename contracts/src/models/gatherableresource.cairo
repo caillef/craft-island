@@ -17,20 +17,25 @@ pub struct GatherableResource {
     pub max_harvest: u8, // if 0, destroyed when harvested, 255 if unlimited
     pub remained_harvest: u8,
     pub destroyed: bool,
+    pub tier: u8, // 0 = normal, 1 = golden
 }
 
 
 #[generate_trait]
 pub impl GatherableResourceImpl of GatherableResourceTrait {
     fn new(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16) -> GatherableResource {
-        Self::create_resource(owner, island_id, chunk_id, position, resource_id, false)
+        Self::create_resource(owner, island_id, chunk_id, position, resource_id, false, 0)
     }
 
     fn new_ready(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16) -> GatherableResource {
-        Self::create_resource(owner, island_id, chunk_id, position, resource_id, true)
+        Self::create_resource(owner, island_id, chunk_id, position, resource_id, true, 0)
     }
 
-    fn create_resource(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16, ready: bool) -> GatherableResource {
+    fn new_with_tier(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16, tier: u8) -> GatherableResource {
+        Self::create_resource(owner, island_id, chunk_id, position, resource_id, false, tier)
+    }
+
+    fn create_resource(owner: felt252, island_id: u16, chunk_id: u128, position: u8, resource_id: u16, ready: bool, tier: u8) -> GatherableResource {
         let max_harvest = Self::get_max_harvest(resource_id);
         let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
         let next_harvest_at = if ready {
@@ -51,6 +56,7 @@ pub impl GatherableResourceImpl of GatherableResourceTrait {
             max_harvest: max_harvest,
             remained_harvest: max_harvest,
             destroyed: false,
+            tier: tier,
         }
     }
 

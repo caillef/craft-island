@@ -194,6 +194,41 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                 if (ABaseObject* ActorObject = Cast<ABaseObject>(SpawnedActor))
                 {
                     ActorObject->GatherableResourceInfo = Gatherable;
+                    if (Gatherable->Tier == 1)
+                    {
+                        // Change materials to gold for tier 1 resources
+                        TArray<UActorComponent*> Components = ActorObject->GetComponents().Array();
+                        for (UActorComponent* Component : Components)
+                        {
+                            if (UMeshComponent* MeshComp = Cast<UMeshComponent>(Component))
+                            {
+                                if (GoldMaterial)
+                                {
+                                    for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                                    {
+                                        MeshComp->SetMaterial(i, GoldMaterial);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Also check child components
+                        TArray<USceneComponent*> ChildComponents;
+                        ActorObject->GetRootComponent()->GetChildrenComponents(true, ChildComponents);
+                        for (USceneComponent* ChildComp : ChildComponents)
+                        {
+                            if (UMeshComponent* MeshComp = Cast<UMeshComponent>(ChildComp))
+                            {
+                                if (GoldMaterial)
+                                {
+                                    for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                                    {
+                                        MeshComp->SetMaterial(i, GoldMaterial);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else if (UDojoModelCraftIslandPocketWorldStructure* Structure = Cast<UDojoModelCraftIslandPocketWorldStructure>(SpawnData.DojoModel))
@@ -389,7 +424,7 @@ void ADojoCraftIslandManager::HandleProcessingLock(UDojoModel* Object)
     UDojoModelCraftIslandPocketProcessingLock* ProcessingLock = Cast<UDojoModelCraftIslandPocketProcessingLock>(Object);
     if (!ProcessingLock) return;
 
-    UE_LOG(LogTemp, Log, TEXT("Received ProcessingLock - Player: %s, UnlockTime: %lld, ProcessType: %d"), 
+    UE_LOG(LogTemp, Log, TEXT("Received ProcessingLock - Player: %s, UnlockTime: %lld, ProcessType: %d"),
         *ProcessingLock->Player, ProcessingLock->UnlockTime, ProcessingLock->ProcessType);
 
     // Check if this is the current player
@@ -746,7 +781,7 @@ void ADojoCraftIslandManager::RequestGoBackHome()
 void ADojoCraftIslandManager::RequestStartProcessing(uint8 ProcessType, int32 InputAmount)
 {
     UE_LOG(LogTemp, Log, TEXT("RequestStartProcessing: ProcessType=%d, InputAmount=%d"), ProcessType, InputAmount);
-    
+
     if (DojoHelpers)
     {
         DojoHelpers->CallCraftIslandPocketActionsStartProcessing(Account, ProcessType, InputAmount);
@@ -760,7 +795,7 @@ void ADojoCraftIslandManager::RequestStartProcessing(uint8 ProcessType, int32 In
 void ADojoCraftIslandManager::RequestCancelProcessing()
 {
     UE_LOG(LogTemp, Log, TEXT("RequestCancelProcessing"));
-    
+
     if (DojoHelpers)
     {
         DojoHelpers->CallCraftIslandPocketActionsCancelProcessing(Account);
@@ -784,7 +819,7 @@ void ADojoCraftIslandManager::CancelProcessing()
 void ADojoCraftIslandManager::ToggleProcessingUI(uint8 ProcessType, bool bShow)
 {
     UE_LOG(LogTemp, Log, TEXT("ToggleProcessingUI: ProcessType=%d, bShow=%s"), ProcessType, bShow ? TEXT("true") : TEXT("false"));
-    
+
     UCraftIslandGameInst* GameInst = Cast<UCraftIslandGameInst>(GetGameInstance());
     if (GameInst)
     {
@@ -799,7 +834,7 @@ void ADojoCraftIslandManager::ToggleProcessingUI(uint8 ProcessType, bool bShow)
 void ADojoCraftIslandManager::ToggleCraftUI(bool bShow)
 {
     UE_LOG(LogTemp, Log, TEXT("ToggleCraftUI: bShow=%s"), bShow ? TEXT("true") : TEXT("false"));
-    
+
     UCraftIslandGameInst* GameInst = Cast<UCraftIslandGameInst>(GetGameInstance());
     if (GameInst)
     {
@@ -824,10 +859,10 @@ float ADojoCraftIslandManager::GetProcessingTimeRemaining() const
     {
         return 0.0f;
     }
-    
+
     int64 CurrentTime = FDateTime::UtcNow().ToUnixTimestamp();
     int64 TimeRemaining = CurrentProcessingLock.UnlockTime - CurrentTime;
-    
+
     return FMath::Max(0.0f, static_cast<float>(TimeRemaining));
 }
 

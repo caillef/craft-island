@@ -209,7 +209,7 @@ UCLASS()
 class CRAFTISLANDPOCKET3_API ADojoCraftIslandManager : public AActor
 {
 	GENERATED_BODY()
-	
+
 private:
     // Constants for spawn positions
     static const FVector DEFAULT_OUTDOOR_SPAWN_POS;
@@ -262,7 +262,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -328,7 +328,7 @@ public:
     void HandleInventory(UDojoModel* Object);
 
     void HandlePlayerData(UDojoModel* Object);
-    
+
     void HandleProcessingLock(UDojoModel* Object);
 
     bool IsCurrentPlayer() const;
@@ -413,7 +413,7 @@ public:
 
     // Clear all spawned actors
     void ClearAllSpawnedActors();
-    
+
     // Set visibility and collision for a group of actors
     void SetActorsVisibilityAndCollision(bool bVisible, bool bEnableCollision);
 
@@ -423,68 +423,71 @@ public:
 
     UPROPERTY()
     int32 CurrentSpaceId;
-    
+
     // Default building for empty spaces
     UPROPERTY()
     AActor* DefaultBuilding;
-    
+
     // Sky atmosphere reference
     UPROPERTY()
     AActor* SkyAtmosphere;
-    
+
     // Track if space 1 actors are hidden
     bool bSpace1ActorsHidden;
-    
+
     // Store player positions for each space
     UPROPERTY()
     TMap<FString, FVector> SpacePlayerPositions;
-    
+
     // Current player inventory
     UPROPERTY()
     UDojoModelCraftIslandPocketInventory* CurrentInventory;
-    
+
     // Get currently selected item ID from inventory
     int32 GetSelectedItemId() const;
-    
+
     // Track the structure type of the current space (0 if not in a structure)
     UPROPERTY()
     int32 CurrentSpaceStructureType;
-    
+
     // Processing functions
     UFUNCTION(BlueprintCallable, Category = "Processing")
     void StartProcessing(uint8 ProcessType, int32 InputAmount);
-    
+
     UFUNCTION(BlueprintCallable, Category = "Processing")
     void CancelProcessing();
-    
+
     UFUNCTION(BlueprintCallable, Category = "Processing")
     void ToggleProcessingUI(uint8 ProcessType, bool bShow);
-    
+
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ToggleCraftUI(bool bShow);
-    
+
     UFUNCTION(BlueprintCallable, Category = "Processing")
     bool IsPlayerProcessing() const;
-    
+
     UFUNCTION(BlueprintCallable, Category = "Processing")
     float GetProcessingTimeRemaining() const;
-    
+
     UFUNCTION(BlueprintCallable, Category = "Processing")
     FString GetProcessingTypeName(uint8 ProcessType) const;
-    
+
     // Current processing lock state
     UPROPERTY()
     FProcessingLock CurrentProcessingLock;
-    
-    
-private:
+
+    // Material for gold highlighting
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Materials")
+    UMaterialInterface* GoldMaterial;
+
+    private:
     // Helper methods for space transitions
     FString MakeSpaceKey(const FString& Owner, int32 Id) const;
     void SaveCurrentPlayerPosition();
     void HandleSpaceTransition(UDojoModelCraftIslandPocketPlayerData* PlayerData);
     FVector GetSpawnPositionForSpace(const FString& SpaceKey, bool bHasBlockChunks);
     void TeleportPlayer(const FVector& NewLocation, bool bImmediate = false);
-    
+
     // Camera utility methods
     void SetCameraLag(APawn* Pawn, bool bEnableLag);
     void DisableCameraLagDuringTeleport(APawn* Pawn);

@@ -107,3 +107,10 @@ sozo migrate --release
 When making changes to the codebase:
 - For contract changes: Run `sozo build` to check if it builds and `sozo migrate` to update
 - For client changes: Compile in Unreal Engine editor
+
+## Adding New Items
+When adding new items to the game:
+1. Add the item to `/data/items.csv` with all required fields
+2. Add the item to `/data/items.json` with matching ID and properties
+3. Update `/client/Source/CraftIslandPocket3/Public/E_Item.h` to add the item to the E_Item enum
+4. If the item can be bought/sold, update the shop logic in contracts

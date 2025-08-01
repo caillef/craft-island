@@ -143,8 +143,13 @@ pub impl InventoryImpl of InventoryTrait {
         
         // Check if moving to market inventory (ID 3)
         if to_inventory.id == 3 {
-            // Only allow wheat (48), carrot (52), or potato (54)
-            assert(from_data.item_type == 48 || from_data.item_type == 52 || from_data.item_type == 54, 'Only crops allowed in market');
+            // Only allow sellable items: crops (48, 52, 54, 65-67), bowl (55), bowl of soup (71)
+            assert(
+                from_data.item_type == 48 || from_data.item_type == 52 || from_data.item_type == 54 ||
+                from_data.item_type == 65 || from_data.item_type == 66 || from_data.item_type == 67 ||
+                from_data.item_type == 55 || from_data.item_type == 71,
+                'Only sellable items allowed'
+            );
         }
         if to_data.is_empty() {
             to_inventory.set_slot_data(to_slot, from_data.item_type, from_data.quantity, from_data.extra);

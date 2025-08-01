@@ -220,7 +220,8 @@
   "55": {
     "name": "Bowl",
     "type": "item",
-    "maxStackSize": 64
+    "maxStackSize": 64,
+    "sellPrice": 5
   },
   "56": {
     "name": "Chest",
@@ -278,5 +279,44 @@
     "maxStackSize": 1,
     "buyPrice": 10000,
     "actorClass": "/Script/Engine.BlueprintGeneratedClass'/Game/CraftIsland/Blocks/B_Brewery.B_Brewery_C'"
+  },
+  "65": {
+    "name": "Golden Wheat",
+    "type": "item",
+    "maxStackSize": 64,
+    "sellPrice": 100
+  },
+  "66": {
+    "name": "Golden Carrot",
+    "type": "item",
+    "maxStackSize": 64,
+    "sellPrice": 20
+  },
+  "67": {
+    "name": "Golden Potato",
+    "type": "item",
+    "maxStackSize": 64,
+    "sellPrice": 80
+  },
+  "68": {
+    "name": "Bucket",
+    "type": "item",
+    "maxStackSize": 16
+  },
+  "69": {
+    "name": "Bucket of Water",
+    "type": "item",
+    "maxStackSize": 16
+  },
+  "70": {
+    "name": "Bowl of Water",
+    "type": "item",
+    "maxStackSize": 16
+  },
+  "71": {
+    "name": "Bowl of Soup",
+    "type": "item",
+    "maxStackSize": 16,
+    "sellPrice": 50
   }
 }

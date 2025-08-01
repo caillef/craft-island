@@ -101,6 +101,15 @@ mod actions {
         resource.max_harvest = GatherableResourceImpl::get_max_harvest(item_id);
         resource.remained_harvest = resource.max_harvest;
         resource.destroyed = false;
+        
+        // Check for golden tier (5% chance for wheat, carrot, potato)
+        if item_id == 47 || item_id == 51 || item_id == 53 {
+            let random = timestamp % 100;
+            resource.tier = if random < 5 { 1 } else { 0 };
+        } else {
+            resource.tier = 0;
+        }
+        
         world.write_model(@resource);
     }
 
@@ -146,17 +155,20 @@ mod actions {
             InventoryTrait::add_to_player_inventories(ref world, player.into(), 46, 1);
             InventoryTrait::add_to_player_inventories(ref world, player.into(), 44, 1);
         } else if item_id == 47 { // Wheat seed
-            // Give 1-2 wheat (no seeds)
+            // Give 1-2 wheat (golden if tier is 1)
             let seed = timestamp % 2;
-            InventoryTrait::add_to_player_inventories(ref world, player.into(), 48, 1 + seed.try_into().unwrap());
+            let wheat_id = if resource.tier == 1 { 65 } else { 48 }; // 65 = Golden Wheat, 48 = Wheat
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), wheat_id, 1 + seed.try_into().unwrap());
         } else if item_id == 51 { // Carrot seed
-            // Give 2-3 carrots (no seeds)
+            // Give 2-3 carrots (golden if tier is 1)
             let seed = timestamp % 2;
-            InventoryTrait::add_to_player_inventories(ref world, player.into(), 52, 2 + seed.try_into().unwrap());
+            let carrot_id = if resource.tier == 1 { 66 } else { 52 }; // 66 = Golden Carrot, 52 = Carrot
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), carrot_id, 2 + seed.try_into().unwrap());
         } else if item_id == 53 { // Potato seed
-            // Give 2-3 potatoes (no seeds)
+            // Give 2-3 potatoes (golden if tier is 1)
             let seed = timestamp % 2;
-            InventoryTrait::add_to_player_inventories(ref world, player.into(), 54, 2 + seed.try_into().unwrap());
+            let potato_id = if resource.tier == 1 { 67 } else { 54 }; // 67 = Golden Potato, 54 = Potato
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), potato_id, 2 + seed.try_into().unwrap());
         } else {
             InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
         }
@@ -261,10 +273,20 @@ mod actions {
         let carrot_amount = sell_inventory.get_item_amount(52);  // Carrot
         let potato_amount = sell_inventory.get_item_amount(54);  // Potato
         let wheat_amount = sell_inventory.get_item_amount(48);   // Wheat
+        let golden_carrot_amount = sell_inventory.get_item_amount(66);  // Golden Carrot
+        let golden_potato_amount = sell_inventory.get_item_amount(67);  // Golden Potato
+        let golden_wheat_amount = sell_inventory.get_item_amount(65);   // Golden Wheat
+        let bowl_amount = sell_inventory.get_item_amount(55);   // Bowl
+        let bowl_soup_amount = sell_inventory.get_item_amount(71);   // Bowl of Soup
 
         total_coins += carrot_amount * 2;   // 2 coins per carrot
         total_coins += potato_amount * 8;   // 8 coins per potato
         total_coins += wheat_amount * 10;   // 10 coins per wheat
+        total_coins += golden_carrot_amount * 20;   // 20 coins per golden carrot (10x)
+        total_coins += golden_potato_amount * 80;   // 80 coins per golden potato (10x)
+        total_coins += golden_wheat_amount * 100;   // 100 coins per golden wheat (10x)
+        total_coins += bowl_amount * 5;   // 5 coins per bowl
+        total_coins += bowl_soup_amount * 50;   // 50 coins per bowl of soup
 
         // Remove sold items
         if carrot_amount > 0 {
@@ -275,6 +297,21 @@ mod actions {
         }
         if wheat_amount > 0 {
             sell_inventory.remove_items(48, wheat_amount);
+        }
+        if golden_carrot_amount > 0 {
+            sell_inventory.remove_items(66, golden_carrot_amount);
+        }
+        if golden_potato_amount > 0 {
+            sell_inventory.remove_items(67, golden_potato_amount);
+        }
+        if golden_wheat_amount > 0 {
+            sell_inventory.remove_items(65, golden_wheat_amount);
+        }
+        if bowl_amount > 0 {
+            sell_inventory.remove_items(55, bowl_amount);
+        }
+        if bowl_soup_amount > 0 {
+            sell_inventory.remove_items(71, bowl_soup_amount);
         }
 
         // Update player coins

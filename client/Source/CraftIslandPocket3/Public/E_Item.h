@@ -80,4 +80,11 @@ enum class E_Item : uint8
     KitchenPattern UMETA(DisplayName = "Kitchen Pattern"),
     WarehousePattern UMETA(DisplayName = "Warehouse Pattern"),
     BreweryPattern UMETA(DisplayName = "Brewery Pattern"),
+    GoldenWheat UMETA(DisplayName = "Golden Wheat"),
+    GoldenCarrot UMETA(DisplayName = "Golden Carrot"),
+    GoldenPotato UMETA(DisplayName = "Golden Potato"),
+    Bucket UMETA(DisplayName = "Bucket"),
+    BucketOfWater UMETA(DisplayName = "Bucket of Water"),
+    BowlOfWater UMETA(DisplayName = "Bowl of Water"),
+    BowlOfSoup UMETA(DisplayName = "Bowl of Soup"),
 };

@@ -59,6 +59,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     bool Destroyed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int Tier;
 };
 
 
