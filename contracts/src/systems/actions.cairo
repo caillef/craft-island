@@ -197,7 +197,6 @@ mod actions {
     fn buy(
         ref self: ContractState, item_ids: Array<u16>, quantities: Array<u32>
     ) {
-        println!("buy function called with item_ids: {:?}, quantities: {:?}", item_ids, quantities);
         let mut world = get_world(ref self);
         let player = get_caller_address();
         let mut player_data: PlayerData = world.read_model((player));
@@ -461,8 +460,6 @@ mod actions {
             let mut inventory: Inventory = world.read_model((player, 0));
 
             let item_type: u16 = inventory.get_hotbar_selected_item_type();
-
-            println!("use_item called with item_type: {}, position: ({}, {}, {})", item_type, x, y, z);
             if item_type == 41 { // hoe
                 update_block(ref world, x, y, z, item_type);
             } else if item_type == 43 { // hammer

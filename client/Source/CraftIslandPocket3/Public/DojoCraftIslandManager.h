@@ -286,6 +286,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
     TSubclassOf<UUserWidget> SellInterfaceWidgetClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> StoneCraftInterfaceWidgetClass;
+
     UPROPERTY(EditAnywhere, Category = "Config")
     TSubclassOf<APawn> PlayerPawnClass;
 

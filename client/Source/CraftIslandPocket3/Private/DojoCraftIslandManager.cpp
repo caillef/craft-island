@@ -696,6 +696,30 @@ void ADojoCraftIslandManager::RequestPlaceUse()
     // Calculate the actual Z position we're targeting
     int32 ActualZ = TargetBlock.Z + 8192;
 
+    // Check if using rock (33) on another rock (33)
+    if (SelectedItemId == 33 && bActorExists)
+    {
+        AActor* TargetActor = Actors[TargetPosition];
+        if (ABaseObject* Object = Cast<ABaseObject>(TargetActor))
+        {
+            // Check if it's a rock (E_Item::Rock = 33)
+            if (Object->Item == E_Item::Rock)
+            {
+                // Open stone craft interface
+                if (StoneCraftInterfaceWidgetClass)
+                {
+                    UUserWidget* StoneCraftUI = CreateWidget<UUserWidget>(GetWorld(), StoneCraftInterfaceWidgetClass);
+                    if (StoneCraftUI)
+                    {
+                        StoneCraftUI->AddToViewport();
+                        UE_LOG(LogTemp, Log, TEXT("Opened Stone Craft Interface"));
+                    }
+                }
+                return;
+            }
+        }
+    }
+
     // Blocks (1-3) must be at z=0
     // World structures (50, 60-64) should be placed one level up
     // Other items can stack on blocks
@@ -757,7 +781,7 @@ void ADojoCraftIslandManager::RequestInventoryMoveItem(int32 FromInventory, int3
 
 void ADojoCraftIslandManager::RequestCraft(int32 Item)
 {
-    DojoHelpers->CallCraftIslandPocketActionsCraft(Account, Item, TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
+    DojoHelpers->CallCraftIslandPocketActionsCraft(Account, Item, TargetBlock.X + 8192, TargetBlock.Y + 8192, TargetBlock.Z + 8192);
 }
 
 void ADojoCraftIslandManager::RequestGiveItem()
