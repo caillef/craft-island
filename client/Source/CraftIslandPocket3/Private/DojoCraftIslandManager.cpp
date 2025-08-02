@@ -202,11 +202,20 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                         {
                             if (UMeshComponent* MeshComp = Cast<UMeshComponent>(Component))
                             {
-                                if (GoldMaterial)
+                                for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
                                 {
-                                    for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                                    UMaterialInterface* CurrentMaterial = MeshComp->GetMaterial(i);
+                                    if (CurrentMaterial)
                                     {
-                                        MeshComp->SetMaterial(i, GoldMaterial);
+                                        FString MaterialName = CurrentMaterial->GetName();
+                                        if (MaterialName.Contains(TEXT("Leaves")) && GoldLeavesMaterial)
+                                        {
+                                            MeshComp->SetMaterial(i, GoldLeavesMaterial);
+                                        }
+                                        else if (GoldMaterial)
+                                        {
+                                            MeshComp->SetMaterial(i, GoldMaterial);
+                                        }
                                     }
                                 }
                             }
@@ -219,11 +228,20 @@ void ADojoCraftIslandManager::Tick(float DeltaTime)
                         {
                             if (UMeshComponent* MeshComp = Cast<UMeshComponent>(ChildComp))
                             {
-                                if (GoldMaterial)
+                                for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
                                 {
-                                    for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                                    UMaterialInterface* CurrentMaterial = MeshComp->GetMaterial(i);
+                                    if (CurrentMaterial)
                                     {
-                                        MeshComp->SetMaterial(i, GoldMaterial);
+                                        FString MaterialName = CurrentMaterial->GetName();
+                                        if (MaterialName.Contains(TEXT("Leaves")) && GoldLeavesMaterial)
+                                        {
+                                            MeshComp->SetMaterial(i, GoldLeavesMaterial);
+                                        }
+                                        else if (GoldMaterial)
+                                        {
+                                            MeshComp->SetMaterial(i, GoldMaterial);
+                                        }
                                     }
                                 }
                             }

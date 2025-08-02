@@ -767,6 +767,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerDataModel(struct Struct* m
         ConvertTyToUnrealEngineType(member, "current_space_owner", "felt252", Model->CurrentSpaceOwner);
         ConvertTyToUnrealEngineType(member, "current_space_id", "u16", Model->CurrentSpaceId);
         ConvertTyToUnrealEngineType(member, "coins", "u32", Model->Coins);
+        ConvertTyToUnrealEngineType(member, "random_nonce", "u32", Model->RandomNonce);
     }
 
     FDojoModule::CArrayFree(members->data, members->data_len);

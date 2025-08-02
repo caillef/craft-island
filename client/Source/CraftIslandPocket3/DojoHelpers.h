@@ -158,6 +158,8 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int Coins;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int RandomNonce;
 };
 
 

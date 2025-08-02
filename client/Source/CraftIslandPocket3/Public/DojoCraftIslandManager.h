@@ -480,6 +480,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Materials")
     UMaterialInterface* GoldMaterial;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Materials")
+    UMaterialInterface* GoldLeavesMaterial;
+
     private:
     // Helper methods for space transitions
     FString MakeSpaceKey(const FString& Owner, int32 Id) const;

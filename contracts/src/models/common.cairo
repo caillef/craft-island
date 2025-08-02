@@ -10,6 +10,7 @@ pub struct PlayerData {
     pub current_space_owner: felt252,
     pub current_space_id: u16,
     pub coins: u32,
+    pub random_nonce: u32,
 }
 
 // Not Used Yet

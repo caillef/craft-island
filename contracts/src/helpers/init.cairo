@@ -48,6 +48,7 @@ fn init_player(ref world: WorldStorage, player: ContractAddress) {
         current_space_owner: player.into(),
         current_space_id: 1,
         coins: 0,
+        random_nonce: 0,
     };
     world.write_model(@player_data);
 }

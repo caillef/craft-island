@@ -102,10 +102,19 @@ mod actions {
         resource.remained_harvest = resource.max_harvest;
         resource.destroyed = false;
         
-        // Check for golden tier (5% chance for wheat, carrot, potato)
+        // Simple 10% chance for golden tier (wheat, carrot, potato)
         if item_id == 47 || item_id == 51 || item_id == 53 {
-            let random = timestamp % 100;
-            resource.tier = if random < 5 { 1 } else { 0 };
+            let mut player_data_mut: PlayerData = world.read_model((player));
+            // Simple random using timestamp, position, and nonce with 6-digit primes
+            let simple_random = (timestamp + x * 100003 + y * 100019 + z * 100043 + player_data_mut.random_nonce.into()) % 100;
+            if simple_random < 10 {
+                resource.tier = 1; // Golden (10% chance)
+            } else {
+                resource.tier = 0; // Normal
+            }
+            // Simple nonce increment
+            player_data_mut.random_nonce = (player_data_mut.random_nonce + 1) % 1000000;
+            world.write_model(@player_data_mut);
         } else {
             resource.tier = 0;
         }

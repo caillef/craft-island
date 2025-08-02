@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x71c4d8c005cc0b7f2fb7e377dc3e4d4edc6ad877bd096e69cdda383308151f5",
+      "class_hash": "0x657a99855ebc6b24ccabe9352c443e4bc7973c372a73de3e50d65280a827b31",
       "abi": [
         {
           "type": "impl",
@@ -1729,7 +1729,7 @@
     },
     {
       "address": "0x4abf7c0f04e846af6a847847da9511755ed13b88a8fc9a120336531a4da3f5e",
-      "class_hash": "0x3a7cc263e3cb58b8326cef1c154dae27b41abbb708f6889075b6340e4a2d162",
+      "class_hash": "0x504147dc1fe3d561e7c7e408ccef9aab4bea463a4a1980673de6db09ba0b8d7",
       "abi": [
         {
           "type": "impl",
@@ -1973,7 +1973,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x26c55e37840ea837a9129ad0c08c9369898fa05815d3135e2b3131e119c3ca0",
+      "class_hash": "0x596815d5b37f8898aba77551725ca632a42ee94ebcc7fa65f55ee4cb02c7119",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
