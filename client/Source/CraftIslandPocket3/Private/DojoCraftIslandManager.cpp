@@ -35,7 +35,7 @@ void ADojoCraftIslandManager::BeginPlay()
     DojoHelpers->OnDojoModelUpdated.AddDynamic(this, &ADojoCraftIslandManager::HandleDojoModel);
 
     // Step 4: Create burner account
-    Account = DojoHelpers->CreateBurnerDeprecated(RpcUrl, PlayerAddress, PrivateKey);
+    Account = DojoHelpers->CreateAccountDeprecated(RpcUrl, PlayerAddress, PrivateKey);
 
     // Initialize current space tracking
     CurrentSpaceOwner = Account.Address;

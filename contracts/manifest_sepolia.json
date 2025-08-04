@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x4fe0beeb96dabe5f4cbe308a525f70da978fb13515a7525aed654d1cfc7496",
-      "class_hash": "0x1bfa59010cc283edb97dca7868daf65e9c277c0c7afc8a01747fb7f774e1967",
+      "class_hash": "0x40b46b4c587cf4b5472ebf53d745ae9e68d1ae5c2901bfd27819e0b6c7b430",
       "abi": [
         {
           "type": "impl",
@@ -1393,6 +1393,29 @@
             {
               "type": "function",
               "name": "spawn",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "buy",
+              "inputs": [
+                {
+                  "name": "item_ids",
+                  "type": "core::array::Array::<core::integer::u16>"
+                },
+                {
+                  "name": "quantities",
+                  "type": "core::array::Array::<core::integer::u32>"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "sell",
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
@@ -1543,6 +1566,29 @@
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "start_processing",
+              "inputs": [
+                {
+                  "name": "process_type",
+                  "type": "core::integer::u8"
+                },
+                {
+                  "name": "input_amount",
+                  "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "cancel_processing",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1666,6 +1712,8 @@
       "selector": "0x2421825019faf473c80afccd4a206fb7d24b2e1e0203119018ea28e4bf653aa",
       "systems": [
         "spawn",
+        "buy",
+        "sell",
         "hit_block",
         "use_item",
         "select_hotbar_slot",
@@ -1674,12 +1722,14 @@
         "generate_island_part",
         "visit",
         "visit_new_island",
+        "start_processing",
+        "cancel_processing",
         "upgrade"
       ]
     },
     {
       "address": "0x4abf7c0f04e846af6a847847da9511755ed13b88a8fc9a120336531a4da3f5e",
-      "class_hash": "0x7edb1c95dc0aa4aaad4d55203f4d85bc6a8906b9394d36f610d4466621708cd",
+      "class_hash": "0x504147dc1fe3d561e7c7e408ccef9aab4bea463a4a1980673de6db09ba0b8d7",
       "abi": [
         {
           "type": "impl",
@@ -1750,6 +1800,18 @@
                 },
                 {
                   "name": "qty",
+                  "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "give_coins",
+              "inputs": [
+                {
+                  "name": "amount",
                   "type": "core::integer::u32"
                 }
               ],
@@ -1878,6 +1940,7 @@
       "selector": "0x43d62c14f6442be7460cfd2aff92839bc505c6f7acc2904971a87319a4b1dde",
       "systems": [
         "give_self",
+        "give_coins",
         "upgrade"
       ]
     }
@@ -1886,7 +1949,7 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x381d95f663f8847be3eda092c7929ead53d277fefc19d36d9e8233151f0f017",
+      "class_hash": "0x74f2d80c382b85f6f6098f2dca2c109920974a9b099f63f64517b43dd08832b",
       "tag": "craft_island_pocket-GatherableResource",
       "selector": "0x724f6e93d1c79ee556934629fac544529f95a96cf9b19eccf2cec9afb77b6b5"
     },
@@ -1910,7 +1973,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x669e43fe8b05151a97941e231e17205f160785641ae0518e7987fc4e4f1b66f",
+      "class_hash": "0x596815d5b37f8898aba77551725ca632a42ee94ebcc7fa65f55ee4cb02c7119",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
@@ -1922,7 +1985,13 @@
     },
     {
       "members": [],
-      "class_hash": "0x36d1a84754f2670d03f1a60883bcd08e655c360b0646707c5c0e74e4494d1ac",
+      "class_hash": "0x5a6499de45a3380235ca12e2ef6217692fd6a5e83eacbaf6b9b91a5dd0ee26a",
+      "tag": "craft_island_pocket-ProcessingLock",
+      "selector": "0x53c74b393d8b91faf4c42b262fdc898c543a3b2c4de2de06c5231e3edcbbe6e"
+    },
+    {
+      "members": [],
+      "class_hash": "0x7f033e5327e1825f4596b16e5fca548a07eeb38f6fc5305a93d2e2f865ff83d",
       "tag": "craft_island_pocket-WorldStructure",
       "selector": "0x5df5957a204638a9dc1fe18f016555f1811394279cd5705d8d6a3a60dd890c6"
     }
