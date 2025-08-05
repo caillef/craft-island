@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x40b46b4c587cf4b5472ebf53d745ae9e68d1ae5c2901bfd27819e0b6c7b430",
+      "class_hash": "0x40bebbe5dc318aa23b3ca1c2d8eb76aaa87797ad9067c995b8d694131f3d121",
       "abi": [
         {
           "type": "impl",
@@ -1435,10 +1435,6 @@
                 {
                   "name": "z",
                   "type": "core::integer::u64"
-                },
-                {
-                  "name": "hp",
-                  "type": "core::integer::u32"
                 }
               ],
               "outputs": [],
@@ -1589,6 +1585,18 @@
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "execute_compressed_actions",
+              "inputs": [
+                {
+                  "name": "packed_actions",
+                  "type": "core::felt252"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1724,6 +1732,7 @@
         "visit_new_island",
         "start_processing",
         "cancel_processing",
+        "execute_compressed_actions",
         "upgrade"
       ]
     },

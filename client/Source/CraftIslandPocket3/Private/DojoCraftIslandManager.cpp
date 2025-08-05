@@ -3,6 +3,9 @@
 
 #include "DojoCraftIslandManager.h"
 #include "EngineUtils.h"
+#include "BaseObject.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Components/StaticMeshComponent.h"
 
 // Define static constants
 const FVector ADojoCraftIslandManager::DEFAULT_OUTDOOR_SPAWN_POS(50.0f, 50.0f, 250.0f);
@@ -14,6 +17,11 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	// Initialize local hotbar selection to -1 (unset)
+	LocalHotbarSelectedSlot = -1;
+
+	// Initialize transaction queue
+	bIsProcessingTransaction = false;
 }
 
 // Called when the game starts or when spawned
@@ -378,6 +386,8 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
         if (Inventory->Id == 0)
         {
             CurrentInventory = Inventory;
+            // Sync local hotbar selection with server-confirmed value
+            LocalHotbarSelectedSlot = Inventory->HotbarSelectedSlot;
         }
 
         // Get GameInstance and cast to your custom subclass
@@ -485,6 +495,10 @@ void ADojoCraftIslandManager::HandleDojoModel(UDojoModel* Model)
     UE_LOG(LogTemp, VeryVerbose, TEXT("HandleDojoModel: Processing model %s"), *Model->DojoModelType);
     FString Name = Model->DojoModelType;
 
+    // When we receive any model update, it means a transaction was processed
+    // Continue processing the queue
+    OnTransactionComplete();
+
     // First, update the chunk cache
     UCraftIslandChunks::HandleCraftIslandModel(Model, ChunkCache);
 
@@ -552,6 +566,49 @@ AActor* ADojoCraftIslandManager::PlaceAssetInWorld(E_Item Item, const FIntVector
     if (Item == E_Item::None) {
         return nullptr;
     }
+
+    // Check if there's an optimistic actor at this position that we need to confirm
+    if (OptimisticActors.Contains(DojoPosition))
+    {
+        AActor* OptimisticActor = OptimisticActors[DojoPosition];
+        if (OptimisticActor && IsValid(OptimisticActor))
+        {
+            // Check if it's the same item being confirmed
+            bool bSameItem = false;
+            if (ABaseBlock* OptimisticBlock = Cast<ABaseBlock>(OptimisticActor))
+            {
+                bSameItem = (OptimisticBlock->Item == Item);
+            }
+            else if (ABaseObject* OptimisticObject = Cast<ABaseObject>(OptimisticActor))
+            {
+                bSameItem = (OptimisticObject->Item == Item);
+            }
+
+            if (bSameItem)
+            {
+                // Confirm the optimistic placement
+                RemovePendingVisual(OptimisticActor);
+                OptimisticActors.Remove(DojoPosition);
+
+                // Move from optimistic to confirmed
+                if (!Actors.Contains(DojoPosition))
+                {
+                    Actors.Add(DojoPosition, OptimisticActor);
+                    ActorSpawnInfo.Add(DojoPosition, FActorSpawnInfo(OptimisticActor, SpawnType));
+                }
+
+                UE_LOG(LogTemp, Log, TEXT("Confirmed optimistic placement at (%d, %d, %d)"),
+                    DojoPosition.X, DojoPosition.Y, DojoPosition.Z);
+                return OptimisticActor;
+            }
+            else
+            {
+                // Wrong item - rollback optimistic and place correct one
+                RollbackOptimisticAction(DojoPosition);
+            }
+        }
+    }
+
     // Check if there's already an actor at this position
     if (Actors.Contains(DojoPosition))
     {
@@ -738,13 +795,48 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         ZOffset = 1;
     }
 
+    // Optimistic rendering: Place the item immediately with visual feedback
+    if (SelectedItemId > 0)
+    {
+        FIntVector OptimisticPosition(
+            TargetBlock.X + 8192,
+            TargetBlock.Y + 8192,
+            TargetBlock.Z + 8192 + ZOffset
+        );
 
-    DojoHelpers->CallCraftIslandPocketActionsUseItem(
-        Account,
+        // Don't add optimistic if there's already something pending at this position
+        if (!OptimisticActors.Contains(OptimisticPosition))
+        {
+            // Spawn the actor immediately (optimistically)
+            AActor* OptimisticActor = PlaceAssetInWorld(
+                static_cast<E_Item>(SelectedItemId),
+                OptimisticPosition,
+                false // Not validated yet
+            );
+
+            if (OptimisticActor)
+            {
+                // Store as optimistic
+                OptimisticActors.Add(OptimisticPosition, OptimisticActor);
+
+                // Apply pending visual feedback
+                ApplyPendingVisual(OptimisticActor);
+
+                UE_LOG(LogTemp, Log, TEXT("Optimistic placement at (%d, %d, %d) for item %d"),
+                    OptimisticPosition.X, OptimisticPosition.Y, OptimisticPosition.Z, SelectedItemId);
+            }
+        }
+    }
+
+    // Queue the transaction instead of calling directly
+    FTransactionQueueItem Item;
+    Item.Type = ETransactionType::PlaceUse;
+    Item.Position = FIntVector(
         TargetBlock.X + 8192,
         TargetBlock.Y + 8192,
         TargetBlock.Z + 8192 + ZOffset
     );
+    QueueTransaction(Item);
 }
 
 void ADojoCraftIslandManager::RequestSpawn()
@@ -766,12 +858,73 @@ void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
         SlotIndex = IntProp->GetPropertyValue_InContainer(Slot);
     }
 
-    DojoHelpers->CallCraftIslandPocketActionsSelectHotbarSlot(Account, SlotIndex);
+    // Store selected slot locally for optimistic rendering
+    LocalHotbarSelectedSlot = SlotIndex;
+
+    // Queue the transaction instead of calling directly
+    FTransactionQueueItem Item;
+    Item.Type = ETransactionType::SelectHotbar;
+    Item.IntParam = SlotIndex;
+    QueueTransaction(Item);
 }
 
 void ADojoCraftIslandManager::RequestHit()
 {
-    DojoHelpers->CallCraftIslandPocketActionsHitBlock(Account, TargetBlock.X + 8192, TargetBlock.Y + 8192, TargetBlock.Z + 8192, 1);
+    // Optimistic rendering for block/resource removal
+    FIntVector HitPosition(
+        TargetBlock.X + 8192,
+        TargetBlock.Y + 8192,
+        TargetBlock.Z + 8192
+    );
+
+    // Check if there's an actor at the hit position
+    if (Actors.Contains(HitPosition))
+    {
+        AActor* ActorToRemove = Actors[HitPosition];
+        if (ActorToRemove && IsValid(ActorToRemove))
+        {
+            // Don't actually remove it yet, just make it appear as if it's being removed
+            // Apply a "removal pending" visual effect
+            TArray<UActorComponent*> MeshComponents = ActorToRemove->GetComponents().Array();
+            for (UActorComponent* Component : MeshComponents)
+            {
+                if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
+                {
+                    // Make it semi-transparent and red-tinted to show it's being removed
+                    for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                    {
+                        UMaterialInstanceDynamic* DynMaterial = MeshComp->CreateAndSetMaterialInstanceDynamic(i);
+                        if (DynMaterial)
+                        {
+                            DynMaterial->SetScalarParameterValue(FName("Opacity"), 0.3f);
+                            DynMaterial->SetVectorParameterValue(FName("EmissiveColor"), FLinearColor(1.0f, 0.0f, 0.0f)); // Red tint
+                        }
+                    }
+
+                    // Disable collision immediately
+                    MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+                    // Scale down slightly
+                    ActorToRemove->SetActorScale3D(FVector(0.9f, 0.9f, 0.9f));
+                }
+            }
+
+            // Tag it as pending removal
+            ActorToRemove->Tags.Add(FName("OptimisticRemoval"));
+
+            // Store in optimistic actors for potential rollback
+            OptimisticActors.Add(HitPosition, ActorToRemove);
+
+            UE_LOG(LogTemp, Log, TEXT("Optimistic removal at (%d, %d, %d)"),
+                HitPosition.X, HitPosition.Y, HitPosition.Z);
+        }
+    }
+
+    // Queue the transaction instead of calling directly
+    FTransactionQueueItem Item;
+    Item.Type = ETransactionType::Hit;
+    Item.Position = HitPosition;
+    QueueTransaction(Item);
 }
 
 void ADojoCraftIslandManager::RequestInventoryMoveItem(int32 FromInventory, int32 FromSlot, int32 ToInventory, int32 ToSlot)
@@ -1018,7 +1171,9 @@ int32 ADojoCraftIslandManager::GetSelectedItemId() const
         return 0;
     }
 
-    int32 SelectedSlot = CurrentInventory->HotbarSelectedSlot;
+    // Use local selected slot for immediate response (optimistic rendering)
+    // Falls back to server-confirmed slot if local slot hasn't been set
+    int32 SelectedSlot = (LocalHotbarSelectedSlot >= 0) ? LocalHotbarSelectedSlot : CurrentInventory->HotbarSelectedSlot;
     if (SelectedSlot >= 36) return 0; // Max 36 slots (9 per felt252)
 
     // Determine which slot field to use
@@ -1420,6 +1575,28 @@ void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray
 
 void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPosition, EActorSpawnType RequiredType)
 {
+    // Check if this is confirming an optimistic removal
+    if (OptimisticActors.Contains(DojoPosition))
+    {
+        AActor* OptimisticActor = OptimisticActors[DojoPosition];
+        if (OptimisticActor && OptimisticActor->Tags.Contains(FName("OptimisticRemoval")))
+        {
+            // Confirm the removal - actually destroy the actor now
+            if (IsValid(OptimisticActor))
+            {
+                OptimisticActor->Destroy();
+            }
+            OptimisticActors.Remove(DojoPosition);
+            Actors.Remove(DojoPosition);
+            ActorSpawnInfo.Remove(DojoPosition);
+
+            UE_LOG(LogTemp, Log, TEXT("Confirmed optimistic removal at (%d, %d, %d)"),
+                DojoPosition.X, DojoPosition.Y, DojoPosition.Z);
+            return;
+        }
+    }
+
+    // Normal removal (non-optimistic)
     if (!Actors.Contains(DojoPosition)) return;
 
     if (ActorSpawnInfo.Contains(DojoPosition))
@@ -1671,4 +1848,324 @@ void ADojoCraftIslandManager::LoadAllChunksFromCache()
     {
         UE_LOG(LogTemp, Log, TEXT("LoadAllChunksFromCache: Loaded %d structures"), StructuresLoaded);
     }
+}
+
+// Optimistic rendering methods
+void ADojoCraftIslandManager::ApplyPendingVisual(AActor* Actor)
+{
+    if (!Actor) return;
+
+    // Make the actor semi-transparent to indicate it's pending
+    TArray<UActorComponent*> MeshComponents = Actor->GetComponents().Array();
+    for (UActorComponent* Component : MeshComponents)
+    {
+        if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
+        {
+            // Apply translucent material or adjust opacity
+            if (PendingMaterial)
+            {
+                // Use a specific pending material if available
+                int32 NumMaterials = MeshComp->GetNumMaterials();
+                for (int32 i = 0; i < NumMaterials; i++)
+                {
+                    MeshComp->SetMaterial(i, PendingMaterial);
+                }
+            }
+            else
+            {
+                // Fall back to adjusting render settings
+                MeshComp->SetRenderCustomDepth(true);
+                MeshComp->SetCustomDepthStencilValue(1);
+
+                // Make it slightly smaller to indicate pending state
+                Actor->SetActorScale3D(FVector(0.95f, 0.95f, 0.95f));
+
+                // Reduce opacity if possible
+                for (int32 i = 0; i < MeshComp->GetNumMaterials(); i++)
+                {
+                    UMaterialInstanceDynamic* DynMaterial = MeshComp->CreateAndSetMaterialInstanceDynamic(i);
+                    if (DynMaterial)
+                    {
+                        DynMaterial->SetScalarParameterValue(FName("Opacity"), 0.7f);
+                        DynMaterial->SetVectorParameterValue(FName("EmissiveColor"), FLinearColor(0.0f, 0.5f, 1.0f)); // Blue tint
+                    }
+                }
+            }
+
+            // Disable collision until confirmed
+            MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        }
+    }
+
+    // Add a subtle pulsing effect (can be implemented in Blueprint)
+    Actor->Tags.Add(FName("OptimisticPlacement"));
+}
+
+void ADojoCraftIslandManager::RemovePendingVisual(AActor* Actor)
+{
+    if (!Actor) return;
+
+    TArray<UActorComponent*> MeshComponents = Actor->GetComponents().Array();
+    for (UActorComponent* Component : MeshComponents)
+    {
+        if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Component))
+        {
+            // Restore normal rendering
+            MeshComp->SetRenderCustomDepth(false);
+
+            // Restore normal scale
+            Actor->SetActorScale3D(FVector(1.0f, 1.0f, 1.0f));
+
+            // Enable collision
+            MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        }
+    }
+
+    // Remove tag
+    Actor->Tags.Remove(FName("OptimisticPlacement"));
+
+    UE_LOG(LogTemp, Log, TEXT("Confirmed optimistic placement for actor"));
+}
+
+void ADojoCraftIslandManager::AddOptimisticPlacement(const FIntVector& Position, E_Item Item)
+{
+    // Implementation handled inline in RequestPlaceUse for now
+}
+
+void ADojoCraftIslandManager::AddOptimisticRemoval(const FIntVector& Position)
+{
+    // Store the actor that will be removed optimistically
+    if (Actors.Contains(Position))
+    {
+        AActor* ActorToRemove = Actors[Position];
+        if (ActorToRemove)
+        {
+            // Make it semi-transparent to show it's being removed
+            ApplyPendingVisual(ActorToRemove);
+            ActorToRemove->Tags.Add(FName("OptimisticRemoval"));
+        }
+    }
+}
+
+void ADojoCraftIslandManager::ConfirmOptimisticAction(const FIntVector& Position)
+{
+    if (OptimisticActors.Contains(Position))
+    {
+        AActor* OptimisticActor = OptimisticActors[Position];
+        if (OptimisticActor)
+        {
+            RemovePendingVisual(OptimisticActor);
+        }
+        OptimisticActors.Remove(Position);
+    }
+}
+
+void ADojoCraftIslandManager::RollbackOptimisticAction(const FIntVector& Position)
+{
+    if (OptimisticActors.Contains(Position))
+    {
+        AActor* OptimisticActor = OptimisticActors[Position];
+        if (OptimisticActor)
+        {
+            // Play a disappear animation or effect
+            OptimisticActor->Destroy();
+        }
+        OptimisticActors.Remove(Position);
+
+        UE_LOG(LogTemp, Warning, TEXT("Rolled back optimistic action at position (%d, %d, %d)"),
+            Position.X, Position.Y, Position.Z);
+    }
+}
+
+void ADojoCraftIslandManager::QueueTransaction(const FTransactionQueueItem& Item)
+{
+    TransactionQueue.Enqueue(Item);
+
+    // If not already processing, start processing the queue
+    if (!bIsProcessingTransaction)
+    {
+        ProcessNextTransaction();
+    }
+}
+
+void ADojoCraftIslandManager::ProcessNextTransaction()
+{
+    // Try to batch PlaceUse and Hit actions together
+    TArray<FTransactionQueueItem> BatchedActions;
+    
+    // Peek at the queue to see if we should batch
+    FTransactionQueueItem* PeekedItem = TransactionQueue.Peek();
+    if (PeekedItem && (PeekedItem->Type == ETransactionType::PlaceUse || PeekedItem->Type == ETransactionType::Hit))
+    {
+        // Collect up to 8 PlaceUse/Hit actions
+        while (BatchedActions.Num() < 8)
+        {
+            FTransactionQueueItem* NextItem = TransactionQueue.Peek();
+            if (!NextItem) break;
+            
+            if (NextItem->Type == ETransactionType::PlaceUse || NextItem->Type == ETransactionType::Hit)
+            {
+                FTransactionQueueItem Item;
+                TransactionQueue.Dequeue(Item);
+                BatchedActions.Add(Item);
+            }
+            else
+            {
+                // Non-batchable action found, stop batching
+                break;
+            }
+        }
+    }
+    
+    // If we have batchable actions, encode and send them
+    if (BatchedActions.Num() > 0)
+    {
+        bIsProcessingTransaction = true;
+        
+        // Set a 15-second timeout in case transaction gets stuck (e.g., reverted)
+        GetWorld()->GetTimerManager().SetTimer(TransactionTimeoutHandle, [this]()
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Transaction timeout reached, forcing completion"));
+            OnTransactionComplete();
+        }, 15.0f, false);
+        
+        // Encode the batched actions
+        FString PackedActions = EncodeCompressedActions(BatchedActions);
+        
+        // Send compressed actions
+        DojoHelpers->CallCraftIslandPocketActionsExecuteCompressedActions(Account, PackedActions);
+        
+        UE_LOG(LogTemp, Log, TEXT("Sending %d compressed actions: %s"), BatchedActions.Num(), *PackedActions);
+    }
+    else
+    {
+        // Process single non-batchable action
+        FTransactionQueueItem NextItem;
+        if (TransactionQueue.Dequeue(NextItem))
+        {
+            bIsProcessingTransaction = true;
+            
+            // Set a 15-second timeout in case transaction gets stuck (e.g., reverted)
+            GetWorld()->GetTimerManager().SetTimer(TransactionTimeoutHandle, [this]()
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Transaction timeout reached, forcing completion"));
+                OnTransactionComplete();
+            }, 15.0f, false);
+            
+            switch (NextItem.Type)
+            {
+                case ETransactionType::SelectHotbar:
+                {
+                    DojoHelpers->CallCraftIslandPocketActionsSelectHotbarSlot(Account, NextItem.IntParam);
+                    break;
+                }
+                default:
+                    UE_LOG(LogTemp, Warning, TEXT("Unhandled transaction type in ProcessNextTransaction"));
+                    bIsProcessingTransaction = false;
+                    break;
+            }
+        }
+        else
+        {
+            bIsProcessingTransaction = false;
+        }
+    }
+}
+
+void ADojoCraftIslandManager::OnTransactionComplete()
+{
+    // Clear the timeout timer since transaction completed
+    GetWorld()->GetTimerManager().ClearTimer(TransactionTimeoutHandle);
+    
+    bIsProcessingTransaction = false;
+
+    // Process next transaction in queue after a small delay
+    FTimerHandle TimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+    {
+        ProcessNextTransaction();
+    }, 0.1f, false);
+}
+
+FString ADojoCraftIslandManager::EncodeCompressedActions(const TArray<FTransactionQueueItem>& Actions)
+{
+    // Encode up to 8 actions into a felt252
+    // Bit layout per action (30 bits): [1 bit: action_type][1 bit: z][14 bits: x][14 bits: y]
+    
+    // Use FUint64 to build the packed value, then convert to hex string
+    TArray<uint8> Bytes;
+    Bytes.SetNum(32); // 256 bits / 8 = 32 bytes
+    for (int i = 0; i < 32; i++) Bytes[i] = 0;
+    
+    int BitOffset = 0;
+    
+    for (int i = 0; i < Actions.Num() && i < 8; i++)
+    {
+        const FTransactionQueueItem& Action = Actions[i];
+        
+        // Use coordinates as-is (they already have 8192 offset from queueing)
+        int32 X = Action.Position.X;
+        int32 Y = Action.Position.Y;
+        int32 Z = Action.Position.Z - 8192;  // Z needs special handling for the bit
+        
+        // Clamp to valid range (0-16383) that fits in 14 bits
+        X = FMath::Clamp(X, 0, 16383);
+        Y = FMath::Clamp(Y, 0, 16383);
+        
+        UE_LOG(LogTemp, Log, TEXT("Encoding action %d: Type=%s, Position=(%d,%d,%d), Z-bit=%d"),
+            i,
+            Action.Type == ETransactionType::Hit ? TEXT("Hit") : TEXT("Place"),
+            X, Y, Action.Position.Z,
+            Z);
+        
+        // Build the 30-bit action
+        uint32 ActionData = 0;
+        
+        // Y coordinate (14 bits)
+        ActionData |= (Y & 0x3FFF);
+        
+        // X coordinate (14 bits)
+        ActionData |= ((X & 0x3FFF) << 14);
+        
+        // Z bit (1 bit) - 0 for z=8192, 1 for z=8193
+        ActionData |= ((Z == 1 ? 1 : 0) << 28);
+        
+        // Action type (1 bit) - 0 for PlaceUse, 1 for Hit
+        ActionData |= ((Action.Type == ETransactionType::Hit ? 1 : 0) << 29);
+        
+        // Pack into byte array
+        int ByteIndex = BitOffset / 8;
+        int BitInByte = BitOffset % 8;
+        
+        // Write the 30 bits
+        for (int j = 0; j < 30; j++)
+        {
+            if ((ActionData & (1 << j)) != 0)
+            {
+                int CurrentByteIndex = (BitOffset + j) / 8;
+                int CurrentBitInByte = (BitOffset + j) % 8;
+                if (CurrentByteIndex < 32)
+                {
+                    Bytes[CurrentByteIndex] |= (1 << CurrentBitInByte);
+                }
+            }
+        }
+        
+        BitOffset += 30;
+    }
+    
+    // Convert to hex string (big-endian for Starknet felt252)
+    FString HexString = TEXT("0x");
+    for (int i = 31; i >= 0; i--)
+    {
+        HexString += FString::Printf(TEXT("%02x"), Bytes[i]);
+    }
+    
+    // Remove leading zeros (keep at least one zero after 0x)
+    while (HexString.Len() > 3 && HexString[2] == '0' && HexString[3] == '0')
+    {
+        HexString.RemoveAt(2, 2);
+    }
+    
+    return HexString;
 }

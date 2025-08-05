@@ -389,10 +389,10 @@ public:
     void CallControllerCraftIslandPocketActionsSpawn(const FControllerAccount& account);
 
     UFUNCTION(BlueprintCallable, Category = "Calls")
-    void CallCraftIslandPocketActionsHitBlock(const FAccount& account, int64 x, int64 y, int64 z, int hp);
+    void CallCraftIslandPocketActionsHitBlock(const FAccount& account, int64 x, int64 y, int64 z);
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
-    void CallControllerCraftIslandPocketActionsHitBlock(const FControllerAccount& account, int64 x, int64 y, int64 z, int hp);
+    void CallControllerCraftIslandPocketActionsHitBlock(const FControllerAccount& account, int64 x, int64 y, int64 z);
 
     UFUNCTION(BlueprintCallable, Category = "Calls")
     void CallCraftIslandPocketActionsUseItem(const FAccount& account, int64 x, int64 y, int64 z);
@@ -405,6 +405,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsSelectHotbarSlot(const FControllerAccount& account, int slot);
+
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsExecuteCompressedActions(const FAccount& account, const FString& packed_actions);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsExecuteCompressedActions(const FControllerAccount& account, const FString& packed_actions);
 
     UFUNCTION(BlueprintCallable, Category = "Calls")
     void CallCraftIslandPocketActionsCraft(const FAccount& account, int item, int64 x, int64 y, int64 z);

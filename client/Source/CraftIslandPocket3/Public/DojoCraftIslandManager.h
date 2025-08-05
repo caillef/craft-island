@@ -112,6 +112,37 @@ struct FProcessingLock
     }
 };
 
+UENUM()
+enum class ETransactionType : uint8
+{
+    PlaceUse,
+    Hit,
+    SelectHotbar,
+    Other
+};
+
+USTRUCT()
+struct FTransactionQueueItem
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    ETransactionType Type;
+
+    UPROPERTY()
+    FIntVector Position;
+
+    UPROPERTY()
+    int32 IntParam;
+    
+    FTransactionQueueItem()
+    {
+        Type = ETransactionType::Other;
+        Position = FIntVector::ZeroValue;
+        IntParam = 0;
+    }
+};
+
 UENUM(BlueprintType)
 enum class EActorSpawnType : uint8
 {
@@ -486,7 +517,41 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Materials")
     UMaterialInterface* GoldLeavesMaterial;
 
+    // Optimistic rendering materials
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Materials")
+    UMaterialInterface* PendingMaterial;
+
+    // Map of pending optimistic actions by position
+    UPROPERTY()
+    TMap<FIntVector, AActor*> OptimisticActors;
+
+    // Optimistic inventory changes
+    UPROPERTY()
+    TMap<int32, int32> OptimisticInventoryChanges; // ItemId -> QuantityChange
+
+    // Track locally selected hotbar slot for optimistic rendering
+    UPROPERTY()
+    int32 LocalHotbarSelectedSlot;
+
+    // Transaction queue for blockchain calls
+    TQueue<FTransactionQueueItem> TransactionQueue;
+    bool bIsProcessingTransaction;
+    FTimerHandle TransactionTimeoutHandle;
+
     private:
+    // Transaction queue methods
+    void QueueTransaction(const FTransactionQueueItem& Item);
+    void ProcessNextTransaction();
+    void OnTransactionComplete();
+    FString EncodeCompressedActions(const TArray<FTransactionQueueItem>& Actions);
+    // Optimistic rendering methods
+    void AddOptimisticPlacement(const FIntVector& Position, E_Item Item);
+    void AddOptimisticRemoval(const FIntVector& Position);
+    void ConfirmOptimisticAction(const FIntVector& Position);
+    void RollbackOptimisticAction(const FIntVector& Position);
+    void ApplyPendingVisual(AActor* Actor);
+    void RemovePendingVisual(AActor* Actor);
+
     // Helper methods for space transitions
     FString MakeSpaceKey(const FString& Owner, int32 Id) const;
     void SaveCurrentPlayerPosition();

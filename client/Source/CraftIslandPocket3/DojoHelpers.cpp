@@ -954,7 +954,7 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsSpawn(const FController
                      TEXT("spawn"), FString::Join(args, TEXT(",")));
 }
 
-void ADojoHelpers::CallCraftIslandPocketActionsHitBlock(const FAccount& account, int64 x, int64 y, int64 z, int hp) {
+void ADojoHelpers::CallCraftIslandPocketActionsHitBlock(const FAccount& account, int64 x, int64 y, int64 z) {
     TArray<FString> args;
     args.Append(ConvertToFeltHexa<int64>(x, \
                                  "u64"));
@@ -962,14 +962,12 @@ void ADojoHelpers::CallCraftIslandPocketActionsHitBlock(const FAccount& account,
                                  "u64"));
     args.Append(ConvertToFeltHexa<int64>(z, \
                                  "u64"));
-    args.Append(ConvertToFeltHexa<int>(hp, \
-                                 "u32"));
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("hit_block"), FString::Join(args, TEXT(",")));
 }
 
 void ADojoHelpers::CallControllerCraftIslandPocketActionsHitBlock(const FControllerAccount& \
-                     account, int64 x, int64 y, int64 z, int hp) {
+                     account, int64 x, int64 y, int64 z) {
     TArray<FString> args;
     args.Append(ConvertToFeltHexa<int64>(x, \
                                  "u64"));
@@ -977,8 +975,6 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsHitBlock(const FControl
                                  "u64"));
     args.Append(ConvertToFeltHexa<int64>(z, \
                                  "u64"));
-    args.Append(ConvertToFeltHexa<int>(hp, \
-                                 "u32"));
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("hit_block"), FString::Join(args, TEXT(",")));
 }
@@ -1023,6 +1019,20 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsSelectHotbarSlot(const 
                                  "u8"));
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("select_hotbar_slot"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallCraftIslandPocketActionsExecuteCompressedActions(const FAccount& account, const FString& packed_actions) {
+    TArray<FString> args;
+    args.Add(packed_actions);
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("execute_compressed_actions"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsExecuteCompressedActions(const FControllerAccount& account, const FString& packed_actions) {
+    TArray<FString> args;
+    args.Add(packed_actions);
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("execute_compressed_actions"), FString::Join(args, TEXT(",")));
 }
 
 void ADojoHelpers::CallCraftIslandPocketActionsCraft(const FAccount& account, int item, int64 x, int64 y, int64 z) {
@@ -1183,7 +1193,7 @@ void ADojoHelpers::CallCraftIslandPocketActionsBuy(const FAccount& account, int3
     // Create arrays for item_ids and quantities
     args.Add(FString::Printf(TEXT("1"))); // Array length for item_ids
     args.Append(ConvertToFeltHexa<int>(ItemId, "u16")); // Item ID as u16
-    args.Add(FString::Printf(TEXT("1"))); // Array length for quantities  
+    args.Add(FString::Printf(TEXT("1"))); // Array length for quantities
     args.Append(ConvertToFeltHexa<int>(Quantity, "u32")); // Quantity as u32
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("buy"), FString::Join(args, TEXT(",")));
