@@ -411,6 +411,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsExecuteCompressedActions(const FControllerAccount& account, const FString& packed_actions);
+    
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsExecutePackedActions(const FAccount& account, const TArray<FString>& packed_data);
+    
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsExecutePackedActions(const FControllerAccount& account, const TArray<FString>& packed_data);
 
     UFUNCTION(BlueprintCallable, Category = "Calls")
     void CallCraftIslandPocketActionsCraft(const FAccount& account, int item, int64 x, int64 y, int64 z);

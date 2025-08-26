@@ -1328,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x54a9fde5d67770ff1a9f768f645f4f92c8115ca76a1ae388a38f4d4a2655ed0",
-      "class_hash": "0x40bebbe5dc318aa23b3ca1c2d8eb76aaa87797ad9067c995b8d694131f3d121",
+      "address": "0x430c4569e9f6037ad00c45389cd6f5f9393d1624e9b84d6cc656648b4fb0375",
+      "class_hash": "0x64654fdeb2736e9c2ca62417deba659c72ae50b208d7706100c65765b4bc1b5",
       "abi": [
         {
           "type": "impl",
@@ -1385,6 +1385,20 @@
           "type": "impl",
           "name": "ActionsImpl",
           "interface_name": "craft_island_pocket::systems::actions::IActions"
+        },
+        {
+          "type": "enum",
+          "name": "core::bool",
+          "variants": [
+            {
+              "name": "False",
+              "type": "()"
+            },
+            {
+              "name": "True",
+              "type": "()"
+            }
+          ]
         },
         {
           "type": "interface",
@@ -1595,7 +1609,27 @@
                   "type": "core::felt252"
                 }
               ],
-              "outputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u8"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "execute_packed_actions",
+              "inputs": [
+                {
+                  "name": "packed_data",
+                  "type": "core::array::Array::<core::felt252>"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::array::Array::<core::bool>"
+                }
+              ],
               "state_mutability": "external"
             }
           ]
@@ -1733,11 +1767,12 @@
         "start_processing",
         "cancel_processing",
         "execute_compressed_actions",
+        "execute_packed_actions",
         "upgrade"
       ]
     },
     {
-      "address": "0x4abf7c0f04e846af6a847847da9511755ed13b88a8fc9a120336531a4da3f5e",
+      "address": "0x6b3d14f8594d739e73ab8fc78993f6c62b47ad19f79ed50a4afa436c275da01",
       "class_hash": "0x504147dc1fe3d561e7c7e408ccef9aab4bea463a4a1980673de6db09ba0b8d7",
       "abi": [
         {

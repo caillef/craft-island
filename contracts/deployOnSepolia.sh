@@ -14,8 +14,8 @@ if [ ! -f "Scarb.toml" ]; then
     exit 1
 fi
 
-# Set longer timeout for Sepolia (5 minutes)
-export STARKNET_RPC_REQUEST_TIMEOUT=300
+# Set longer timeout for Sepolia (10 minutes)
+export STARKNET_RPC_REQUEST_TIMEOUT=600
 
 echo "⚙️  Setting RPC timeout to 300 seconds..."
 echo ""

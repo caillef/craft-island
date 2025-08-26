@@ -1329,7 +1329,7 @@
   "contracts": [
     {
       "address": "0x4fe0beeb96dabe5f4cbe308a525f70da978fb13515a7525aed654d1cfc7496",
-      "class_hash": "0x58af01d762adaaaf9c8f31ee91a0948bfdfbf22ded2b72f7b5d1601bb6d3d82",
+      "class_hash": "0x1fdfe62848ad49f43fabe8751bdec2357c8c66a8d6989fb9495a171658062c",
       "abi": [
         {
           "type": "impl",
@@ -1385,6 +1385,20 @@
           "type": "impl",
           "name": "ActionsImpl",
           "interface_name": "craft_island_pocket::systems::actions::IActions"
+        },
+        {
+          "type": "enum",
+          "name": "core::bool",
+          "variants": [
+            {
+              "name": "False",
+              "type": "()"
+            },
+            {
+              "name": "True",
+              "type": "()"
+            }
+          ]
         },
         {
           "type": "interface",
@@ -1601,6 +1615,22 @@
                 }
               ],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "execute_packed_actions",
+              "inputs": [
+                {
+                  "name": "packed_data",
+                  "type": "core::array::Array::<core::felt252>"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::array::Array::<core::bool>"
+                }
+              ],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1737,6 +1767,7 @@
         "start_processing",
         "cancel_processing",
         "execute_compressed_actions",
+        "execute_packed_actions",
         "upgrade"
       ]
     },

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/Queue.h"
 #include "GameFramework/Actor.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
@@ -118,6 +119,15 @@ enum class ETransactionType : uint8
     PlaceUse,
     Hit,
     SelectHotbar,
+    MoveItem,
+    Craft,
+    Buy,
+    Sell,
+    StartProcess,
+    CancelProcess,
+    Visit,
+    VisitNewIsland,
+    GenerateIsland,
     Other
 };
 
@@ -131,15 +141,37 @@ struct FTransactionQueueItem
 
     UPROPERTY()
     FIntVector Position;
+    
+    UPROPERTY()
+    E_Item ItemType;
 
     UPROPERTY()
     int32 IntParam;
+    
+    UPROPERTY()
+    int32 IntParam2;
+    
+    UPROPERTY()
+    int32 IntParam3;
+    
+    UPROPERTY()
+    int32 IntParam4;
+    
+    UPROPERTY()
+    TArray<int32> ItemIds;
+    
+    UPROPERTY()
+    TArray<int32> Quantities;
     
     FTransactionQueueItem()
     {
         Type = ETransactionType::Other;
         Position = FIntVector::ZeroValue;
+        ItemType = E_Item::None;
         IntParam = 0;
+        IntParam2 = 0;
+        IntParam3 = 0;
+        IntParam4 = 0;
     }
 };
 
@@ -289,6 +321,28 @@ private:
 public:
 	// Sets default values for this actor's properties
 	ADojoCraftIslandManager();
+    
+    // Queue methods for batching
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    void QueueInventoryMove(int32 FromInventory, int32 FromSlot, int32 ToInventory, int32 ToSlot);
+    
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    void QueueCraft(int32 ItemId);
+    
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    void QueueBuy(const TArray<int32>& ItemIds, const TArray<int32>& Quantities);
+    
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    void QueueSell();
+    
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    void QueueVisit(int32 SpaceId);
+    
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    void FlushActionQueue();
+    
+    UFUNCTION(BlueprintCallable, Category = "Batching")
+    int32 GetPendingActionCount() const;
 
 protected:
 	// Called when the game starts or when spawned
@@ -307,6 +361,19 @@ protected:
     FAccount Account;
 
 public:
+    // Event delegates for optimistic updates
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnOptimisticInventoryMove OnOptimisticInventoryMove;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnOptimisticCraft OnOptimisticCraft;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnOptimisticSell OnOptimisticSell;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnActionQueueUpdate OnActionQueueUpdate;
+    
     // Widgets
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
     TSubclassOf<UUserWidget> OnboardingWidgetClass;
@@ -521,9 +588,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Materials")
     UMaterialInterface* PendingMaterial;
 
-    // Map of pending optimistic actions by position
+    // Map of pending optimistic actions by position with timestamps
     UPROPERTY()
     TMap<FIntVector, AActor*> OptimisticActors;
+    
+    // Track when optimistic actors were created for cleanup
+    TMap<FIntVector, double> OptimisticActorTimestamps;
+    FTimerHandle OptimisticCleanupTimerHandle;
+    static constexpr float OPTIMISTIC_TIMEOUT_SECONDS = 30.0f; // Rollback after 30 seconds
 
     // Optimistic inventory changes
     UPROPERTY()
@@ -533,17 +605,33 @@ public:
     UPROPERTY()
     int32 LocalHotbarSelectedSlot;
 
-    // Transaction queue for blockchain calls
+    // Transaction queue for blockchain calls (thread-safe)
     TQueue<FTransactionQueueItem> TransactionQueue;
+    mutable FCriticalSection TransactionQueueMutex; // Protect queue access
     bool bIsProcessingTransaction;
     FTimerHandle TransactionTimeoutHandle;
+    int32 TransactionQueueCount;
+    static constexpr int32 MAX_QUEUE_SIZE = 1000; // Prevent unbounded growth
 
     private:
     // Transaction queue methods
     void QueueTransaction(const FTransactionQueueItem& Item);
     void ProcessNextTransaction();
+    void ProcessSingleAction(const FTransactionQueueItem& Action);
     void OnTransactionComplete();
-    FString EncodeCompressedActions(const TArray<FTransactionQueueItem>& Actions);
+    
+    // Universal action encoder functions
+    TArray<FString> EncodePackedActions(const TArray<FTransactionQueueItem>& Actions);
+    FString PackType0Actions(const TArray<FTransactionQueueItem>& Actions, int32& Index);
+    FString PackType1Actions(const TArray<FTransactionQueueItem>& Actions, int32& Index);
+    FString PackType2Actions(const TArray<FTransactionQueueItem>& Actions, int32& Index);
+    FString PackType3Action(const FTransactionQueueItem& Action);
+    bool CanBatchAction(ETransactionType Type);
+    int32 GetActionSize(ETransactionType Type);
+    
+    // Bit manipulation helpers
+    void WriteBits(TArray<uint8>& Bytes, int32& BitOffset, uint64 Value, int32 NumBits);
+    FString BytesToHexString(const TArray<uint8>& Bytes);
     // Optimistic rendering methods
     void AddOptimisticPlacement(const FIntVector& Position, E_Item Item);
     void AddOptimisticRemoval(const FIntVector& Position);
@@ -562,4 +650,31 @@ public:
     // Camera utility methods
     void SetCameraLag(APawn* Pawn, bool bEnableLag);
     void DisableCameraLagDuringTeleport(APawn* Pawn);
+    
+    // Optimistic inventory update methods
+    void ApplyOptimisticInventoryMove(const FTransactionQueueItem& Action);
+    void RollbackOptimisticInventoryMove(const FTransactionQueueItem& Action);
+    void ConfirmOptimisticInventoryActions();
+    
+    // Optimistic actor cleanup
+    void CleanupTimedOutOptimisticActors();
+    void StartOptimisticCleanupTimer();
+    
+    // Batch timing configuration
+    static constexpr float BATCH_WAIT_TIME = 0.5f;
+    static constexpr int32 MAX_BATCH_SIZE = 10;
+    static constexpr int32 FORCE_SEND_SIZE = 8;
+    
+    // Timer for batching
+    FTimerHandle BatchTimerHandle;
+    
+    // Optimistic inventory state
+    struct FOptimisticInventoryState
+    {
+        TMap<FIntPoint, E_Item> Items; // Key: (InventoryId, Slot)
+        TMap<FIntPoint, int32> Quantities;
+        TArray<FTransactionQueueItem> PendingActions;
+    };
+    
+    FOptimisticInventoryState OptimisticInventory;
 };

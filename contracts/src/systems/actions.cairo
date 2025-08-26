@@ -14,6 +14,7 @@ trait IActions<T> {
     fn start_processing(ref self: T, process_type: u8, input_amount: u32);
     fn cancel_processing(ref self: T);
     fn execute_compressed_actions(ref self: T, packed_actions: felt252) -> u8;
+    fn execute_packed_actions(ref self: T, packed_data: Array<felt252>) -> Array<bool>;
 }
 
 // dojo decorator
@@ -46,6 +47,35 @@ mod actions {
     };
 
     use dojo::model::{ModelStorage};
+    
+    // Helper function to extract bits from felt252
+    fn extract_u8(value: felt252, shift: u32) -> u8 {
+        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
+        let masked: u256 = shifted - (shifted / 256) * 256;
+        masked.try_into().unwrap()
+    }
+    
+    // Helper function to extract u16 from felt252
+    fn extract_u16(value: felt252, shift: u32) -> u16 {
+        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
+        let masked: u256 = shifted - (shifted / 0x10000) * 0x10000;
+        masked.try_into().unwrap()
+    }
+    
+    // Helper function to extract u32 from felt252
+    fn extract_u32(value: felt252, shift: u32) -> u32 {
+        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
+        let masked: u256 = shifted - (shifted / 0x100000000) * 0x100000000;
+        masked.try_into().unwrap()
+    }
+    
+    // Helper function to extract u64 from felt252
+    fn extract_u64(value: felt252, shift: u32, bits: u32) -> u64 {
+        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
+        let mask: u256 = fast_power_2(bits.into()).into();
+        let masked: u256 = shifted - (shifted / mask) * mask;
+        masked.try_into().unwrap()
+    }
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
@@ -845,6 +875,161 @@ mod actions {
             // Return number of successful actions
             successful_count
         }
+        
+        fn execute_packed_actions(ref self: ContractState, packed_data: Array<felt252>) -> Array<bool> {
+            println!("execute_packed_actions: {} felts", packed_data.len());
+            
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+            
+            // Limit to prevent gas issues
+            assert(packed_data.len() <= 10, 'Too many packed felts');
+            
+            let mut results: Array<bool> = array![];
+            let mut felt_idx = 0;
+            
+            while felt_idx < packed_data.len() {
+                let current_felt = *packed_data.at(felt_idx);
+                let pack_type = extract_u8(current_felt, 0);
+                println!("Pack type: {}", pack_type);
+                
+                if pack_type == 0 {
+                    // Type 0: Packed PlaceUse/Hit actions (up to 8 per felt)
+                    // [8 bits: pack_type=0][4 bits: count][30 bits: action1]...[30 bits: action8]
+                    // Each action: [1 bit: action_type][14 bits: y][14 bits: x][1 bit: z]
+                    let count_raw = extract_u8(current_felt, 8);
+                    let count = count_raw - (count_raw / 16) * 16; // 4 bits
+                    
+                    let mut data: u256 = current_felt.into() / 4096; // Skip header (12 bits)
+                    let mut i: u8 = 0;
+                    
+                    while i < count {
+                        let action_raw = extract_u32(data.try_into().unwrap(), 0);
+                        let action = action_raw - (action_raw / 0x40000000) * 0x40000000; // 30 bits
+                        let action_type = action & 0x1; // 1 bit
+                        let y: u64 = extract_u64(action.into(), 1, 14); // 14 bits
+                        let x: u64 = extract_u64(action.into(), 15, 14); // 14 bits
+                        let z: u64 = if extract_u8(action.into(), 29) == 0 { 8192 } else { 8193 }; // 1 bit at position 29
+                        
+                        let success = if action_type == 0 {
+                            println!("Use: ({},{},{})", x, y, z);
+                            try_use_item(ref world, player, x, y, z)
+                        } else {
+                            try_hit_block(ref world, player, x, y, z)
+                        };
+                        
+                        results.append(success);
+                        data = data / 0x40000000; // Shift 30 bits
+                        i += 1;
+                    }
+                } else if pack_type == 1 {
+                    // Type 1: Packed MoveItem actions (up to 6 per felt)
+                    // [8 bits: pack_type=1][4 bits: count][40 bits: move1]...[40 bits: move6]
+                    let count_raw = extract_u8(current_felt, 8);
+                    let count = count_raw - (count_raw / 16) * 16; // 4 bits
+                    let mut data: u256 = current_felt.into() / 4096;
+                    let mut i: u8 = 0;
+                    
+                    while i < count {
+                        let from_inv: u16 = extract_u8(data.try_into().unwrap(), 0).into(); // 8 bits
+                        let from_slot = extract_u8(data.try_into().unwrap(), 8); // 8 bits
+                        let to_inv: u16 = extract_u8(data.try_into().unwrap(), 16).into(); // 8 bits
+                        let to_slot = extract_u8(data.try_into().unwrap(), 24); // 8 bits
+                        
+                        let success = try_move_item(ref world, player, from_inv, from_slot, to_inv, to_slot);
+                        results.append(success);
+                        
+                        data = data / 0x10000000000; // Shift 40 bits
+                        i += 1;
+                    }
+                } else if pack_type == 2 {
+                    // Type 2: Mixed simple actions
+                    // [8 bits: pack_type=2][4 bits: count][variable data per action]
+                    let count_raw = extract_u8(current_felt, 8);
+                    let count = count_raw - (count_raw / 16) * 16; // 4 bits
+                    let mut data: u256 = current_felt.into() / 4096;
+                    let mut i: u8 = 0;
+                    
+                    while i < count {
+                        let action_type = extract_u8(data.try_into().unwrap(), 0);
+                        data = data / 256;
+                        
+                        let success = if action_type == 2 {
+                            // SelectHotbar: [8 bits: slot]
+                            let slot = extract_u8(data.try_into().unwrap(), 8);
+                            data = data / 256;
+                            try_select_hotbar(ref world, player, slot)
+                        } else if action_type == 6 {
+                            // Sell: no additional data
+                            try_sell(ref world, player)
+                        } else if action_type == 8 {
+                            // CancelProcessing: no additional data
+                            try_cancel_processing(ref world, player)
+                        } else if action_type == 9 {
+                            // Visit: [16 bits: space_id]
+                            let space_id = extract_u16(data.try_into().unwrap(), 8);
+                            data = data / 0x10000;
+                            try_visit(ref world, player, space_id)
+                        } else if action_type == 10 {
+                            // VisitNewIsland: no additional data
+                            try_visit_new_island(ref world, player)
+                        } else {
+                            false
+                        };
+                        
+                        results.append(success);
+                        i += 1;
+                    }
+                } else if pack_type == 3 {
+                    // Type 3: Single large action
+                    // [8 bits: pack_type=3][8 bits: action_type][remaining bits: action data]
+                    let action_type = extract_u8(current_felt, 8);
+                    let data: u256 = current_felt.into() / 0x10000;
+                    
+                    let success = if action_type == 3 {
+                        // Craft: [32 bits: item_id][30 bits: position]
+                        // Position: [14 bits: y][14 bits: x][2 bits: z and reserved]
+                        let item_id = extract_u32(data.try_into().unwrap(), 0);
+                        let y: u64 = extract_u64(data.try_into().unwrap(), 32, 14);
+                        let x: u64 = extract_u64(data.try_into().unwrap(), 46, 14);
+                        let z: u64 = if extract_u8(data.try_into().unwrap(), 60) == 0 { 8192 } else { 8193 };
+                        try_craft_helper(ref world, player, item_id, x, y, z)
+                    } else if action_type == 5 {
+                        // Buy: [16 bits: item_id][32 bits: quantity]
+                        let item_id = extract_u16(data.try_into().unwrap(), 0);
+                        let quantity = extract_u32(data.try_into().unwrap(), 16);
+                        try_buy_single(ref world, player, item_id, quantity)
+                    } else if action_type == 7 {
+                        // StartProcessing: [8 bits: process_type][32 bits: amount]
+                        let process_type: u8 = (data & 0xFF).try_into().unwrap();
+                        let amount: u32 = ((data / 0x100) & 0xFFFFFFFF).try_into().unwrap();
+                        try_start_processing(ref world, player, process_type, amount)
+                    } else if action_type == 11 {
+                        // GenerateIsland: [30 bits: position][16 bits: island_id]
+                        // Position: [14 bits: y][14 bits: x][2 bits: z and reserved]
+                        let coords_raw = extract_u32(data.try_into().unwrap(), 0);
+                        let coords = coords_raw - (coords_raw / 0x40000000) * 0x40000000; // 30 bits
+                        let y: u64 = extract_u64(coords.into(), 0, 14);
+                        let x: u64 = extract_u64(coords.into(), 14, 14);
+                        let z: u64 = if extract_u8(coords.into(), 28) == 0 { 8192 } else { 8193 };
+                        let island_id = extract_u16(data.try_into().unwrap(), 30);
+                        try_generate_island(ref world, player, x, y, z, island_id)
+                    } else {
+                        false
+                    };
+                    
+                    results.append(success);
+                } else {
+                    // Unknown pack type, skip
+                    results.append(false);
+                }
+                
+                felt_idx += 1;
+            };
+            
+            
+            results
+        }
     }
 
     // Safe version of hit_block that returns success/failure instead of asserting
@@ -862,6 +1047,7 @@ mod actions {
         // Get block info
         let player_data: PlayerData = world.read_model(player);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        
         let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
         
         // Get block ID at position
@@ -879,10 +1065,13 @@ mod actions {
         }
         
         // Try to remove block
-        if remove_block_safe(ref world, x, y, z) {
+        let block_removed = remove_block_safe(ref world, x, y, z);
+        if block_removed {
+            println!("Block removed successfully");
             return true;
         } else {
             // Try harvest
+            println!("Block not removed, trying harvest");
             return try_harvest(ref world, player, x, y, z);
         }
     }
@@ -892,6 +1081,7 @@ mod actions {
         // Get inventory
         let mut inventory: Inventory = world.read_model((player, 0));
         let item_type: u16 = inventory.get_hotbar_selected_item_type();
+        println!("use_item: tool={} at ({},{},{})", item_type, x, y, z);
         
         // Check if has item
         if item_type == 0 {
@@ -1017,7 +1207,10 @@ mod actions {
         let player_data: PlayerData = world.read_model(player);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
+        
+        println!("Resource: id={}, pos={}", resource.resource_id, position);
         
         if resource.resource_id == 0 || resource.destroyed {
             return false; // No resource exists
@@ -1065,23 +1258,51 @@ mod actions {
             return false;
         }
         
-        // Process harvest - this part gets complex with inventory management
-        // For brevity, returning true if we get here, but full implementation would check inventory space
+        // Process harvest
         resource.harvested_at = timestamp;
         resource.remained_harvest -= 1;
         
-        // Simplified - in reality would need to check inventory space for all items
-        let success = true; // Would be result of trying to add items
-        
-        if success {
-            if resource.remained_harvest == 0 {
-                resource.destroyed = true;
-                resource.resource_id = 0;
-            }
-            world.write_model(@resource);
+        // Add the harvested items to inventory based on resource type
+        let mut item_id = resource.resource_id;
+        if item_id == 49 { // Boulder
+            item_id = 33; // Rock
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
+        } else if item_id == 46 { // Oak Tree
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 46, 1);
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), 44, 1);
+        } else if item_id == 47 { // Wheat seed
+            // Give 1-2 wheat (golden if tier is 1)
+            let seed = timestamp % 2;
+            let wheat_id = if resource.tier == 1 { 65 } else { 48 }; // 65 = Golden Wheat, 48 = Wheat
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), wheat_id, 1 + seed.try_into().unwrap());
+        } else if item_id == 51 { // Carrot seed
+            // Give 2-3 carrots (golden if tier is 1)
+            let seed = timestamp % 2;
+            let carrot_id = if resource.tier == 1 { 66 } else { 52 }; // 66 = Golden Carrot, 52 = Carrot
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), carrot_id, 2 + seed.try_into().unwrap());
+        } else if item_id == 53 { // Potato seed
+            // Give 2-3 potatoes (golden if tier is 1)
+            let seed = timestamp % 2;
+            let potato_id = if resource.tier == 1 { 67 } else { 54 }; // 67 = Golden Potato, 54 = Potato
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), potato_id, 2 + seed.try_into().unwrap());
+        } else {
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, 1);
         }
         
-        success
+        // Update resource state
+        if resource.max_harvest == 255 {
+            // Unlimited harvests
+        } else if resource.max_harvest > 0 && resource.remained_harvest == 0 {
+            resource.destroyed = true;
+            resource.resource_id = 0;
+        } else {
+            resource.next_harvest_at = timestamp + 10;
+        }
+        
+        world.write_model(@resource);
+        println!("Harvested! remain={}", resource.remained_harvest);
+        
+        true
     }
 
     // Safe version of plant
@@ -1134,6 +1355,329 @@ mod actions {
         }
         
         false
+    }
+
+    // Safe version of move_item
+    fn try_move_item(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, from_inv: u16, from_slot: u8, to_inv: u16, to_slot: u8) -> bool {
+        let mut from_inventory: Inventory = world.read_model((player, from_inv));
+        let mut to_inventory: Inventory = world.read_model((player, to_inv));
+        
+        // Try to move the item
+        if from_inventory.move_item_between_inventories(from_slot, ref to_inventory, to_slot) {
+            world.write_model(@from_inventory);
+            world.write_model(@to_inventory);
+            return true;
+        }
+        false
+    }
+
+    // Safe version of select_hotbar
+    fn try_select_hotbar(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, slot: u8) -> bool {
+        if slot >= 9 {
+            return false; // Invalid slot
+        }
+        
+        let mut inventory: Inventory = world.read_model((player, 0));
+        
+        // Check if slot has an item
+        let selected_item = inventory.get_hotbar_selected_item_type();
+        if selected_item == 0 && slot != inventory.hotbar_selected_slot {
+            // Try to check if the new slot has an item
+            inventory.hotbar_selected_slot = slot;
+            let new_item = inventory.get_hotbar_selected_item_type();
+            if new_item == 0 {
+                return false; // Empty slot
+            }
+        }
+        
+        inventory.hotbar_selected_slot = slot;
+        world.write_model(@inventory);
+        true
+    }
+
+    // Safe version of sell
+    fn try_sell(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> bool {
+        // Get sell inventory (id = 3)
+        let mut sell_inventory: Inventory = world.read_model((player, 3));
+        let mut player_data: PlayerData = world.read_model(player);
+        
+        let mut total_coins: u32 = 0;
+        
+        // Calculate total value
+        total_coins += sell_inventory.get_item_amount(52) * 2;    // Carrot
+        total_coins += sell_inventory.get_item_amount(54) * 8;    // Potato
+        total_coins += sell_inventory.get_item_amount(48) * 10;   // Wheat
+        total_coins += sell_inventory.get_item_amount(66) * 20;   // Golden Carrot
+        total_coins += sell_inventory.get_item_amount(67) * 80;   // Golden Potato
+        total_coins += sell_inventory.get_item_amount(65) * 100;  // Golden Wheat
+        total_coins += sell_inventory.get_item_amount(55) * 5;    // Bowl
+        total_coins += sell_inventory.get_item_amount(71) * 50;   // Bowl of Soup
+        
+        if total_coins == 0 {
+            return false; // Nothing to sell
+        }
+        
+        // Clear inventory and add coins
+        let mut i: u8 = 0;
+        while i < sell_inventory.inventory_size {
+            sell_inventory.clear_slot(i);
+            i += 1;
+        };
+        
+        player_data.coins += total_coins;
+        world.write_model(@player_data);
+        world.write_model(@sell_inventory);
+        true
+    }
+
+    // Safe version of cancel_processing
+    fn try_cancel_processing(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> bool {
+        let mut lock: ProcessingLock = world.read_model(player);
+        
+        if lock.unlock_time == 0 {
+            return false; // Not processing
+        }
+        
+        // Clear the lock
+        lock.unlock_time = 0;
+        lock.process_type = ProcessType::None;
+        lock.batches_processed = 0;
+        world.write_model(@lock);
+        true
+    }
+
+    // Safe version of visit
+    fn try_visit(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, space_id: u16) -> bool {
+        let mut player_data: PlayerData = world.read_model(player);
+        
+        // Check if space exists (simplified check)
+        let last_space_id = player_data.last_space_created_id;
+        if space_id == 0 || space_id > last_space_id {
+            return false;
+        }
+        
+        player_data.current_space_owner = player.into();
+        player_data.current_space_id = space_id;
+        world.write_model(@player_data);
+        true
+    }
+
+    // Safe version of visit_new_island
+    fn try_visit_new_island(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> bool {
+        let mut player_data: PlayerData = world.read_model(player);
+        
+        // Create new space
+        player_data.last_space_created_id += 1;
+        player_data.current_space_owner = player.into();
+        player_data.current_space_id = player_data.last_space_created_id;
+        
+        world.write_model(@player_data);
+        true
+    }
+
+    // Safe version of craft (helper function)
+    fn try_craft_helper(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_id: u32, x: u64, y: u64, z: u64) -> bool {
+        let item: u16 = item_id.try_into().unwrap();
+        
+        // For inventory craft
+        if item == 0 {
+            let mut craftinventory: Inventory = world.read_model((player, 2));
+            let craft_matrix: u256 = (craftinventory.slots1.into() & 7229938216006767371223902296383078621116345691456360212366842288707796205568);
+            let wanteditem = craftmatch(craft_matrix);
+            
+            if wanteditem == 0 {
+                return false; // Not a valid recipe
+            }
+            
+            let mut k = 0;
+            loop {
+                if k >= 9 {
+                    break;
+                }
+                craftinventory.remove_item(k, 1);
+                k += 1;
+            };
+            
+            let mut hotbar: Inventory = world.read_model((player, 0));
+            let mut inventory: Inventory = world.read_model((player, 1));
+            let overflow = hotbar.add_items(wanteditem, 1);
+            if overflow > 0 {
+                inventory.add_items(wanteditem, overflow);
+            }
+            
+            world.write_model(@craftinventory);
+            world.write_model(@hotbar);
+            world.write_model(@inventory);
+            return true;
+        }
+        
+        // Stone Craft
+        if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
+            let player_data: PlayerData = world.read_model(player);
+            let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+            let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+            let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
+            
+            if resource.resource_id != 33 || resource.destroyed {
+                return false; // No rock
+            }
+            
+            resource.destroyed = true;
+            resource.resource_id = 0;
+            world.write_model(@resource);
+            
+            let mut hotbar: Inventory = world.read_model((player, 0));
+            if hotbar.get_hotbar_selected_item_type() == 33 {
+                hotbar.remove_items(33, 1);
+            } else {
+                let mut inventory: Inventory = world.read_model((player, 1));
+                if hotbar.get_item_amount(33) > 0 {
+                    hotbar.remove_items(33, 1);
+                } else {
+                    inventory.remove_items(33, 1);
+                }
+                world.write_model(@inventory);
+            }
+            
+            let overflow = hotbar.add_items(item, 1);
+            if overflow > 0 {
+                let mut inventory: Inventory = world.read_model((player, 1));
+                inventory.add_items(item, overflow);
+                world.write_model(@inventory);
+            }
+            
+            world.write_model(@hotbar);
+            return true;
+        }
+        
+        false
+    }
+
+    // Safe version of buy (single item)
+    fn try_buy_single(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_id: u16, quantity: u32) -> bool {
+        let mut player_data: PlayerData = world.read_model(player);
+        
+        // Get price
+        let price_per_item = get_item_price(item_id);
+        if price_per_item == 0 {
+            return false; // Item not for sale
+        }
+        
+        let total_cost = price_per_item * quantity;
+        if player_data.coins < total_cost {
+            return false; // Not enough coins
+        }
+        
+        // Check inventory space (simplified)
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let mut inventory: Inventory = world.read_model((player, 1));
+        
+        // Deduct coins and add items
+        player_data.coins -= total_cost;
+        let overflow = hotbar.add_items(item_id, quantity);
+        if overflow > 0 {
+            let remaining = inventory.add_items(item_id, overflow);
+            if remaining > 0 {
+                // Refund for items that couldn't fit
+                player_data.coins += price_per_item * remaining;
+            }
+        }
+        
+        world.write_model(@player_data);
+        world.write_model(@hotbar);
+        world.write_model(@inventory);
+        true
+    }
+
+    // Safe version of start_processing
+    fn try_start_processing(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, process_type: u8, amount: u32) -> bool {
+        // Check if already processing
+        let lock: ProcessingLock = world.read_model(player);
+        if lock.unlock_time > 0 {
+            return false; // Already processing
+        }
+        
+        // Get processing config
+        let process_type_enum = match process_type {
+            0 => ProcessType::None,
+            1 => ProcessType::GrindWheat,
+            2 => ProcessType::CutLogs,
+            3 => ProcessType::SmeltOre,
+            4 => ProcessType::CrushStone,
+            5 => ProcessType::ProcessClay,
+            _ => ProcessType::None
+        };
+        let config = get_processing_config(process_type_enum);
+        if config.input_item == 0 {
+            return false; // Invalid process type
+        }
+        
+        // Check inventory for input items
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let mut inventory: Inventory = world.read_model((player, 1));
+        
+        let total_available = hotbar.get_item_amount(config.input_item.try_into().unwrap()) + inventory.get_item_amount(config.input_item.try_into().unwrap());
+        let actual_amount = if amount > total_available { total_available } else { amount };
+        
+        if actual_amount == 0 {
+            return false; // No input items
+        }
+        
+        // Remove input items
+        let mut remaining = actual_amount;
+        let hotbar_amount = hotbar.get_item_amount(config.input_item.try_into().unwrap());
+        let to_remove = if hotbar_amount >= remaining { remaining } else { hotbar_amount };
+        if to_remove > 0 {
+            hotbar.remove_items(config.input_item.try_into().unwrap(), to_remove);
+            remaining -= to_remove;
+        }
+        if remaining > 0 {
+            inventory.remove_items(config.input_item.try_into().unwrap(), remaining);
+        }
+        
+        // Create processing lock
+        let timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let batches = actual_amount / config.input_amount;
+        let duration = batches * config.time_per_batch.try_into().unwrap();
+        
+        let mut new_lock = ProcessingLock {
+            player: player.into(),
+            unlock_time: timestamp + duration.into(),
+            process_type: process_type_enum,
+            batches_processed: batches.into()
+        };
+        
+        world.write_model(@new_lock);
+        world.write_model(@hotbar);
+        world.write_model(@inventory);
+        true
+    }
+
+    // Safe version of generate_island
+    fn try_generate_island(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64, island_id: u16) -> bool {
+        // Simplified implementation - in reality would check permissions, resources, etc.
+        let player_data: PlayerData = world.read_model(player);
+        
+        // Basic validation
+        if island_id == 0 || island_id > player_data.last_space_created_id {
+            return false;
+        }
+        
+        // Would normally generate terrain here
+        true
+    }
+
+    // Helper function to get item prices
+    fn get_item_price(item_id: u16) -> u32 {
+        if item_id == 47 { 10 }       // Wheat seed
+        else if item_id == 53 { 5 }   // Potato seed
+        else if item_id == 51 { 2 }   // Carrot seed
+        else if item_id == 60 { 5 }   // Workshop Pattern
+        else if item_id == 61 { 100 } // Well Pattern
+        else if item_id == 62 { 3000 }// Kitchen Pattern
+        else if item_id == 63 { 500 } // Warehouse Pattern
+        else if item_id == 64 { 10000 }// Brewery Pattern
+        else { 0 }
     }
 
     fn spawn_random_resources(ref world: dojo::world::storage::WorldStorage, player: felt252, island_id: u16, shift: u128, island_type: u32) {

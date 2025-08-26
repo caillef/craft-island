@@ -90,6 +90,7 @@ pub fn update_block(
     let player_data: PlayerData = world.read_model((player));
     let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
     let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+    println!("update_block: z-1={}", z - 1);
     chunk.update_block(x, y, z - 1, tool);
     world.write_model(@chunk);
 }
@@ -110,6 +111,7 @@ pub impl IslandChunkImpl of IslandChunkTrait {
     fn update_block(ref self: IslandChunk, x: u64, y: u64, z: u64, tool: u16) {
         if z % 4 < 2 {
             let block_info = get_block_at_pos(self.blocks2, x % 4, y % 4, z % 2);
+            println!("update: block={} z={}", block_info, z);
             assert(block_info > 0, 'Error: block does not exist');
             let shift: u128 = fast_power_2((((x % 4) + (y % 4) * 4 + (z % 2) * 16) * 4).into())
                 .into();

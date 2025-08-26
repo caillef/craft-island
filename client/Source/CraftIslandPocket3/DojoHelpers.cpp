@@ -1035,6 +1035,30 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsExecuteCompressedAction
                      TEXT("execute_compressed_actions"), FString::Join(args, TEXT(",")));
 }
 
+void ADojoHelpers::CallCraftIslandPocketActionsExecutePackedActions(const FAccount& account, const TArray<FString>& packed_data) {
+    TArray<FString> args;
+    // Format as array: [len, item1, item2, ...]
+    args.Add(FString::FromInt(packed_data.Num()));
+    for (const FString& PackedFelt : packed_data)
+    {
+        args.Add(PackedFelt);
+    }
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("execute_packed_actions"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsExecutePackedActions(const FControllerAccount& account, const TArray<FString>& packed_data) {
+    TArray<FString> args;
+    // Format as array: [len, item1, item2, ...]
+    args.Add(FString::FromInt(packed_data.Num()));
+    for (const FString& PackedFelt : packed_data)
+    {
+        args.Add(PackedFelt);
+    }
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("execute_packed_actions"), FString::Join(args, TEXT(",")));
+}
+
 void ADojoHelpers::CallCraftIslandPocketActionsCraft(const FAccount& account, int item, int64 x, int64 y, int64 z) {
     TArray<FString> args;
     args.Append(ConvertToFeltHexa<int>(item, \
