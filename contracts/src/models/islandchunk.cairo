@@ -90,8 +90,8 @@ pub fn update_block(
     let player_data: PlayerData = world.read_model((player));
     let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
     let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
-    println!("update_block: z-1={}", z - 1);
-    chunk.update_block(x, y, z - 1, tool);
+    println!("update_block: z={}", z);
+    chunk.update_block(x, y, z, tool);
     world.write_model(@chunk);
 }
 

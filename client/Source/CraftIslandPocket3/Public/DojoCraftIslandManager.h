@@ -163,6 +163,10 @@ struct FTransactionQueueItem
     UPROPERTY()
     TArray<int32> Quantities;
     
+    // Sequence number for tracking order (especially for hotbar selections)
+    UPROPERTY()
+    int32 SequenceNumber;
+    
     FTransactionQueueItem()
     {
         Type = ETransactionType::Other;
@@ -172,6 +176,7 @@ struct FTransactionQueueItem
         IntParam2 = 0;
         IntParam3 = 0;
         IntParam4 = 0;
+        SequenceNumber = 0;
     }
 };
 
@@ -604,6 +609,14 @@ public:
     // Track locally selected hotbar slot for optimistic rendering
     UPROPERTY()
     int32 LocalHotbarSelectedSlot;
+    
+    // Hotbar selection timing and sequence tracking
+    double LocalHotbarSelectionTimestamp;
+    int32 LocalHotbarSelectionSequence;
+    int32 NextHotbarSequence;
+    FTimerHandle HotbarTimeoutHandle;
+    bool bHotbarSelectionPending; // True when local selection differs from server
+    static constexpr float HOTBAR_TIMEOUT_SECONDS = 2.0f; // Reset after 2 seconds
 
     // Transaction queue for blockchain calls (thread-safe)
     TQueue<FTransactionQueueItem> TransactionQueue;
@@ -659,6 +672,12 @@ public:
     // Optimistic actor cleanup
     void CleanupTimedOutOptimisticActors();
     void StartOptimisticCleanupTimer();
+    
+    // Hotbar timeout handling
+    void ResetLocalHotbarSelection();
+    
+    // Lazy hotbar update - queues hotbar selection if pending
+    void QueuePendingHotbarSelection();
     
     // Batch timing configuration
     static constexpr float BATCH_WAIT_TIME = 0.5f;

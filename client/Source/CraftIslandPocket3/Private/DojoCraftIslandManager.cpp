@@ -19,6 +19,10 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
 
 	// Initialize local hotbar selection to -1 (unset)
 	LocalHotbarSelectedSlot = -1;
+	LocalHotbarSelectionTimestamp = 0.0;
+	LocalHotbarSelectionSequence = 0;
+	NextHotbarSequence = 1;
+	bHotbarSelectionPending = false;
 
 	// Initialize transaction queue
 	bIsProcessingTransaction = false;
@@ -403,26 +407,30 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
         if (Inventory->Id == 0)
         {
             CurrentInventory = Inventory;
-            // Only sync local hotbar selection if we haven't made a local selection
-            // This preserves optimistic rendering when switching slots
+            // Simplified synchronization with lazy hotbar system
             if (LocalHotbarSelectedSlot == -1)
             {
+                // No local selection - sync with server
                 LocalHotbarSelectedSlot = Inventory->HotbarSelectedSlot;
+                LocalHotbarSelectionTimestamp = GetWorld()->GetTimeSeconds();
+                bHotbarSelectionPending = false;
                 UE_LOG(LogTemp, Warning, TEXT("OnInventoryUpdated: Syncing LocalHotbarSelectedSlot to server value: %d"), 
                        Inventory->HotbarSelectedSlot);
             }
-            // If server confirms our selection, keep using it until we change again
             else if (LocalHotbarSelectedSlot == Inventory->HotbarSelectedSlot)
             {
-                // Server has caught up, keep using this value
+                // Server confirmed our selection - clear pending flag
+                bHotbarSelectionPending = false;
+                GetWorld()->GetTimerManager().ClearTimer(HotbarTimeoutHandle);
                 UE_LOG(LogTemp, Warning, TEXT("OnInventoryUpdated: Server confirmed slot %d"), 
                        LocalHotbarSelectedSlot);
-                // Don't reset to -1 here, keep the confirmed value
             }
             else
             {
-                UE_LOG(LogTemp, Warning, TEXT("OnInventoryUpdated: Keeping LocalHotbarSelectedSlot=%d (server has %d)"), 
+                // Keep local state and pending flag - will be sent with next action
+                UE_LOG(LogTemp, Warning, TEXT("OnInventoryUpdated: Local slot %d still pending (server has %d)"), 
                        LocalHotbarSelectedSlot, Inventory->HotbarSelectedSlot);
+                // bHotbarSelectionPending remains true
             }
         }
 
@@ -800,6 +808,9 @@ FIntVector ADojoCraftIslandManager::HexStringToVector(const FString& Source)
 
 void ADojoCraftIslandManager::RequestPlaceUse()
 {
+    // Queue pending hotbar selection first (lazy evaluation)
+    QueuePendingHotbarSelection();
+    
     // Check if there's an actor at the target position
     int32 X = FMath::TruncToInt32((float)(TargetBlock.X + 8192));
     int32 Y = FMath::TruncToInt32((float)(TargetBlock.Y + 8192));
@@ -897,7 +908,8 @@ void ADojoCraftIslandManager::RequestPlaceUse()
                 if (Block->Item == E_Item::Grass) // Grass = 1
                 {
                     ResultItemId = 2; // Dirt
-                    UE_LOG(LogTemp, Warning, TEXT("Hoe will till grass into dirt"));
+                    ZOffset = 0; // Replace at same position, not above
+                    UE_LOG(LogTemp, Warning, TEXT("Hoe will till grass into dirt at same position"));
                 }
                 else
                 {
@@ -931,6 +943,48 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         {
             // For tools, place the result item, not the tool itself
             int32 ItemToPlace = bIsTool ? ResultItemId : SelectedItemId;
+            
+            // Check if placing a seed - seeds can only be placed on dirt blocks
+            bool bIsSeed = (ItemToPlace == 47 || ItemToPlace == 51 || ItemToPlace == 53); // Wheat, Carrot, Potato seeds
+            if (bIsSeed)
+            {
+                // Check what's at the target position below
+                FIntVector GroundPosition(
+                    TargetBlock.X + 8192,
+                    TargetBlock.Y + 8192,
+                    TargetBlock.Z + 8192
+                );
+                
+                if (Actors.Contains(GroundPosition))
+                {
+                    AActor* GroundActor = Actors[GroundPosition];
+                    if (ABaseBlock* GroundBlock = Cast<ABaseBlock>(GroundActor))
+                    {
+                        if (GroundBlock->Item != E_Item::Dirt) // Only allow on dirt (ID 2)
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("Cannot place seeds on %d - only on dirt blocks"), (int32)GroundBlock->Item);
+                            return; // Don't place optimistically and don't queue transaction
+                        }
+                    }
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Cannot place seeds - no ground block found"));
+                    return; // Don't place optimistically and don't queue transaction
+                }
+            }
+            
+            // For tools that replace blocks (like hoe), remove the existing actor first
+            if (bIsTool && ZOffset == 0 && Actors.Contains(OptimisticPosition))
+            {
+                AActor* ExistingActor = Actors[OptimisticPosition];
+                if (ExistingActor && IsValid(ExistingActor))
+                {
+                    ExistingActor->Destroy();
+                    Actors.Remove(OptimisticPosition);
+                    ActorSpawnInfo.Remove(OptimisticPosition);
+                }
+            }
             
             // Spawn the actor immediately (optimistically)
             AActor* OptimisticActor = PlaceAssetInWorld(
@@ -984,28 +1038,42 @@ void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
         SlotIndex = IntProp->GetPropertyValue_InContainer(Slot);
     }
 
-    // Store selected slot locally for optimistic rendering
+    // Store selected slot locally for lazy evaluation - NO immediate blockchain transaction
     LocalHotbarSelectedSlot = SlotIndex;
+    LocalHotbarSelectionTimestamp = GetWorld()->GetTimeSeconds();
+    
+    // Check if this differs from server state
+    if (CurrentInventory && LocalHotbarSelectedSlot != CurrentInventory->HotbarSelectedSlot)
+    {
+        bHotbarSelectionPending = true;
+        UE_LOG(LogTemp, Warning, TEXT("Hotbar selection pending: slot %d (server has %d)"), 
+               LocalHotbarSelectedSlot, CurrentInventory->HotbarSelectedSlot);
+    }
+    else
+    {
+        bHotbarSelectionPending = false;
+        UE_LOG(LogTemp, Warning, TEXT("Hotbar selection matches server: slot %d"), LocalHotbarSelectedSlot);
+    }
     
     // Log the slot change for debugging
-    UE_LOG(LogTemp, Warning, TEXT("=== HOTBAR SELECTION ==="));
-    UE_LOG(LogTemp, Warning, TEXT("Selected slot %d, LocalHotbarSelectedSlot now = %d"), SlotIndex, LocalHotbarSelectedSlot);
+    UE_LOG(LogTemp, Warning, TEXT("=== HOTBAR SELECTION (LAZY) ==="));
+    UE_LOG(LogTemp, Warning, TEXT("Selected slot %d, pending=%d, LocalHotbarSelectedSlot now = %d"), 
+           SlotIndex, bHotbarSelectionPending, LocalHotbarSelectedSlot);
     
     // Force immediate item ID calculation to verify correct selection
     int32 NewItemId = GetSelectedItemId();
     UE_LOG(LogTemp, Warning, TEXT("Item in slot %d has ID: %d"), SlotIndex, NewItemId);
-
-    // Queue the transaction instead of calling directly
-    FTransactionQueueItem Item;
-    Item.Type = ETransactionType::SelectHotbar;
-    Item.IntParam = SlotIndex;
-    QueueTransaction(Item);
+    
+    // NO QueueTransaction() here - will be sent with next action!
 }
 
 void ADojoCraftIslandManager::RequestHit()
 {
     UE_LOG(LogTemp, Warning, TEXT("=== RequestHit START ==="));
     UE_LOG(LogTemp, Warning, TEXT("TargetBlock: (%d,%d,%d)"), TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
+    
+    // Queue pending hotbar selection first (lazy evaluation)
+    QueuePendingHotbarSelection();
     
     // Optimistic rendering for block/resource removal
     FIntVector HitPosition(
@@ -1078,8 +1146,11 @@ void ADojoCraftIslandManager::RequestHit()
                         // Disable collision immediately
                         MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-                        // Scale down slightly
-                        ActorToRemove->SetActorScale3D(FVector(0.9f, 0.9f, 0.9f));
+                        // Scale down slightly (except for boulders)
+                        if (BlockId != 49) // Don't scale down boulders
+                        {
+                            ActorToRemove->SetActorScale3D(FVector(0.9f, 0.9f, 0.9f));
+                        }
                     }
                 }
 
@@ -1114,6 +1185,9 @@ void ADojoCraftIslandManager::RequestInventoryMoveItem(int32 FromInventory, int3
 
 void ADojoCraftIslandManager::RequestCraft(int32 Item)
 {
+    // Queue pending hotbar selection first (lazy evaluation)
+    QueuePendingHotbarSelection();
+    
     DojoHelpers->CallCraftIslandPocketActionsCraft(Account, Item, TargetBlock.X + 8192, TargetBlock.Y + 8192, TargetBlock.Z + 8192);
 }
 
@@ -1772,8 +1846,8 @@ void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray
 
 void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPosition, EActorSpawnType RequiredType)
 {
-    UE_LOG(LogTemp, Warning, TEXT("=== RemoveActorAtPosition START ==="));
-    UE_LOG(LogTemp, Warning, TEXT("Position: (%d,%d,%d), RequiredType: %d"), 
+    UE_LOG(LogTemp, VeryVerbose, TEXT("=== RemoveActorAtPosition START ==="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("Position: (%d,%d,%d), RequiredType: %d"), 
         DojoPosition.X, DojoPosition.Y, DojoPosition.Z, (int32)RequiredType);
     
     // Check if this is confirming an optimistic removal
@@ -1802,7 +1876,7 @@ void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPositi
     // Normal removal (non-optimistic)
     if (!Actors.Contains(DojoPosition))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Position not found in Actors map"));
+        UE_LOG(LogTemp, VeryVerbose, TEXT("Position not found in Actors map (normal for empty chunks)"));
         return;
     }
 
@@ -1834,7 +1908,7 @@ void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPositi
         UE_LOG(LogTemp, Warning, TEXT("Position not found in ActorSpawnInfo"));
     }
     
-    UE_LOG(LogTemp, Warning, TEXT("=== RemoveActorAtPosition END ==="));
+    UE_LOG(LogTemp, VeryVerbose, TEXT("=== RemoveActorAtPosition END ==="));
 }
 
 void ADojoCraftIslandManager::ProcessChunkBlock(uint8 Byte, const FIntVector& DojoPosition, E_Item Item, TArray<FSpawnQueueData>& ChunkSpawnData)
@@ -2673,18 +2747,9 @@ TArray<FString> ADojoCraftIslandManager::EncodePackedActions(const TArray<FTrans
     {
         const FTransactionQueueItem& CurrentAction = Actions[Index];
         
+        
         // Determine which pack type to use
-        if (CurrentAction.Type == ETransactionType::PlaceUse || CurrentAction.Type == ETransactionType::Hit)
-        {
-            // Try to pack Type 0 actions
-            FString Packed = PackType0Actions(Actions, Index);
-            if (!Packed.IsEmpty())
-            {
-                PackedFelts.Add(Packed);
-                continue;
-            }
-        }
-        else if (CurrentAction.Type == ETransactionType::MoveItem)
+        if (CurrentAction.Type == ETransactionType::MoveItem)
         {
             // Try to pack Type 1 actions
             FString Packed = PackType1Actions(Actions, Index);
@@ -2694,9 +2759,11 @@ TArray<FString> ADojoCraftIslandManager::EncodePackedActions(const TArray<FTrans
                 continue;
             }
         }
-        else if (CanBatchAction(CurrentAction.Type))
+        else if (CanBatchAction(CurrentAction.Type) || 
+                 CurrentAction.Type == ETransactionType::PlaceUse || 
+                 CurrentAction.Type == ETransactionType::Hit)
         {
-            // Try to pack Type 2 actions
+            // Try to pack Type 2 actions (now includes PlaceUse/Hit)
             FString Packed = PackType2Actions(Actions, Index);
             if (!Packed.IsEmpty())
             {
@@ -2745,7 +2812,7 @@ FString ADojoCraftIslandManager::PackType0Actions(const TArray<FTransactionQueue
         // The contract expects coordinates with 8192 offset (e.g., 8192,8192,8193)
         uint32 X = Action.Position.X;
         uint32 Y = Action.Position.Y;
-        uint32 Z = (Action.Position.Z == 8193) ? 1 : 0;
+        uint32 Z = Action.Position.Z - 8192; // Convert back to blockchain coordinate system
         uint32 ActionType = (Action.Type == ETransactionType::Hit) ? 1 : 0;
         
         // Pack 30 bits: [1 bit: action_type][14 bits: y][14 bits: x][1 bit: z]
@@ -2869,6 +2936,27 @@ FString ADojoCraftIslandManager::PackType2Actions(const TArray<FTransactionQueue
         
         switch (Action.Type)
         {
+            case ETransactionType::PlaceUse:
+                ActionTypeCode = 0;
+                ExtraBits = 32; // 30 bits position + 2 bits padding
+                {
+                    uint32 X = Action.Position.X & 0x3FFF; // 14 bits
+                    uint32 Y = Action.Position.Y & 0x3FFF; // 14 bits  
+                    uint32 Z = (Action.Position.Z == 8193) ? 1 : 0; // 1 bit
+                    ExtraData = Y | (X << 14) | (Z << 28); // 30 bits total
+                }
+                break;
+            case ETransactionType::Hit:
+                ActionTypeCode = 1;
+                ExtraBits = 32; // 30 bits position + 2 bits padding
+                {
+                    uint32 X = Action.Position.X & 0x3FFF; // 14 bits
+                    uint32 Y = Action.Position.Y & 0x3FFF; // 14 bits
+                    uint32 Z = (Action.Position.Z == 8193) ? 1 : 0; // 1 bit
+                    UE_LOG(LogTemp, Warning, TEXT("Hit encoding: Z=%d, z_bit=%d"), Action.Position.Z, Z);
+                    ExtraData = Y | (X << 14) | (Z << 28); // 30 bits total
+                }
+                break;
             case ETransactionType::SelectHotbar:
                 ActionTypeCode = 2;
                 ExtraBits = 8;
@@ -3013,6 +3101,7 @@ FString ADojoCraftIslandManager::PackType3Action(const FTransactionQueueItem& Ac
     
     return BytesToHexString(Bytes);
 }
+
 
 bool ADojoCraftIslandManager::CanBatchAction(ETransactionType Type)
 {
@@ -3182,5 +3271,53 @@ void ADojoCraftIslandManager::CleanupTimedOutOptimisticActors()
         OptimisticActorTimestamps.Remove(Position);
         UE_LOG(LogTemp, Warning, TEXT("Cleaned up invalid optimistic actor reference at position (%d, %d, %d)"),
                Position.X, Position.Y, Position.Z);
+    }
+}
+
+void ADojoCraftIslandManager::ResetLocalHotbarSelection()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Hotbar selection timeout - resetting local state from slot %d to server state"), 
+           LocalHotbarSelectedSlot);
+    
+    // Reset to unset state - will sync with server on next inventory update
+    LocalHotbarSelectedSlot = -1;
+    LocalHotbarSelectionTimestamp = 0.0;
+    LocalHotbarSelectionSequence = 0;
+    
+    // If we have current inventory, sync immediately
+    if (CurrentInventory)
+    {
+        LocalHotbarSelectedSlot = CurrentInventory->HotbarSelectedSlot;
+        LocalHotbarSelectionTimestamp = GetWorld()->GetTimeSeconds();
+        bHotbarSelectionPending = false;
+        UE_LOG(LogTemp, Warning, TEXT("Reset complete - now using server slot %d"), LocalHotbarSelectedSlot);
+    }
+}
+
+void ADojoCraftIslandManager::QueuePendingHotbarSelection()
+{
+    // Only queue if we have a pending hotbar change
+    if (bHotbarSelectionPending && CurrentInventory)
+    {
+        // Double-check that our local selection still differs from server
+        if (LocalHotbarSelectedSlot != CurrentInventory->HotbarSelectedSlot)
+        {
+            FTransactionQueueItem HotbarItem;
+            HotbarItem.Type = ETransactionType::SelectHotbar;
+            HotbarItem.IntParam = LocalHotbarSelectedSlot;
+            HotbarItem.SequenceNumber = NextHotbarSequence++;
+            
+            UE_LOG(LogTemp, Warning, TEXT("Queuing pending hotbar selection: slot %d (was %d)"), 
+                   LocalHotbarSelectedSlot, CurrentInventory->HotbarSelectedSlot);
+            
+            QueueTransaction(HotbarItem);
+            bHotbarSelectionPending = false; // Mark as sent
+        }
+        else
+        {
+            // Server caught up somehow - clear pending flag
+            bHotbarSelectionPending = false;
+            UE_LOG(LogTemp, Warning, TEXT("Hotbar selection no longer pending - server caught up"));
+        }
     }
 }

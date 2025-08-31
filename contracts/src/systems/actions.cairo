@@ -954,9 +954,37 @@ mod actions {
                         let action_type = extract_u8(data.try_into().unwrap(), 0);
                         data = data / 256;
                         
-                        let success = if action_type == 2 {
+                        let success = if action_type == 0 {
+                            // PlaceUse: [32 bits: position]
+                            // Position: [14 bits: y][14 bits: x][1 bit: z][3 bits: padding]
+                            let position_raw = extract_u32(data.try_into().unwrap(), 0);
+                            let position_data = position_raw; // Use full 32 bits, no mask needed
+                            data = data / 0x100000000; // Skip 32 bits total
+                            
+                            let z_bit = (position_data / 0x10000000) & 0x1; // Bit 28 in 30-bit data
+                            let x = (position_data / 0x4000) & 0x3FFF; // Bits 14-27
+                            let y = position_data & 0x3FFF; // Bits 0-13
+                            let world_z = if z_bit == 0 { 8192 } else { 8193 };
+                            
+                            println!("Type2 PlaceUse: pos=({},{},{}) from data=0x{:x}", x, y, world_z, position_raw);
+                            try_use_item(ref world, player, x.into(), y.into(), world_z)
+                        } else if action_type == 1 {
+                            // Hit: [32 bits: position]
+                            let position_raw = extract_u32(data.try_into().unwrap(), 0);
+                            println!("Type2 Hit: raw position_raw=0x{:x}", position_raw);
+                            let position_data = position_raw; // Use full 32 bits, no mask needed
+                            data = data / 0x100000000; // Skip 32 bits total
+                            
+                            let z_bit = (position_data / 0x10000000) & 0x1; // Bit 28 in 30-bit data
+                            let x = (position_data / 0x4000) & 0x3FFF; // Bits 14-27
+                            let y = position_data & 0x3FFF; // Bits 0-13
+                            let world_z = if z_bit == 0 { 8192 } else { 8193 };
+                            
+                            println!("Type2 Hit: pos=({},{},{}) z_bit={} from data=0x{:x}", x, y, world_z, z_bit, position_raw);
+                            try_hit_block(ref world, player, x.into(), y.into(), world_z)
+                        } else if action_type == 2 {
                             // SelectHotbar: [8 bits: slot]
-                            let slot = extract_u8(data.try_into().unwrap(), 8);
+                            let slot = extract_u8(data.try_into().unwrap(), 0);
                             data = data / 256;
                             try_select_hotbar(ref world, player, slot)
                         } else if action_type == 6 {
@@ -967,7 +995,7 @@ mod actions {
                             try_cancel_processing(ref world, player)
                         } else if action_type == 9 {
                             // Visit: [16 bits: space_id]
-                            let space_id = extract_u16(data.try_into().unwrap(), 8);
+                            let space_id = extract_u16(data.try_into().unwrap(), 0);
                             data = data / 0x10000;
                             try_visit(ref world, player, space_id)
                         } else if action_type == 10 {
@@ -1034,16 +1062,14 @@ mod actions {
 
     // Safe version of hit_block that returns success/failure instead of asserting
     fn try_hit_block(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64) -> bool {
+        println!("hit_block: at ({},{},{})", x, y, z);
         // Get inventory and check selected item
         let mut inventory: Inventory = world.read_model((player, 0));
         let item_type: u16 = inventory.get_hotbar_selected_item_type();
+        println!("hit_block: tool={}", item_type);
         
-        // Check for hoe special case
-        if item_type == 18 {
-            update_block(ref world, x, y, z - 1, item_type);
-            return true;
-        }
         
+        println!("hit_block: getting block info");
         // Get block info
         let player_data: PlayerData = world.read_model(player);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
@@ -1059,8 +1085,11 @@ mod actions {
         let shift: u128 = fast_power_2(((x_local + y_local * 4 + z_local * 16) * 4).into()).into();
         let block_id: u16 = ((blocks / shift) % 16).try_into().unwrap();
         
+        println!("hit_block: block_id={} at local=({},{},{})", block_id, x_local, y_local, z_local);
+        
         // Check if need shovel for dirt/grass/stone
         if (block_id == 1 || block_id == 2 || block_id == 3) && item_type != 39 {
+            println!("hit_block: need shovel for block_id={}, have tool={}", block_id, item_type);
             return false; // Skip this action, don't assert
         }
         
