@@ -62,6 +62,7 @@ void ADojoCraftIslandManager::BeginPlay()
 
     // Initialize space 1 actors tracking
     bSpace1ActorsHidden = false;
+    bFirstPlayerDataReceived = false;
 
     // Initialize inventory tracking
     CurrentInventory = nullptr;
@@ -460,11 +461,33 @@ void ADojoCraftIslandManager::HandlePlayerData(UDojoModel* Object)
     // Check if this is the current player
     if (IsCurrentPlayer())
     {
-        // Check if space has changed
-        bool bSpaceChanged = (CurrentSpaceOwner != PlayerData->CurrentSpaceOwner ||
-                             CurrentSpaceId != PlayerData->CurrentSpaceId);
+        // Check if space has changed - normalize addresses to handle leading zeros
+        auto GetHexPart = [](const FString& Address) -> FString {
+            FString Hex = Address.StartsWith("0x") ? Address.Mid(2) : Address;
+            return Hex.ToLower();
+        };
+        
+        FString CurrentOwnerHex = GetHexPart(CurrentSpaceOwner);
+        FString PlayerDataOwnerHex = GetHexPart(PlayerData->CurrentSpaceOwner);
+        
+        bool bOwnerChanged = !(CurrentOwnerHex.EndsWith(PlayerDataOwnerHex) || PlayerDataOwnerHex.EndsWith(CurrentOwnerHex));
+        bool bSpaceChanged = (bOwnerChanged || CurrentSpaceId != PlayerData->CurrentSpaceId);
 
-        if (bSpaceChanged)
+        // For the first player data, force initial loading
+        if (!bFirstPlayerDataReceived)
+        {
+            bFirstPlayerDataReceived = true;
+            UE_LOG(LogTemp, Log, TEXT("First PlayerData: force loading space %s:%d"), 
+                   *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
+            
+            // Update current space and force initial load
+            CurrentSpaceOwner = PlayerData->CurrentSpaceOwner;
+            CurrentSpaceId = PlayerData->CurrentSpaceId;
+            
+            // Force initial chunk loading for starting space
+            LoadAllChunksFromCache();
+        }
+        else if (bSpaceChanged)
         {
             // Handle the space transition
             HandleSpaceTransition(PlayerData);
@@ -1558,18 +1581,53 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
 {
     if (!PlayerData) return;
 
-    UE_LOG(LogTemp, Log, TEXT("Space changed from %s:%d to %s:%d"),
+    UE_LOG(LogTemp, Warning, TEXT("=== SPACE TRANSITION START ==="));
+    UE_LOG(LogTemp, Warning, TEXT("Space changed from %s:%d to %s:%d"),
         *CurrentSpaceOwner, CurrentSpaceId,
         *PlayerData->CurrentSpaceOwner, PlayerData->CurrentSpaceId);
 
     // Save current player position before changing spaces
     SaveCurrentPlayerPosition();
 
-    // Check if we're returning to space 1
-    bool bReturningToSpace1 = (PlayerData->CurrentSpaceOwner == Account.Address && PlayerData->CurrentSpaceId == 1);
+    // Check if we're leaving space 1 BEFORE updating current space
+    // Compare addresses by removing 0x prefix and comparing the hex part
+    auto GetHexPart = [](const FString& Address) -> FString {
+        FString Hex = Address.StartsWith("0x") ? Address.Mid(2) : Address;
+        return Hex.ToLower();
+    };
+    
+    FString CurrentOwnerHex = GetHexPart(CurrentSpaceOwner);
+    FString AccountAddressHex = GetHexPart(Account.Address);
+    FString PlayerDataOwnerHex = GetHexPart(PlayerData->CurrentSpaceOwner);
+    
+    // Compare by checking if one address ends with the other (handles leading zeros)
+    bool bAddressesMatch = (CurrentOwnerHex.EndsWith(AccountAddressHex) || AccountAddressHex.EndsWith(CurrentOwnerHex));
+    bool bPlayerDataAddressesMatch = (PlayerDataOwnerHex.EndsWith(AccountAddressHex) || AccountAddressHex.EndsWith(PlayerDataOwnerHex));
+    
+    bool bLeavingSpace1 = (bAddressesMatch && CurrentSpaceId == 1);
+    bool bReturningToSpace1 = (bPlayerDataAddressesMatch && PlayerData->CurrentSpaceId == 1);
 
-    // Clear all current actors when changing spaces
-    ClearAllSpawnedActors();
+    UE_LOG(LogTemp, Warning, TEXT("HandleSpaceTransition: CurrentSpaceOwner=%s, Account.Address=%s"), 
+           *CurrentSpaceOwner, *Account.Address);
+    UE_LOG(LogTemp, Warning, TEXT("HandleSpaceTransition: CurrentOwnerHex=%s, AccountAddressHex=%s"), 
+           *CurrentOwnerHex, *AccountAddressHex);
+    UE_LOG(LogTemp, Warning, TEXT("HandleSpaceTransition: CurrentSpaceId=%d, comparing to 1"), 
+           CurrentSpaceId);
+    UE_LOG(LogTemp, Warning, TEXT("HandleSpaceTransition: bAddressesMatch=%d, bLeavingSpace1=%d, bReturningToSpace1=%d"), 
+           bAddressesMatch, bLeavingSpace1, bReturningToSpace1);
+
+    // Clear all current actors when changing spaces (pass leaving space 1 info)
+    if (bLeavingSpace1)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("HandleSpaceTransition: Hiding space 1 actors"));
+        SetActorsVisibilityAndCollision(false, false);
+        bSpace1ActorsHidden = true;
+    }
+    else if (!bSpace1ActorsHidden)
+    {
+        // Only clear actors if not preserving space 1 actors
+        ClearAllSpawnedActors();
+    }
 
     // Update current space tracking
     CurrentSpaceOwner = PlayerData->CurrentSpaceOwner;
@@ -1581,12 +1639,19 @@ void ADojoCraftIslandManager::HandleSpaceTransition(UDojoModelCraftIslandPocketP
         CurrentSpaceStructureType = 0;
     }
 
-    // If returning to space 1 and actors are hidden, show them
-    if (bReturningToSpace1 && bSpace1ActorsHidden)
+    // If returning to space 1, clear current space actors and restore space 1
+    if (bReturningToSpace1)
     {
-        SetActorsVisibilityAndCollision(true, true);
-        bSpace1ActorsHidden = false;
-        UE_LOG(LogTemp, Log, TEXT("Restored space 1 actors"));
+        // Clear current space actors (like buildings)
+        ClearAllSpawnedActors();
+        
+        // If space 1 actors are hidden, show them
+        if (bSpace1ActorsHidden)
+        {
+            SetActorsVisibilityAndCollision(true, true);
+            bSpace1ActorsHidden = false;
+            UE_LOG(LogTemp, Log, TEXT("Restored space 1 actors"));
+        }
     }
 
     // Track if current space has block chunks
@@ -1748,39 +1813,37 @@ void ADojoCraftIslandManager::SetActorsVisibilityAndCollision(bool bVisible, boo
 void ADojoCraftIslandManager::ClearAllSpawnedActors()
 {
 
-    UE_LOG(LogTemp, VeryVerbose, TEXT("========== ClearAllSpawnedActors START =========="));
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: CurrentSpaceOwner = %s, CurrentSpaceId = %d"),
-        *CurrentSpaceOwner, CurrentSpaceId);
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Account.Address = %s"), *Account.Address);
+    UE_LOG(LogTemp, Warning, TEXT("=== CLEAR ACTORS START ==="));
+    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: CurrentSpace=%s:%d, Account=%s"),
+        *CurrentSpaceOwner, CurrentSpaceId, *Account.Address);
+    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Actors.Num()=%d, bSpace1ActorsHidden=%d"), 
+        Actors.Num(), bSpace1ActorsHidden);
 
     // Check if we're currently in space 1
     bool bLeavingSpace1 = (CurrentSpaceOwner == Account.Address && CurrentSpaceId == 1);
 
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: bLeavingSpace1 = %s"), bLeavingSpace1 ? TEXT("true") : TEXT("false"));
-    UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Owner comparison '%s' == '%s' = %s"),
-        *CurrentSpaceOwner, *Account.Address,
-        (CurrentSpaceOwner == Account.Address) ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: bLeavingSpace1=%d"), bLeavingSpace1);
 
     if (bLeavingSpace1)
     {
         // Hide space 1 actors instead of destroying them
-        UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Hiding %d space 1 actors"), Actors.Num());
+        UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Hiding %d space 1 actors"), Actors.Num());
         SetActorsVisibilityAndCollision(false, false);
         bSpace1ActorsHidden = true;
-        UE_LOG(LogTemp, Log, TEXT("ClearAllSpawnedActors: Hiding space 1 actors"));
+        UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Space 1 actors hidden"));
     }
     else
     {
         // If we have hidden space 1 actors, don't destroy them!
         if (bSpace1ActorsHidden)
         {
-            UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Keeping %d hidden space 1 actors"), Actors.Num());
+            UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Keeping %d hidden space 1 actors"), Actors.Num());
             // Don't clear Actors or ActorSpawnInfo - they belong to space 1
         }
         else
         {
             // Destroy actors from other spaces
-            UE_LOG(LogTemp, VeryVerbose, TEXT("ClearAllSpawnedActors: Destroying %d actors from other space"), Actors.Num());
+            UE_LOG(LogTemp, Warning, TEXT("ClearAllSpawnedActors: Destroying %d actors from other space"), Actors.Num());
             for (auto& Pair : Actors)
             {
                 if (Pair.Value && IsValid(Pair.Value))

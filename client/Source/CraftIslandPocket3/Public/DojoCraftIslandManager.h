@@ -540,6 +540,9 @@ public:
 
     // Track if space 1 actors are hidden
     bool bSpace1ActorsHidden;
+    
+    // Track if this is the first player data received
+    bool bFirstPlayerDataReceived;
 
     // Store player positions for each space
     UPROPERTY()
