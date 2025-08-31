@@ -1093,10 +1093,12 @@ void ADojoCraftIslandManager::RequestHit()
         {
             // Check if it's a block (BaseBlock) and if player has shovel
             bool bShouldApplyOptimistic = true;
+            int32 BlockId = -1; // Default value for non-blocks
+            
             if (ABaseBlock* Block = Cast<ABaseBlock>(ActorToRemove))
             {
                 // Get the block ID from the E_Item enum
-                int32 BlockId = static_cast<int32>(Block->Item);
+                BlockId = static_cast<int32>(Block->Item);
                 UE_LOG(LogTemp, Warning, TEXT("Hit target is a block with ID: %d"), BlockId);
                 
                 // If it's a block (ID < 16), check if player has shovel

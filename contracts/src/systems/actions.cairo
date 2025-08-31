@@ -1147,6 +1147,14 @@ mod actions {
             return try_plant(ref world, player, x, y, z, item_type);
         }
         
+        // Special case for structures
+        if item_type == 50 || item_type == 61 || item_type == 62 || item_type == 63 || item_type == 64 { 
+            // House, Well, Kitchen, Warehouse, Brewery Patterns
+            println!("use_item: placing structure type={}", item_type);
+            WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
+            return true;
+        }
+        
         // Try to place block
         if place_block_safe(ref world, x, y, z, item_type) {
             return true;

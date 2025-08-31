@@ -85,12 +85,14 @@ pub impl WorldStructureImpl of WorldStructureTrait {
     }
 
     fn upgrade_structure(ref world: WorldStorage, x: u64, y: u64, z: u64) {
+        println!("upgrade_structure: at ({},{},{})", x, y, z);
         let player = get_caller_address();
         let player_data: PlayerData = world.read_model((player));
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
         // check block under
         let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
         let mut structure: WorldStructure = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
+        println!("upgrade_structure: structure_type={}, completed={}", structure.structure_type, structure.completed);
         assert!(structure.structure_type > 0, "Error: World Structure does not exist");
 
         let mut build_inventory: Inventory = world.read_model((player, structure.build_inventory_id));
