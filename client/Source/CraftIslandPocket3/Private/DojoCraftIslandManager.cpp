@@ -867,6 +867,35 @@ void ADojoCraftIslandManager::RequestPlaceUse()
 
     // Get current selected item to check if it's a block or structure
     int32 SelectedItemId = GetSelectedItemId();
+    
+    // If hoe is selected, only allow on grass blocks
+    if (SelectedItemId == 41) // Stone Hoe
+    {
+        if (bActorExists)
+        {
+            AActor* TargetActor = Actors[TargetPosition];
+            if (ABaseBlock* Block = Cast<ABaseBlock>(TargetActor))
+            {
+                if (Block->Item != E_Item::Grass) // Not grass
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Cannot use hoe on %d - only works on grass blocks"), (int32)Block->Item);
+                    return;
+                }
+            }
+            else
+            {
+                // Not a block at all (could be tree, boulder, etc.)
+                UE_LOG(LogTemp, Warning, TEXT("Cannot use hoe on non-block object"));
+                return;
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Cannot use hoe on empty space"));
+            return;
+        }
+    }
+    
     int32 ZOffset = 0;
 
     // Calculate the actual Z position we're targeting
@@ -952,6 +981,13 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         }
     }
     
+    // If tool failed (ResultItemId = 0), don't proceed with any actions
+    if (bIsTool && ResultItemId == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Tool operation failed - not proceeding"));
+        return;
+    }
+    
     // Optimistic rendering: Place the item/result immediately with visual feedback
     if ((SelectedItemId > 0 && !bIsTool) || (bIsTool && ResultItemId > 0))
     {
@@ -998,7 +1034,7 @@ void ADojoCraftIslandManager::RequestPlaceUse()
             }
             
             // For tools that replace blocks (like hoe), remove the existing actor first
-            if (bIsTool && ZOffset == 0 && Actors.Contains(OptimisticPosition))
+            if (bIsTool && ResultItemId > 0 && ZOffset == 0 && Actors.Contains(OptimisticPosition))
             {
                 AActor* ExistingActor = Actors[OptimisticPosition];
                 if (ExistingActor && IsValid(ExistingActor))
@@ -1095,6 +1131,16 @@ void ADojoCraftIslandManager::RequestHit()
     UE_LOG(LogTemp, Warning, TEXT("=== RequestHit START ==="));
     UE_LOG(LogTemp, Warning, TEXT("TargetBlock: (%d,%d,%d)"), TargetBlock.X, TargetBlock.Y, TargetBlock.Z);
     
+    // Check if we have a valid item selected
+    int32 SelectedItemId = GetSelectedItemId();
+    
+    // Hoe (41) should only be used with PlaceUse, not Hit
+    if (SelectedItemId == 41)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Cannot use hoe for hitting - use PlaceUse on grass instead"));
+        return;
+    }
+    
     // Queue pending hotbar selection first (lazy evaluation)
     QueuePendingHotbarSelection();
     
@@ -1127,7 +1173,6 @@ void ADojoCraftIslandManager::RequestHit()
                 // If it's a block (ID < 16), check if player has shovel
                 if (BlockId < 16)
                 {
-                    int32 SelectedItemId = GetSelectedItemId();
                     // Shovel has ID 39 (Stone Shovel)
                     if (SelectedItemId != 39)
                     {
@@ -1138,7 +1183,6 @@ void ADojoCraftIslandManager::RequestHit()
                 // If it's a boulder (ID 49), check if player has pickaxe
                 else if (BlockId == 49) // Boulder
                 {
-                    int32 SelectedItemId = GetSelectedItemId();
                     // Stone Pickaxe has ID 37
                     if (SelectedItemId != 37)
                     {
