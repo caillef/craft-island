@@ -896,6 +896,31 @@ void ADojoCraftIslandManager::RequestPlaceUse()
         }
     }
     
+    // If hammer is selected, only allow on world structures
+    if (SelectedItemId == 43) // Stone Hammer
+    {
+        if (bActorExists)
+        {
+            AActor* TargetActor = Actors[TargetPosition];
+            if (ABaseWorldStructure* WorldStructure = Cast<ABaseWorldStructure>(TargetActor))
+            {
+                // Allow hammer on world structures (completed or not)
+                UE_LOG(LogTemp, Warning, TEXT("Hammer can be used on world structure"));
+            }
+            else
+            {
+                // Not a world structure
+                UE_LOG(LogTemp, Warning, TEXT("Cannot use hammer on non-structure object"));
+                return;
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Cannot use hammer on empty space"));
+            return;
+        }
+    }
+    
     int32 ZOffset = 0;
 
     // Calculate the actual Z position we're targeting
@@ -910,6 +935,11 @@ void ADojoCraftIslandManager::RequestPlaceUse()
             // Check if it's a rock (E_Item::Rock = 33)
             if (Object->Item == E_Item::Rock)
             {
+                // Store the rock's position for stone crafting
+                StoneCraftTargetBlock = TargetPosition;
+                UE_LOG(LogTemp, Warning, TEXT("Stone craft: Stored rock position (%d,%d,%d)"), 
+                    StoneCraftTargetBlock.X, StoneCraftTargetBlock.Y, StoneCraftTargetBlock.Z);
+                
                 // Open stone craft interface
                 if (StoneCraftInterfaceWidgetClass)
                 {
@@ -1257,7 +1287,14 @@ void ADojoCraftIslandManager::RequestCraft(int32 Item)
     // Queue pending hotbar selection first (lazy evaluation)
     QueuePendingHotbarSelection();
     
-    DojoHelpers->CallCraftIslandPocketActionsCraft(Account, Item, TargetBlock.X + 8192, TargetBlock.Y + 8192, TargetBlock.Z + 8192);
+    UE_LOG(LogTemp, Warning, TEXT("=== RequestCraft START ==="));
+    UE_LOG(LogTemp, Warning, TEXT("Item: %d"), Item);
+    UE_LOG(LogTemp, Warning, TEXT("StoneCraftTargetBlock: (%d,%d,%d)"), StoneCraftTargetBlock.X, StoneCraftTargetBlock.Y, StoneCraftTargetBlock.Z);
+    UE_LOG(LogTemp, Warning, TEXT("Selected hotbar item: %d"), GetSelectedItemId());
+    
+    DojoHelpers->CallCraftIslandPocketActionsCraft(Account, Item, StoneCraftTargetBlock.X, StoneCraftTargetBlock.Y, StoneCraftTargetBlock.Z);
+    
+    UE_LOG(LogTemp, Warning, TEXT("=== RequestCraft END ==="));
 }
 
 void ADojoCraftIslandManager::RequestGiveItem()

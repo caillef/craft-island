@@ -45,8 +45,11 @@ Uses Dojo framework v1.6.0-alpha.1 on Starknet:
 
 #### Infrastructure Scripts
 - `restartKatanaSlot.sh`: Katana (local blockchain) management
+  - **Important**: Before running this script, check if Katana is already running with `ps aux | grep katana`
+  - If found, kill existing instance: `kill -9 <PID>`
 - `restartToriiLocal.sh`: Torii (indexer) management
 - Multiple deployment configurations (dev, release, second)
+- **Note**: We use local Katana + local Torii for development, but will switch to Starknet testnet/mainnet + Sepolia Torii (on Slot) for production. Never Katana on Slot.
 
 ### 3. Data Layer
 **Location:** `/data/`

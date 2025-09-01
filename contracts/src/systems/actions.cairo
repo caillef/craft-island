@@ -395,18 +395,26 @@ mod actions {
 
         // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
+            println!("Stone craft: item={} at ({},{},{})", item, x, y, z);
             let player_data: PlayerData = world.read_model((player));
             let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
             let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+            println!("Stone craft: chunk_id=0x{:x}, position={}", chunk_id, position);
             let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
+            println!("Stone craft: found resource_id={}, destroyed={}", resource.resource_id, resource.destroyed);
             assert!(resource.resource_id == 33 && !resource.destroyed, "Error: No rock");
             resource.destroyed = true;
             resource.resource_id = 0;
             world.write_model(@resource);
 
             let mut hotbar: Inventory = world.read_model((player, 0));
-            if hotbar.get_hotbar_selected_item_type() == 33 {
+            let selected_item = hotbar.get_hotbar_selected_item_type();
+            println!("Stone craft: selected_item={}", selected_item);
+            if selected_item == 33 {
+                println!("Stone craft: adding item {} to inventory", item);
                 InventoryTrait::add_to_player_inventories(ref world, player.into(), item, 1);
+            } else {
+                println!("Stone craft: wrong selected item, expected 33 but got {}", selected_item);
             }
         }
     }
@@ -877,7 +885,6 @@ mod actions {
         }
         
         fn execute_packed_actions(ref self: ContractState, packed_data: Array<felt252>) -> Array<bool> {
-            println!("execute_packed_actions: {} felts", packed_data.len());
             
             let mut world = get_world(ref self);
             let player = get_caller_address();
@@ -891,7 +898,6 @@ mod actions {
             while felt_idx < packed_data.len() {
                 let current_felt = *packed_data.at(felt_idx);
                 let pack_type = extract_u8(current_felt, 0);
-                println!("Pack type: {}", pack_type);
                 
                 if pack_type == 0 {
                     // Type 0: Packed PlaceUse/Hit actions (up to 8 per felt)
@@ -912,7 +918,6 @@ mod actions {
                         let z: u64 = if extract_u8(action.into(), 29) == 0 { 8192 } else { 8193 }; // 1 bit at position 29
                         
                         let success = if action_type == 0 {
-                            println!("Use: ({},{},{})", x, y, z);
                             try_use_item(ref world, player, x, y, z)
                         } else {
                             try_hit_block(ref world, player, x, y, z)
@@ -966,12 +971,10 @@ mod actions {
                             let y = position_data & 0x3FFF; // Bits 0-13
                             let world_z = if z_bit == 0 { 8192 } else { 8193 };
                             
-                            println!("Type2 PlaceUse: pos=({},{},{}) from data=0x{:x}", x, y, world_z, position_raw);
                             try_use_item(ref world, player, x.into(), y.into(), world_z)
                         } else if action_type == 1 {
                             // Hit: [32 bits: position]
                             let position_raw = extract_u32(data.try_into().unwrap(), 0);
-                            println!("Type2 Hit: raw position_raw=0x{:x}", position_raw);
                             let position_data = position_raw; // Use full 32 bits, no mask needed
                             data = data / 0x100000000; // Skip 32 bits total
                             
@@ -980,7 +983,6 @@ mod actions {
                             let y = position_data & 0x3FFF; // Bits 0-13
                             let world_z = if z_bit == 0 { 8192 } else { 8193 };
                             
-                            println!("Type2 Hit: pos=({},{},{}) z_bit={} from data=0x{:x}", x, y, world_z, z_bit, position_raw);
                             try_hit_block(ref world, player, x.into(), y.into(), world_z)
                         } else if action_type == 2 {
                             // SelectHotbar: [8 bits: slot]
@@ -1062,14 +1064,11 @@ mod actions {
 
     // Safe version of hit_block that returns success/failure instead of asserting
     fn try_hit_block(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64) -> bool {
-        println!("hit_block: at ({},{},{})", x, y, z);
         // Get inventory and check selected item
         let mut inventory: Inventory = world.read_model((player, 0));
         let item_type: u16 = inventory.get_hotbar_selected_item_type();
-        println!("hit_block: tool={}", item_type);
         
         
-        println!("hit_block: getting block info");
         // Get block info
         let player_data: PlayerData = world.read_model(player);
         let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
@@ -1085,22 +1084,18 @@ mod actions {
         let shift: u128 = fast_power_2(((x_local + y_local * 4 + z_local * 16) * 4).into()).into();
         let block_id: u16 = ((blocks / shift) % 16).try_into().unwrap();
         
-        println!("hit_block: block_id={} at local=({},{},{})", block_id, x_local, y_local, z_local);
         
         // Check if need shovel for dirt/grass/stone
         if (block_id == 1 || block_id == 2 || block_id == 3) && item_type != 39 {
-            println!("hit_block: need shovel for block_id={}, have tool={}", block_id, item_type);
             return false; // Skip this action, don't assert
         }
         
         // Try to remove block
         let block_removed = remove_block_safe(ref world, x, y, z);
         if block_removed {
-            println!("Block removed successfully");
             return true;
         } else {
             // Try harvest
-            println!("Block not removed, trying harvest");
             return try_harvest(ref world, player, x, y, z);
         }
     }
@@ -1110,7 +1105,6 @@ mod actions {
         // Get inventory
         let mut inventory: Inventory = world.read_model((player, 0));
         let item_type: u16 = inventory.get_hotbar_selected_item_type();
-        println!("use_item: tool={} at ({},{},{})", item_type, x, y, z);
         
         // Check if has item
         if item_type == 0 {
@@ -1142,21 +1136,106 @@ mod actions {
             }
         }
         
-        // Special case for seeds
-        if item_type == 47 || item_type == 51 || item_type == 53 {
-            return try_plant(ref world, player, x, y, z, item_type);
-        }
-        
         // Special case for structures
-        if item_type == 50 || item_type == 61 || item_type == 62 || item_type == 63 || item_type == 64 { 
-            // House, Well, Kitchen, Warehouse, Brewery Patterns
-            println!("use_item: placing structure type={}", item_type);
+        if item_type == 50 || item_type == 60 || item_type == 61 || item_type == 62 || item_type == 63 || item_type == 64 { 
+            // House, Workshop, Well, Kitchen, Warehouse, Brewery Patterns
             WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
             return true;
         }
         
-        // Try to place block
-        if place_block_safe(ref world, x, y, z, item_type) {
+        // General rule: blocks vs gatherable resources/seeds
+        if item_type < 16 {
+            return place_block_safe(ref world, x, y, z, item_type);
+        } else {
+            return try_place_gatherable_resource(ref world, player, x, y, z, item_type);
+        }
+        
+        false
+    }
+
+    // Safe version of placing gatherable resources and seeds
+    fn try_place_gatherable_resource(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64, resource_id: u16) -> bool {
+        let player_data: PlayerData = world.read_model(player);
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        
+        // Check if there's already a resource at this position
+        let existing_resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
+        if existing_resource.resource_id != 0 && !existing_resource.destroyed {
+            return false; // Position already has a resource
+        }
+        
+        // Check if it's a seed (special planting logic)
+        let is_seed = resource_id == 47 || resource_id == 51 || resource_id == 53; // Wheat, Carrot, Potato seeds
+        
+        if is_seed {
+            // Seeds require dirt or farmland below
+            let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+            let block_below_pos: u8 = (x % 4 + (y % 4) * 4 + ((z - 1) % 4) * 16).try_into().unwrap();
+            let shift: u128 = fast_power_2((block_below_pos * 4).into()).into();
+            let blocks = if (z - 1) % 4 < 2 { chunk.blocks2 } else { chunk.blocks1 };
+            let block_below: u16 = ((blocks / shift) % 16).try_into().unwrap();
+            
+            if block_below != 1 && block_below != 18 { // Must be dirt or farmland
+                return false;
+            }
+        } else {
+            // Other resources require no block at position
+            let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+            let x_local = x % 4;
+            let y_local = y % 4;
+            let z_local = z % 2;
+            let lower_layer = z % 4 < 2;
+            let blocks = if lower_layer { chunk.blocks2 } else { chunk.blocks1 };
+            let shift: u128 = fast_power_2(((x_local + y_local * 4 + z_local * 16) * 4).into()).into();
+            let existing_block: u16 = ((blocks / shift) % 16).try_into().unwrap();
+            
+            if existing_block != 0 {
+                return false; // Position already has a block
+            }
+        }
+        
+        // Check inventory and remove item
+        let mut inventory: Inventory = world.read_model((player, 0));
+        let slot = inventory.hotbar_selected_slot;
+        let selected_item = inventory.get_hotbar_selected_item_type();
+        
+        if selected_item != resource_id || selected_item == 0 {
+            return false; // Wrong item or no item
+        }
+        
+        // Remove from inventory and place resource
+        if inventory.remove_item(slot, 1) {
+            let new_resource = if is_seed {
+                // Seeds use planting logic with growth time
+                let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
+                GatherableResource {
+                    island_owner: player_data.current_space_owner,
+                    island_id: player_data.current_space_id,
+                    chunk_id: chunk_id,
+                    position: position,
+                    resource_id: resource_id,
+                    planted_at: timestamp,
+                    next_harvest_at: GatherableResourceTrait::calculate_next_harvest_time(resource_id, timestamp),
+                    harvested_at: 0,
+                    max_harvest: GatherableResourceTrait::get_max_harvest(resource_id),
+                    remained_harvest: GatherableResourceTrait::get_max_harvest(resource_id),
+                    destroyed: false,
+                    tier: 0,
+                }
+            } else {
+                // Other resources are immediately ready
+                GatherableResourceTrait::new_ready(
+                    player_data.current_space_owner,
+                    player_data.current_space_id,
+                    chunk_id,
+                    position,
+                    resource_id
+                )
+            };
+            
+            world.write_model(@inventory);
+            world.write_model(@new_resource);
             return true;
         }
         
@@ -1247,7 +1326,6 @@ mod actions {
         
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         
-        println!("Resource: id={}, pos={}", resource.resource_id, position);
         
         if resource.resource_id == 0 || resource.destroyed {
             return false; // No resource exists
@@ -1337,62 +1415,11 @@ mod actions {
         }
         
         world.write_model(@resource);
-        println!("Harvested! remain={}", resource.remained_harvest);
         
         true
     }
 
     // Safe version of plant
-    fn try_plant(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64, item_id: u16) -> bool {
-        let player_data: PlayerData = world.read_model(player);
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
-        let resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
-        
-        if resource.resource_id != 0 {
-            return false; // Resource already exists
-        }
-        
-        // Check block below
-        let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
-        let block_below_pos: u8 = (x % 4 + (y % 4) * 4 + ((z - 1) % 4) * 16).try_into().unwrap();
-        let shift: u128 = fast_power_2((block_below_pos * 4).into()).into();
-        let blocks = if (z - 1) % 4 < 2 { chunk.blocks2 } else { chunk.blocks1 };
-        let block_below: u16 = ((blocks / shift) % 16).try_into().unwrap();
-        
-        if block_below != 1 && block_below != 18 { // Must be dirt or farmland
-            return false;
-        }
-        
-        // Remove seed from inventory
-        let mut inventory: Inventory = world.read_model((player, 0));
-        let slot = inventory.hotbar_selected_slot;
-        
-        if inventory.remove_item(slot, 1) {
-            // Plant the seed
-            let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
-            let mut new_resource = GatherableResource {
-                island_owner: player_data.current_space_owner,
-                island_id: player_data.current_space_id,
-                chunk_id: chunk_id,
-                position: position,
-                resource_id: item_id,
-                planted_at: timestamp,
-                next_harvest_at: timestamp + 300, // 5 minutes
-                harvested_at: 0,
-                max_harvest: if item_id == 47 { 3 } else { 5 },
-                remained_harvest: if item_id == 47 { 3 } else { 5 },
-                destroyed: false,
-                tier: 0
-            };
-            
-            world.write_model(@inventory);
-            world.write_model(@new_resource);
-            return true;
-        }
-        
-        false
-    }
 
     // Safe version of move_item
     fn try_move_item(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, from_inv: u16, from_slot: u8, to_inv: u16, to_slot: u8) -> bool {
@@ -1420,9 +1447,11 @@ mod actions {
         let selected_item = inventory.get_hotbar_selected_item_type();
         if selected_item == 0 && slot != inventory.hotbar_selected_slot {
             // Try to check if the new slot has an item
+            let old_slot = inventory.hotbar_selected_slot;
             inventory.hotbar_selected_slot = slot;
             let new_item = inventory.get_hotbar_selected_item_type();
             if new_item == 0 {
+                inventory.hotbar_selected_slot = old_slot; // Restore old slot
                 return false; // Empty slot
             }
         }

@@ -423,6 +423,10 @@ public:
     AActor* FloatingShip;
 
     FIntVector TargetBlock;
+    
+    // Store rock position for stone crafting when interface is opened
+    UPROPERTY()
+    FIntVector StoneCraftTargetBlock;
 
     bool bLoaded = false;
 
