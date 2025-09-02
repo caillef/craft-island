@@ -1,1 +1,1 @@
-torii --rpc http://localhost:5050 --world 0x0563a8a0cbb6949d501017182b852167952e488ff0052e6418ef8c9ca65a7d2b
+torii --rpc http://localhost:5050 --world 0x067126801bb71a1a236d29bd789b93daa65d7f503f9d786235e9d5e4867022a4

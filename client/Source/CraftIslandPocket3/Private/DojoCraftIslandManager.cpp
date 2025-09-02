@@ -1263,6 +1263,13 @@ void ADojoCraftIslandManager::RequestHit()
                 UE_LOG(LogTemp, Log, TEXT("Optimistic removal at (%d, %d, %d)"),
                     HitPosition.X, HitPosition.Y, HitPosition.Z);
             }
+            else
+            {
+                // If we don't have the right tool, don't send the hit action at all
+                // It would fail on the blockchain anyway, so save the gas
+                UE_LOG(LogTemp, Warning, TEXT("Hit blocked: Wrong tool for target. Not sending transaction."));
+                return;
+            }
         }
     }
 

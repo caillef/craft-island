@@ -63,7 +63,7 @@ impl SlotDataImpl of SlotDataTrait {
 pub impl InventoryImpl of InventoryTrait {
     fn default(inventory_size: u8) -> Inventory {
         Inventory {
-            owner: starknet::contract_address_const::<'PLAYER'>(),
+            owner: 'PLAYER'.try_into().unwrap(),
             id: 0,
             inventory_type: 0,
             inventory_size: inventory_size,

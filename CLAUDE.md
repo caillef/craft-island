@@ -27,7 +27,7 @@ The game client is built with Unreal Engine 5.6 and contains:
 ### 2. Smart Contract Layer - Cairo/Dojo
 **Location:** `/contracts/`
 
-Uses Dojo framework v1.6.0-alpha.1 on Starknet:
+Uses Dojo framework v1.7.0-alpha.1 on Starknet:
 
 #### Core Systems (`/contracts/src/systems/`)
 - **actions.cairo**: Main game actions including:

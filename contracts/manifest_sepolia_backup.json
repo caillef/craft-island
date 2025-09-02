@@ -1,9 +1,9 @@
 {
   "world": {
-    "class_hash": "0x4d44ca76c3f82df35436d1c20847ba5c345b8dda4731e200ba3232cd8f94fe9",
-    "address": "0x67126801bb71a1a236d29bd789b93daa65d7f503f9d786235e9d5e4867022a4",
+    "class_hash": "0x685ed02eefa98fe7e208aa295042e9bbad8029b0d3d6f0ba2b32546efe0a1f9",
+    "address": "0x563a8a0cbb6949d501017182b852167952e488ff0052e6418ef8c9ca65a7d2b",
     "seed": "craft_island_pocket",
-    "name": "Dojo starter",
+    "name": "Craft Island",
     "entrypoints": [
       "uuid",
       "set_metadata",
@@ -11,13 +11,11 @@
       "register_event",
       "register_model",
       "register_contract",
-      "register_external_contract",
       "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
       "upgrade_contract",
-      "upgrade_external_contract",
       "emit_event",
       "emit_events",
       "set_entity",
@@ -85,10 +83,6 @@
           {
             "name": "Library",
             "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
-          },
-          {
-            "name": "ExternalContract",
-            "type": "(core::starknet::contract_address::ContractAddress, core::felt252)"
           }
         ]
       },
@@ -219,10 +213,6 @@
           {
             "name": "Enum",
             "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
-          },
-          {
-            "name": "FixedArray",
-            "type": "(core::array::Span::<dojo::meta::layout::Layout>, core::integer::u32)"
           }
         ]
       },
@@ -379,34 +369,6 @@
           },
           {
             "type": "function",
-            "name": "register_external_contract",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "instance_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              },
-              {
-                "name": "block_number",
-                "type": "core::integer::u64"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
             "name": "register_library",
             "inputs": [
               {
@@ -499,30 +461,6 @@
                 "type": "core::starknet::class_hash::ClassHash"
               }
             ],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "upgrade_external_contract",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "instance_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              },
-              {
-                "name": "block_number",
-                "type": "core::integer::u64"
-              }
-            ],
-            "outputs": [],
             "state_mutability": "external"
           },
           {
@@ -990,85 +928,6 @@
       },
       {
         "type": "event",
-        "name": "dojo::world::world_contract::world::ExternalContractRegistered",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "instance_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_selector",
-            "type": "core::felt252",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "block_number",
-            "type": "core::integer::u64",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
-        "name": "dojo::world::world_contract::world::ExternalContractUpgraded",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "instance_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_selector",
-            "type": "core::felt252",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "block_number",
-            "type": "core::integer::u64",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
         "name": "dojo::world::world_contract::world::ModelUpgraded",
         "kind": "struct",
         "members": [
@@ -1399,16 +1258,6 @@
             "kind": "nested"
           },
           {
-            "name": "ExternalContractRegistered",
-            "type": "dojo::world::world_contract::world::ExternalContractRegistered",
-            "kind": "nested"
-          },
-          {
-            "name": "ExternalContractUpgraded",
-            "type": "dojo::world::world_contract::world::ExternalContractUpgraded",
-            "kind": "nested"
-          },
-          {
             "name": "ModelUpgraded",
             "type": "dojo::world::world_contract::world::ModelUpgraded",
             "kind": "nested"
@@ -1479,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x7c1d590050c3fd2979ca8f78bf0e84b82366e4dde2a2abdf5e13321826bb73",
-      "class_hash": "0x2dfe6c6854d6f6919293d598d407d354ee94ba20259f25faa603ad53f89c545",
+      "address": "0x4fe0beeb96dabe5f4cbe308a525f70da978fb13515a7525aed654d1cfc7496",
+      "class_hash": "0x1fdfe62848ad49f43fabe8751bdec2357c8c66a8d6989fb9495a171658062c",
       "abi": [
         {
           "type": "impl",
@@ -1494,7 +1343,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "actions__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -1923,8 +1772,8 @@
       ]
     },
     {
-      "address": "0x46b481a054c78c0ab095a64ea011fcb8af49ab020332cb970a48e73e1e032fa",
-      "class_hash": "0x6747d1ab1b36ee7567514a66db0d64dd7d71e0c7d6ba3339fe73a34723080ee",
+      "address": "0x4abf7c0f04e846af6a847847da9511755ed13b88a8fc9a120336531a4da3f5e",
+      "class_hash": "0x504147dc1fe3d561e7c7e408ccef9aab4bea463a4a1980673de6db09ba0b8d7",
       "abi": [
         {
           "type": "impl",
@@ -1938,7 +1787,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "admin__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2144,43 +1993,49 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x2553d71f37282418082b7f6f802e874f89564768d666d3fddcca0dadeff0130",
+      "class_hash": "0x74f2d80c382b85f6f6098f2dca2c109920974a9b099f63f64517b43dd08832b",
       "tag": "craft_island_pocket-GatherableResource",
       "selector": "0x724f6e93d1c79ee556934629fac544529f95a96cf9b19eccf2cec9afb77b6b5"
     },
     {
       "members": [],
-      "class_hash": "0x5a8ae12fde57dde8048c76816fa646f235b568b3ac1a05d006f2ec618c19e8f",
+      "class_hash": "0x2fa3d89d383db9cfef903672a40f767c7d4b9b8c863dde95dc7d858897da586",
       "tag": "craft_island_pocket-Inventory",
       "selector": "0x25890204dfbd25109a45c03a3c28262cdd0ac836ab0e470ed6b318ad999446e"
     },
     {
       "members": [],
-      "class_hash": "0x6a325148181abec7fdc92a7f7254d1b8269e1e007cecc6df249adde52a048f3",
+      "class_hash": "0x742f008ba9c2e563f1186c07a5089c9652a6c2dae6935a49223755cef744049",
       "tag": "craft_island_pocket-IslandChunk",
       "selector": "0x33bcf22997bb979a42ca224a7d3738a796f91d705065fbd52011d91a9ed402"
     },
     {
       "members": [],
-      "class_hash": "0x644351355a5453e232996ceaf892d85b3420bf50768d3c2a221fec24d5cb7a5",
+      "class_hash": "0x71296f8369acc7f008ce5fd3c4c3d8894addaab5289b388d961c015eecc94d0",
+      "tag": "craft_island_pocket-IslandInfo",
+      "selector": "0x67e103009e1d694b274874d7eb0dc7a4406e3b5224ebbb50d9e908830bdf41e"
+    },
+    {
+      "members": [],
+      "class_hash": "0x596815d5b37f8898aba77551725ca632a42ee94ebcc7fa65f55ee4cb02c7119",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },
     {
       "members": [],
-      "class_hash": "0x65ab1794637ff8f56dc4d5c90fe5ae322371358afe9da05f4304838e965163c",
+      "class_hash": "0x2fe5180d2c848281d0c0f32b23bf7452872f76fbd796ec0aed7fc36bdabb2b3",
       "tag": "craft_island_pocket-PlayerStats",
       "selector": "0x2a92edae62771b960421a6c25f61baa8bcb4274809be50f39a103b47ef97fad"
     },
     {
       "members": [],
-      "class_hash": "0x270a750e385265dddbd5135dc9abb280fc51c0ee7e3b84400a1bbdf1aead72c",
+      "class_hash": "0x5a6499de45a3380235ca12e2ef6217692fd6a5e83eacbaf6b9b91a5dd0ee26a",
       "tag": "craft_island_pocket-ProcessingLock",
       "selector": "0x53c74b393d8b91faf4c42b262fdc898c543a3b2c4de2de06c5231e3edcbbe6e"
     },
     {
       "members": [],
-      "class_hash": "0x6b8cf2835b206f867fe4e725a3d0ab5d7ba58da616f8cfc6238c2f4cf298e63",
+      "class_hash": "0x7f033e5327e1825f4596b16e5fca548a07eeb38f6fc5305a93d2e2f865ff83d",
       "tag": "craft_island_pocket-WorldStructure",
       "selector": "0x5df5957a204638a9dc1fe18f016555f1811394279cd5705d8d6a3a60dd890c6"
     }

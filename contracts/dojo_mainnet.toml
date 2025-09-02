@@ -1,0 +1,27 @@
+[world]
+name = "Craft Island"
+description = "A fully on-chain autonomous world game built on Starknet using Dojo. Similar to Animal Crossing or Minecraft, where players explore, gather resources, craft items, and build their islands."
+cover_uri = "file://assets/cover.png"
+icon_uri = "file://assets/icon.png"
+website = "https://github.com/caillef/craft-island"
+seed = "craft_island_pocket"
+
+[world.socials]
+x = "https://x.com/ohayo_dojo"
+discord = "https://discord.gg/FB2wR6uF"
+github = "https://github.com/caillef/craft-island"
+telegram = "https://t.me/dojoengine"
+
+[namespace]
+default = "craft_island_pocket"
+
+[env]
+rpc_url = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_9/demo"
+# You need to set your own mainnet account credentials
+account_address = "0x0494b65279A674Cd377E730E2C38E0a292654E22aA4dc97BDe37b7754ce2D016"
+private_key = "0x0450c0a39d308bcc3b10b9009ef29533baca59a04abb1c406b619eaefaad7214"
+# World address will be set after first deployment
+# world_address = ""
+
+[writers]
+"craft_island_pocket" = ["craft_island_pocket-actions", "craft_island_pocket-admin"]

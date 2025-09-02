@@ -2,6 +2,7 @@
 name = "craft_island_pocket"
 version = "0.1.0"
 edition = "2024_07"
+seed = "123123123"
 
 [cairo]
 sierra-replace-ids = true
@@ -10,16 +11,20 @@ sierra-replace-ids = true
 migrate = "sozo build && sozo migrate"
 
 [dependencies]
-dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.6.0" }
+dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.7.0-alpha.1" }
+starknet = ">=2.11.4"
+dojo_macros = { git = "https://github.com/dojoengine/dojo", tag = "v1.7.0-alpha.1" }
 
 [[target.starknet-contract]]
 build-external-contracts = ["dojo::world::world_contract::world"]
 sierra = true
 casm = true
-allowed-libfuncs-list.name = "experimental"
+#allowed-libfuncs-list.name = "experimental"
 
 [dev-dependencies]
 cairo_test = "*"
-dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.6.0" }
+dojo_cairo_test = { git = "https://github.com/dojoengine/dojo", tag = "v1.7.0-alpha.1" }
 
 [profile.sepolia]
+
+[profile.mainnet]

@@ -1,9 +1,10 @@
 use starknet::ContractAddress;
 
-#[derive(Copy, Drop, Serde, PartialEq, IntrospectPacked)]
+#[derive(Copy, Drop, Serde, PartialEq, Introspect, Default, DojoStore)]
 pub enum ProcessType {
+    #[default]
     None,
-    GrindWheat,     // Wheat -> Flour  
+    GrindWheat,     // Wheat -> Flour
     CutLogs,        // Wood Log -> Planks
     SmeltOre,       // Iron Ore -> Iron Ingot
     CrushStone,     // Stone -> Gravel
