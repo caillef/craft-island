@@ -32,6 +32,39 @@ ADojoCraftIslandManager::ADojoCraftIslandManager()
 	StartOptimisticCleanupTimer();
 }
 
+// Static function to get DojoManager instance from Blueprint
+ADojoCraftIslandManager* ADojoCraftIslandManager::GetDojoManager(const UObject* WorldContext)
+{
+    if (!WorldContext)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("GetDojoManager: WorldContext is null"));
+        return nullptr;
+    }
+
+    UWorld* World = WorldContext->GetWorld();
+    if (!World)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("GetDojoManager: Could not get World from WorldContext"));
+        return nullptr;
+    }
+
+    // Find the DojoCraftIslandManager in the world
+    UE_LOG(LogTemp, Log, TEXT("GetDojoManager: Searching for DojoManager in world"));
+    for (TActorIterator<ADojoCraftIslandManager> ActorItr(World); ActorItr; ++ActorItr)
+    {
+        ADojoCraftIslandManager* DojoManager = *ActorItr;
+        if (DojoManager)
+        {
+            UE_LOG(LogTemp, Log, TEXT("GetDojoManager: Found DojoManager, DojoHelpers available: %s"), 
+                DojoManager->DojoHelpers ? TEXT("Yes") : TEXT("No"));
+            return DojoManager;
+        }
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("GetDojoManager: No DojoCraftIslandManager found in world"));
+    return nullptr;
+}
+
 // Called when the game starts or when spawned
 void ADojoCraftIslandManager::BeginPlay()
 {
@@ -56,6 +89,30 @@ void ADojoCraftIslandManager::BeginPlay()
     // Initialize current space tracking
     CurrentSpaceOwner = Account.Address;
     CurrentSpaceId = 1;
+    
+    // Set player address in UI if it exists
+    if (UI)
+    {
+        // Call the Blueprint function SetPlayerAddress on the UI widget
+        UFunction* SetPlayerAddressFunc = UI->FindFunction(FName("SetPlayerAddress"));
+        if (SetPlayerAddressFunc)
+        {
+            struct FSetPlayerAddressParams
+            {
+                FString Address;
+            };
+            
+            FSetPlayerAddressParams Params;
+            Params.Address = Account.Address;
+            
+            UI->ProcessEvent(SetPlayerAddressFunc, &Params);
+            UE_LOG(LogTemp, Log, TEXT("Called SetPlayerAddress on UI with address: %s"), *Account.Address);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("SetPlayerAddress function not found on UI widget"));
+        }
+    }
 
     // Initialize default building to nullptr
     DefaultBuilding = nullptr;
@@ -653,6 +710,8 @@ void ADojoCraftIslandManager::OnUIDelayedLoad() {
 void ADojoCraftIslandManager::CraftIslandSpawn()
 {
     DojoHelpers->CallCraftIslandPocketActionsSpawn(Account);
+    // TODO: Set player name after spawning (disabled for now due to string_to_bytes issue)
+    // DojoHelpers->CallCraftIslandPocketActionsSetName(Account, TEXT("caillef"));
 }
 
 AActor* ADojoCraftIslandManager::PlaceAssetInWorld(E_Item Item, const FIntVector& DojoPosition, bool Validated, EActorSpawnType SpawnType)
@@ -1111,6 +1170,8 @@ void ADojoCraftIslandManager::RequestPlaceUse()
 void ADojoCraftIslandManager::RequestSpawn()
 {
     DojoHelpers->CallCraftIslandPocketActionsSpawn(Account);
+    // TODO: Set player name after spawning (disabled for now due to string_to_bytes issue)
+    // DojoHelpers->CallCraftIslandPocketActionsSetName(Account, TEXT("caillef"));
 }
 
 void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)
@@ -1964,20 +2025,12 @@ void ADojoCraftIslandManager::ClearAllSpawnedActors()
 
 void ADojoCraftIslandManager::QueueSpawnWithOverflowProtection(const FSpawnQueueData& SpawnData)
 {
-    UE_LOG(LogTemp, Warning, TEXT("=== QueueSpawnWithOverflowProtection ==="));
-    UE_LOG(LogTemp, Warning, TEXT("Adding to spawn queue: Item=%d, Position=(%d,%d,%d), Validated=%d"), 
-        (int32)SpawnData.Item, 
-        SpawnData.DojoPosition.X, SpawnData.DojoPosition.Y, SpawnData.DojoPosition.Z,
-        SpawnData.Validated);
-    
     const int32 MaxSpawnQueueSize = 1000;
     if (SpawnQueue.Num() >= MaxSpawnQueueSize)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Spawn queue full (%d), removing oldest entry"), SpawnQueue.Num());
         SpawnQueue.RemoveAt(0);
     }
     SpawnQueue.Add(SpawnData);
-    UE_LOG(LogTemp, Warning, TEXT("Spawn queue size: %d"), SpawnQueue.Num());
 }
 
 void ADojoCraftIslandManager::QueueSpawnBatchWithOverflowProtection(const TArray<FSpawnQueueData>& SpawnDataBatch)
@@ -2125,44 +2178,23 @@ void ADojoCraftIslandManager::ProcessIslandChunk(UDojoModelCraftIslandPocketIsla
 
 void ADojoCraftIslandManager::ProcessGatherableResource(UDojoModelCraftIslandPocketGatherableResource* Gatherable)
 {
-    UE_LOG(LogTemp, Warning, TEXT("=== ProcessGatherableResource START ==="));
-    
-    if (!Gatherable)
+    if (!Gatherable || Gatherable->IslandOwner != CurrentSpaceOwner)
     {
-        UE_LOG(LogTemp, Error, TEXT("ProcessGatherableResource: Gatherable is NULL"));
-        return;
-    }
-    
-    UE_LOG(LogTemp, Warning, TEXT("Gatherable Owner: %s, Current Owner: %s"), *Gatherable->IslandOwner, *CurrentSpaceOwner);
-    
-    if (Gatherable->IslandOwner != CurrentSpaceOwner)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("ProcessGatherableResource: Owner mismatch, skipping"));
         return;
     }
 
     FIntVector ChunkOffset = HexStringToVector(Gatherable->ChunkId);
     E_Item Item = static_cast<E_Item>(Gatherable->ResourceId);
     FIntVector DojoPos = GetWorldPositionFromLocal(Gatherable->Position, ChunkOffset);
-    
-    UE_LOG(LogTemp, Warning, TEXT("ChunkId: %s, ChunkOffset: (%d,%d,%d)"), 
-        *Gatherable->ChunkId, ChunkOffset.X, ChunkOffset.Y, ChunkOffset.Z);
-    UE_LOG(LogTemp, Warning, TEXT("ResourceId: %d, Item: %d, Position: %d"), 
-        Gatherable->ResourceId, (int32)Item, Gatherable->Position);
-    UE_LOG(LogTemp, Warning, TEXT("DojoPos: (%d,%d,%d)"), DojoPos.X, DojoPos.Y, DojoPos.Z);
 
     if (Item == E_Item::None)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Item is None, removing actor at position"));
         RemoveActorAtPosition(DojoPos, EActorSpawnType::GatherableResource);
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("Item is %d, queuing spawn"), (int32)Item);
         QueueSpawnWithOverflowProtection(FSpawnQueueData(Item, DojoPos, false, Gatherable));
     }
-    
-    UE_LOG(LogTemp, Warning, TEXT("=== ProcessGatherableResource END ==="));
 }
 
 void ADojoCraftIslandManager::ProcessWorldStructure(UDojoModelCraftIslandPocketWorldStructure* Structure)

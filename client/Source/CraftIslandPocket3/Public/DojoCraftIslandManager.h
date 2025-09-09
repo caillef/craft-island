@@ -326,6 +326,10 @@ private:
 public:
 	// Sets default values for this actor's properties
 	ADojoCraftIslandManager();
+
+    // Static function to get the DojoManager instance (for accessing from Blueprint)
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dojo")
+    static ADojoCraftIslandManager* GetDojoManager(const UObject* WorldContext);
     
     // Queue methods for batching
     UFUNCTION(BlueprintCallable, Category = "Batching")
