@@ -768,6 +768,7 @@ UDojoModel* ADojoHelpers::parseCraftIslandPocketPlayerDataModel(struct Struct* m
         ConvertTyToUnrealEngineType(member, "current_space_id", "u16", Model->CurrentSpaceId);
         ConvertTyToUnrealEngineType(member, "coins", "u32", Model->Coins);
         ConvertTyToUnrealEngineType(member, "random_nonce", "u32", Model->RandomNonce);
+        ConvertTyToUnrealEngineType(member, "name", "ByteArray", Model->Name);
     }
 
     FDojoModule::CArrayFree(members->data, members->data_len);
@@ -1260,4 +1261,21 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsCancelProcessing(const 
     TArray<FString> args;
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("cancel_processing"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallCraftIslandPocketActionsSetName(const FAccount& account, const FString& name) {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<FString>(name, \
+                                 "ByteArray"));
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("set_name"), FString::Join(args, TEXT(",")));
+}
+
+void ADojoHelpers::CallControllerCraftIslandPocketActionsSetName(const FControllerAccount& \
+                     account, const FString& name) {
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<FString>(name, \
+                                 "ByteArray"));
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("set_name"), FString::Join(args, TEXT(",")));
 }

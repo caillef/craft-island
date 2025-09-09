@@ -152,6 +152,15 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int CurrentSpaceId;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int Coins;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int RandomNonce;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString Name;
 };
 
 
@@ -376,5 +385,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketAdminGiveSelf(const FControllerAccount& account, int item, int qty);
+
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsSetName(const FAccount& account, const FString& name);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsSetName(const FControllerAccount& account, const FString& name);
 
 };

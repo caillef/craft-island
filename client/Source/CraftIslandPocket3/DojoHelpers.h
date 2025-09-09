@@ -160,6 +160,8 @@ public:
     int Coins;
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int RandomNonce;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString Name;
 };
 
 
@@ -477,5 +479,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallControllerCraftIslandPocketActionsCancelProcessing(const FControllerAccount& account);
+
+    UFUNCTION(BlueprintCallable, Category = "Calls")
+    void CallCraftIslandPocketActionsSetName(const FAccount& account, const FString& name);
+
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
+    void CallControllerCraftIslandPocketActionsSetName(const FControllerAccount& account, const FString& name);
 
 };

@@ -15,6 +15,8 @@ trait IActions<T> {
     fn cancel_processing(ref self: T);
     fn execute_compressed_actions(ref self: T, packed_actions: felt252) -> u8;
     fn execute_packed_actions(ref self: T, packed_data: Array<felt252>) -> Array<bool>;
+    fn debug_give_coins(ref self: T); // Debug function to give 50 free coins
+    fn set_name(ref self: T, name: ByteArray);
 }
 
 // dojo decorator
@@ -1052,6 +1054,36 @@ mod actions {
 
 
             results
+        }
+
+        // Debug function to give 50 free coins
+        fn debug_give_coins(ref self: ContractState) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+            
+            // Get current player data
+            let mut player_data: PlayerData = world.read_model((player));
+            
+            // Add 50 coins
+            player_data.coins += 50;
+            
+            // Save updated player data
+            world.write_model(@player_data);
+        }
+
+        // Set player name
+        fn set_name(ref self: ContractState, name: ByteArray) {
+            let mut world = get_world(ref self);
+            let player = get_caller_address();
+            
+            // Get current player data
+            let mut player_data: PlayerData = world.read_model((player));
+            
+            // Set the name
+            player_data.name = name;
+            
+            // Save updated player data
+            world.write_model(@player_data);
         }
     }
 

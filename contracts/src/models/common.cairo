@@ -11,6 +11,7 @@ pub struct PlayerData {
     pub current_space_id: u16,
     pub coins: u32,
     pub random_nonce: u32,
+    pub name: ByteArray,
 }
 
 // Not Used Yet
