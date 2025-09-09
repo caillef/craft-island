@@ -710,8 +710,8 @@ void ADojoCraftIslandManager::OnUIDelayedLoad() {
 void ADojoCraftIslandManager::CraftIslandSpawn()
 {
     DojoHelpers->CallCraftIslandPocketActionsSpawn(Account);
-    // TODO: Set player name after spawning (disabled for now due to string_to_bytes issue)
-    // DojoHelpers->CallCraftIslandPocketActionsSetName(Account, TEXT("caillef"));
+    // Set player name after spawning
+    DojoHelpers->CallCraftIslandPocketActionsSetName(Account, TEXT("caillef"));
 }
 
 AActor* ADojoCraftIslandManager::PlaceAssetInWorld(E_Item Item, const FIntVector& DojoPosition, bool Validated, EActorSpawnType SpawnType)
@@ -1170,8 +1170,8 @@ void ADojoCraftIslandManager::RequestPlaceUse()
 void ADojoCraftIslandManager::RequestSpawn()
 {
     DojoHelpers->CallCraftIslandPocketActionsSpawn(Account);
-    // TODO: Set player name after spawning (disabled for now due to string_to_bytes issue)
-    // DojoHelpers->CallCraftIslandPocketActionsSetName(Account, TEXT("caillef"));
+    // Set player name after spawning
+    DojoHelpers->CallCraftIslandPocketActionsSetName(Account, TEXT("caillef"));
 }
 
 void ADojoCraftIslandManager::InventorySelectHotbar(UObject* Slot)

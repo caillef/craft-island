@@ -905,7 +905,14 @@ void ADojoHelpers::CallControllerCraftIslandPocketAdminGiveSelf(const FControlle
 
 void ADojoHelpers::CallCraftIslandPocketActionsSetName(const FAccount& account, const FString& name) {
     TArray<FString> args;
-    args.Append(ConvertToFeltHexa<FString>(name, \
+    
+    // Convert string to hex representation for ByteArray
+    FString hexString = TEXT("0x");
+    for (int32 i = 0; i < name.Len(); i++) {
+        hexString += FString::Printf(TEXT("%02x"), (uint8)name[i]);
+    }
+    
+    args.Append(ConvertToFeltHexa<FString>(hexString, \
                                  "ByteArray"));
     this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("set_name"), FString::Join(args, TEXT(",")));
@@ -914,7 +921,14 @@ void ADojoHelpers::CallCraftIslandPocketActionsSetName(const FAccount& account, 
 void ADojoHelpers::CallControllerCraftIslandPocketActionsSetName(const FControllerAccount& \
                      account, const FString& name) {
     TArray<FString> args;
-    args.Append(ConvertToFeltHexa<FString>(name, \
+    
+    // Convert string to hex representation for ByteArray
+    FString hexString = TEXT("0x");
+    for (int32 i = 0; i < name.Len(); i++) {
+        hexString += FString::Printf(TEXT("%02x"), (uint8)name[i]);
+    }
+    
+    args.Append(ConvertToFeltHexa<FString>(hexString, \
                                  "ByteArray"));
     this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
                      TEXT("set_name"), FString::Join(args, TEXT(",")));
