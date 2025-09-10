@@ -46,6 +46,9 @@ mod actions {
         init::{init},
         math::{fast_power_2},
         processing_guard::{ensure_not_locked},
+        position::{calculate_chunk_id, get_chunk_and_position},
+        inventory::{add_items_with_overflow},
+        bitwise::{extract_u8, extract_u16, extract_u32, extract_u64},
     };
     use craft_island_pocket::common::errors::{
         GameResult, GameError, GameResultTrait
@@ -53,65 +56,6 @@ mod actions {
 
     use dojo::model::{ModelStorage};
 
-    // Helper function to extract bits from felt252
-    fn extract_u8(value: felt252, shift: u32) -> u8 {
-        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
-        let masked: u256 = shifted - (shifted / 256) * 256;
-        masked.try_into().unwrap()
-    }
-
-    // Helper function to extract u16 from felt252
-    fn extract_u16(value: felt252, shift: u32) -> u16 {
-        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
-        let masked: u256 = shifted - (shifted / 0x10000) * 0x10000;
-        masked.try_into().unwrap()
-    }
-
-    // Helper function to extract u32 from felt252
-    fn extract_u32(value: felt252, shift: u32) -> u32 {
-        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
-        let masked: u256 = shifted - (shifted / 0x100000000) * 0x100000000;
-        masked.try_into().unwrap()
-    }
-
-    // Helper function to extract u64 from felt252
-    fn extract_u64(value: felt252, shift: u32, bits: u32) -> u64 {
-        let shifted: u256 = value.into() / fast_power_2(shift.into()).into();
-        let mask: u256 = fast_power_2(bits.into()).into();
-        let masked: u256 = shifted - (shifted / mask) * mask;
-        masked.try_into().unwrap()
-    }
-
-    // Helper functions for common position/chunk calculations
-    fn calculate_chunk_id(x: u64, y: u64, z: u64) -> u128 {
-        get_position_id(x / 4, y / 4, z / 4)
-    }
-
-    fn calculate_position_in_chunk(x: u64, y: u64, z: u64) -> u8 {
-        (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap()
-    }
-
-    fn get_chunk_and_position(x: u64, y: u64, z: u64) -> (u128, u8) {
-        let chunk_id = calculate_chunk_id(x, y, z);
-        let position = calculate_position_in_chunk(x, y, z);
-        (chunk_id, position)
-    }
-
-    // Helper function for inventory overflow handling
-    fn add_items_with_overflow(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_id: u16, quantity: u32) -> u32 {
-        let mut hotbar: Inventory = world.read_model((player, 0));
-        let overflow = hotbar.add_items(item_id, quantity);
-        world.write_model(@hotbar);
-        
-        if overflow > 0 {
-            let mut inventory: Inventory = world.read_model((player, 1));
-            let remaining = inventory.add_items(item_id, overflow);
-            world.write_model(@inventory);
-            remaining
-        } else {
-            0
-        }
-    }
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
