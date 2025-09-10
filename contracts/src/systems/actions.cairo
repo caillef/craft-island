@@ -82,6 +82,37 @@ mod actions {
         masked.try_into().unwrap()
     }
 
+    // Helper functions for common position/chunk calculations
+    fn calculate_chunk_id(x: u64, y: u64, z: u64) -> u128 {
+        get_position_id(x / 4, y / 4, z / 4)
+    }
+
+    fn calculate_position_in_chunk(x: u64, y: u64, z: u64) -> u8 {
+        (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap()
+    }
+
+    fn get_chunk_and_position(x: u64, y: u64, z: u64) -> (u128, u8) {
+        let chunk_id = calculate_chunk_id(x, y, z);
+        let position = calculate_position_in_chunk(x, y, z);
+        (chunk_id, position)
+    }
+
+    // Helper function for inventory overflow handling
+    fn add_items_with_overflow(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_id: u16, quantity: u32) -> u32 {
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let overflow = hotbar.add_items(item_id, quantity);
+        world.write_model(@hotbar);
+        
+        if overflow > 0 {
+            let mut inventory: Inventory = world.read_model((player, 1));
+            let remaining = inventory.add_items(item_id, overflow);
+            world.write_model(@inventory);
+            remaining
+        } else {
+            0
+        }
+    }
+
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
     }
@@ -90,9 +121,7 @@ mod actions {
         let mut world = get_world(ref self);
         let player = get_caller_address();
         let player_data: PlayerData = world.read_model((player));
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        // check block under
-        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        let (chunk_id, position) = get_chunk_and_position(x, y, z);
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         assert!(resource.resource_id == 0, "Error: Resource exists");
 
@@ -160,8 +189,7 @@ mod actions {
 
     fn harvest_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64) -> GameResult<()> {
         let player_data: PlayerData = world.read_model(player);
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        let (chunk_id, position) = get_chunk_and_position(x, y, z);
         let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
         
         if resource.resource_id == 0 || resource.destroyed {
@@ -304,8 +332,7 @@ mod actions {
         // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
             let player_data: PlayerData = world.read_model((player));
-            let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-            let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+            let (chunk_id, position) = get_chunk_and_position(x, y, z);
             let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
             assert!(resource.resource_id == 33 && !resource.destroyed, "Error: No rock");
             resource.destroyed = true;
@@ -958,24 +985,15 @@ mod actions {
                 k += 1;
             };
 
-            let mut hotbar: Inventory = world.read_model((player, 0));
-            let mut inventory: Inventory = world.read_model((player, 1));
-            let overflow = hotbar.add_items(wanteditem, 1);
-            if overflow > 0 {
-                inventory.add_items(wanteditem, overflow);
-            }
-
+            add_items_with_overflow(ref world, player, wanteditem, 1);
             world.write_model(@craftinventory);
-            world.write_model(@hotbar);
-            world.write_model(@inventory);
             return true;
         }
 
         // Stone Craft
         if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
             let player_data: PlayerData = world.read_model(player);
-            let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-            let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+            let (chunk_id, position) = get_chunk_and_position(x, y, z);
             let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
 
             if resource.resource_id != 33 || resource.destroyed {
@@ -1114,7 +1132,7 @@ mod actions {
 
         // Check if trying to break blocks 1, 2, or 3 (dirt, grass, stone)
         let player_data: PlayerData = world.read_model((player));
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        let chunk_id = calculate_chunk_id(x, y, z);
         let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
 
         // Get block ID at position
@@ -1202,8 +1220,7 @@ mod actions {
     // Internal implementation of placing gatherable resources 
     fn place_gatherable_resource_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64, resource_id: u16) -> GameResult<()> {
         let player_data: PlayerData = world.read_model(player);
-        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
-        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+        let (chunk_id, position) = get_chunk_and_position(x, y, z);
 
         // Check if there's already a resource at this position
         let existing_resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
