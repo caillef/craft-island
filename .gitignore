@@ -68,3 +68,4 @@
 
 contracts/sozo
 contracts/dojo_sepolia.toml
+contracts/dojo_mainnet.toml
