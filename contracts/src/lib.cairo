@@ -9,6 +9,9 @@ pub mod helpers {
     pub mod init;
     pub mod utils;
     pub mod processing_guard;
+    pub mod position;
+    pub mod inventory;
+    pub mod bitwise;
 }
 
 pub mod common {
