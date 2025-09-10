@@ -5,6 +5,7 @@ use craft_island_pocket::models::common::{PlayerData};
 use craft_island_pocket::models::gatherableresource::GatherableResourceTrait;
 use starknet::ContractAddress;
 
+
 fn init_island(ref world: WorldStorage, player: ContractAddress) {
     world.write_model(@IslandChunkTrait::new(player.into(), 1, 0x000000080100000007ff0000000800, 0, 76842741656518657));
     world.write_model(@IslandChunkTrait::new(player.into(), 1, 0x000000080100000008000000000800, 0, 4785147619639313));
@@ -31,18 +32,19 @@ fn init_island(ref world: WorldStorage, player: ContractAddress) {
     world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x000000080000000007ff0000000800, 23, 46));
     world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x000000080000000008010000000800, 30, 46));
     world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008000000000800, 24, 46));
-    // wheat
-    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008020000000800, 17, 47));
-    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 29, 47));
-    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 25, 47));
-    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008020000000800, 16, 47));
-    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 28, 47));
-    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 24, 47));
+    // carrot seeds (ready to harvest)
+    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008020000000800, 17, 51));
+    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 29, 51));
+    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 25, 51));
+    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008020000000800, 16, 51));
+    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 28, 51));
+    world.write_model(@GatherableResourceTrait::new_ready(player.into(), 1, 0x00000007ff00000008010000000800, 24, 51));
 }
 
 fn init_player(ref world: WorldStorage, player: ContractAddress) {
     let mut player_data: PlayerData = PlayerData {
         player: player,
+        name: ''.into(),
         last_inventory_created_id: 3, // hotbar, inventory, craft, sell
         last_space_created_id: 1, // own island
         current_space_owner: player.into(),

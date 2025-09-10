@@ -3,7 +3,7 @@
     "class_hash": "0x4d44ca76c3f82df35436d1c20847ba5c345b8dda4731e200ba3232cd8f94fe9",
     "address": "0x67126801bb71a1a236d29bd789b93daa65d7f503f9d786235e9d5e4867022a4",
     "seed": "craft_island_pocket",
-    "name": "Dojo starter",
+    "name": "Craft Island",
     "entrypoints": [
       "uuid",
       "set_metadata",
@@ -1479,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x7c1d590050c3fd2979ca8f78bf0e84b82366e4dde2a2abdf5e13321826bb73",
-      "class_hash": "0x2dfe6c6854d6f6919293d598d407d354ee94ba20259f25faa603ad53f89c545",
+      "address": "0x42d220a4dc5fdca775ca7964400ea82b4200cfa8a78a1bb4d3edadb4c28a22",
+      "class_hash": "0x3eddabd14b8b43a621e8e91b2361b93f30971228da68c9ef80f9e7582ab7378",
       "abi": [
         {
           "type": "impl",
@@ -1782,6 +1782,13 @@
                 }
               ],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "debug_give_coins",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1919,6 +1926,7 @@
         "cancel_processing",
         "execute_compressed_actions",
         "execute_packed_actions",
+        "debug_give_coins",
         "upgrade"
       ]
     },

@@ -480,7 +480,7 @@ void ADojoCraftIslandManager::HandleInventory(UDojoModel* Object)
                 // Server confirmed our selection - clear pending flag
                 bHotbarSelectionPending = false;
                 GetWorld()->GetTimerManager().ClearTimer(HotbarTimeoutHandle);
-                UE_LOG(LogTemp, Warning, TEXT("OnInventoryUpdated: Server confirmed slot %d"), 
+                UE_LOG(LogTemp, VeryVerbose, TEXT("OnInventoryUpdated: Server confirmed slot %d"), 
                        LocalHotbarSelectedSlot);
             }
             else
@@ -1321,7 +1321,7 @@ void ADojoCraftIslandManager::RequestHit()
                 OptimisticActors.Add(HitPosition, ActorToRemove);
                 OptimisticActorTimestamps.Add(HitPosition, GetWorld()->GetTimeSeconds());
 
-                UE_LOG(LogTemp, Log, TEXT("Optimistic removal at (%d, %d, %d)"),
+                UE_LOG(LogTemp, VeryVerbose, TEXT("Optimistic removal at (%d, %d, %d)"),
                     HitPosition.X, HitPosition.Y, HitPosition.Z);
             }
             else
@@ -1339,10 +1339,8 @@ void ADojoCraftIslandManager::RequestHit()
     Item.Type = ETransactionType::Hit;
     Item.Position = HitPosition;
     
-    UE_LOG(LogTemp, Warning, TEXT("Queuing Hit transaction"));
     QueueTransaction(Item);
     
-    UE_LOG(LogTemp, Warning, TEXT("=== RequestHit END ==="));
 }
 
 void ADojoCraftIslandManager::RequestInventoryMoveItem(int32 FromInventory, int32 FromSlot, int32 ToInventory, int32 ToSlot)
@@ -2059,21 +2057,19 @@ void ADojoCraftIslandManager::RemoveActorAtPosition(const FIntVector& DojoPositi
     // Check if this is confirming an optimistic removal
     if (OptimisticActors.Contains(DojoPosition))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Found in OptimisticActors"));
         AActor* OptimisticActor = OptimisticActors[DojoPosition];
         if (OptimisticActor && OptimisticActor->Tags.Contains(FName("OptimisticRemoval")))
         {
             // Confirm the removal - actually destroy the actor now
             if (IsValid(OptimisticActor))
             {
-                UE_LOG(LogTemp, Warning, TEXT("Destroying optimistic actor"));
                 OptimisticActor->Destroy();
             }
             OptimisticActors.Remove(DojoPosition);
             Actors.Remove(DojoPosition);
             ActorSpawnInfo.Remove(DojoPosition);
 
-            UE_LOG(LogTemp, Warning, TEXT("Confirmed optimistic removal at (%d, %d, %d)"),
+            UE_LOG(LogTemp, VeryVerbose, TEXT("Confirmed optimistic removal at (%d, %d, %d)"),
                 DojoPosition.X, DojoPosition.Y, DojoPosition.Z);
             return;
         }
@@ -2626,29 +2622,15 @@ void ADojoCraftIslandManager::ProcessNextTransaction()
         // Use new universal encoder
         TArray<FString> PackedActions = EncodePackedActions(BatchedActions);
         
-        UE_LOG(LogTemp, Warning, TEXT("=== Sending Batched Actions ==="));
-        UE_LOG(LogTemp, Warning, TEXT("Number of actions: %d"), BatchedActions.Num());
-        for (int32 i = 0; i < BatchedActions.Num(); i++)
-        {
-            const FTransactionQueueItem& Action = BatchedActions[i];
-            UE_LOG(LogTemp, Warning, TEXT("Action %d: Type=%d, Position=(%d,%d,%d)"), 
-                i, (int32)Action.Type, Action.Position.X, Action.Position.Y, Action.Position.Z);
-        }
         
         // Call the new execute_packed_actions method
         if (DojoHelpers)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Calling execute_packed_actions with %d packed felts"), PackedActions.Num());
-            for (int32 i = 0; i < PackedActions.Num(); i++)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("PackedFelt[%d]: %s"), i, *PackedActions[i]);
-            }
             
             // Use the universal packing system
             DojoHelpers->CallCraftIslandPocketActionsExecutePackedActions(Account, PackedActions);
         }
         
-        UE_LOG(LogTemp, Warning, TEXT("Sent %d actions in %d felts"), BatchedActions.Num(), PackedActions.Num());
     }
     else
     {
@@ -3138,7 +3120,6 @@ FString ADojoCraftIslandManager::PackType2Actions(const TArray<FTransactionQueue
                     uint32 X = Action.Position.X & 0x3FFF; // 14 bits
                     uint32 Y = Action.Position.Y & 0x3FFF; // 14 bits
                     uint32 Z = (Action.Position.Z == 8193) ? 1 : 0; // 1 bit
-                    UE_LOG(LogTemp, Warning, TEXT("Hit encoding: Z=%d, z_bit=%d"), Action.Position.Z, Z);
                     ExtraData = Y | (X << 14) | (Z << 28); // 30 bits total
                 }
                 break;
