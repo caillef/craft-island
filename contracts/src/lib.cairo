@@ -1,5 +1,8 @@
 pub mod systems {
     pub mod actions;
+    pub mod resources;
+    pub mod crafting;
+    pub mod commerce;
     pub mod admin;
 }
 
