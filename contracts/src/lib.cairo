@@ -11,6 +11,10 @@ pub mod helpers {
     pub mod processing_guard;
 }
 
+pub mod common {
+    pub mod errors;
+}
+
 pub mod models {
     pub mod common;
     pub mod inventory;
