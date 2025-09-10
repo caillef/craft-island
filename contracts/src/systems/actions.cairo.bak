@@ -260,13 +260,135 @@ mod actions {
     ) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        GameResultTrait::unwrap(buy_internal(ref world, player, item_ids.span(), quantities.span(), false));
+        let mut player_data: PlayerData = world.read_model((player));
+
+        // Validate input arrays have same length
+        assert(item_ids.len() == quantities.len(), 'Arrays must have same length');
+        assert(item_ids.len() > 0, 'Must buy at least one item');
+
+        // Calculate total cost and validate items
+        let mut total_cost: u32 = 0;
+        let mut i: u32 = 0;
+        loop {
+            if i >= item_ids.len() {
+                break;
+            }
+
+            let item_id = *item_ids.at(i);
+            let quantity = *quantities.at(i);
+
+            // Get price for each item
+            let price_per_item = if item_id == 47 {
+                10 // Wheat seed - 10 coins
+            } else if item_id == 53 {
+                5  // Potato seed - 5 coins
+            } else if item_id == 51 {
+                2  // Carrot seed - 2 coins
+            } else if item_id == 60 {
+                5  // Workshop Pattern - 5 coins
+            } else if item_id == 61 {
+                100  // Well Pattern - 100 coins
+            } else if item_id == 62 {
+                3000  // Kitchen Pattern - 3000 coins
+            } else if item_id == 63 {
+                500  // Warehouse Pattern - 500 coins
+            } else if item_id == 64 {
+                10000  // Brewery Pattern - 10000 coins
+            } else {
+                assert(false, 'Item not available for purchase');
+                0
+            };
+
+            total_cost += price_per_item * quantity;
+            i += 1;
+        };
+
+        // Check if player has enough coins
+        assert(player_data.coins >= total_cost, 'Not enough coins');
+
+        // Deduct coins
+        player_data.coins -= total_cost;
+
+        // Add items to player inventory
+        i = 0;
+        loop {
+            if i >= item_ids.len() {
+                break;
+            }
+
+            let item_id = *item_ids.at(i);
+            let quantity = *quantities.at(i);
+
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, quantity);
+
+            i += 1;
+        };
+
+        // Save player data
+        world.write_model(@player_data);
     }
 
     fn sell(ref self: ContractState) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        GameResultTrait::unwrap(sell_internal(ref world, player));
+
+        // Get sell inventory (id = 3)
+        let mut sell_inventory: Inventory = world.read_model((player, 3));
+        let mut player_data: PlayerData = world.read_model((player));
+
+        let mut total_coins: u32 = 0;
+
+        // Count coins for each item type
+        let carrot_amount = sell_inventory.get_item_amount(52);  // Carrot
+        let potato_amount = sell_inventory.get_item_amount(54);  // Potato
+        let wheat_amount = sell_inventory.get_item_amount(48);   // Wheat
+        let golden_carrot_amount = sell_inventory.get_item_amount(66);  // Golden Carrot
+        let golden_potato_amount = sell_inventory.get_item_amount(67);  // Golden Potato
+        let golden_wheat_amount = sell_inventory.get_item_amount(65);   // Golden Wheat
+        let bowl_amount = sell_inventory.get_item_amount(55);   // Bowl
+        let bowl_soup_amount = sell_inventory.get_item_amount(71);   // Bowl of Soup
+
+        total_coins += carrot_amount * 2;   // 2 coins per carrot
+        total_coins += potato_amount * 8;   // 8 coins per potato
+        total_coins += wheat_amount * 10;   // 10 coins per wheat
+        total_coins += golden_carrot_amount * 20;   // 20 coins per golden carrot (10x)
+        total_coins += golden_potato_amount * 80;   // 80 coins per golden potato (10x)
+        total_coins += golden_wheat_amount * 100;   // 100 coins per golden wheat (10x)
+        total_coins += bowl_amount * 5;   // 5 coins per bowl
+        total_coins += bowl_soup_amount * 50;   // 50 coins per bowl of soup
+
+        // Remove sold items
+        if carrot_amount > 0 {
+            sell_inventory.remove_items(52, carrot_amount);
+        }
+        if potato_amount > 0 {
+            sell_inventory.remove_items(54, potato_amount);
+        }
+        if wheat_amount > 0 {
+            sell_inventory.remove_items(48, wheat_amount);
+        }
+        if golden_carrot_amount > 0 {
+            sell_inventory.remove_items(66, golden_carrot_amount);
+        }
+        if golden_potato_amount > 0 {
+            sell_inventory.remove_items(67, golden_potato_amount);
+        }
+        if golden_wheat_amount > 0 {
+            sell_inventory.remove_items(65, golden_wheat_amount);
+        }
+        if bowl_amount > 0 {
+            sell_inventory.remove_items(55, bowl_amount);
+        }
+        if bowl_soup_amount > 0 {
+            sell_inventory.remove_items(71, bowl_soup_amount);
+        }
+
+        // Update player coins
+        player_data.coins += total_coins;
+
+        // Save changes
+        world.write_model(@player_data);
+        world.write_model(@sell_inventory);
     }
 
     fn try_inventory_craft(ref self: ContractState) {
@@ -382,9 +504,22 @@ mod actions {
         }
 
         fn inventory_move_item(ref self: ContractState, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8) {
+            assert(from_inventory != to_inventory_id || from_slot != to_slot, 'Error: same slot');
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            GameResultTrait::unwrap(inventory_move_item_internal(ref world, player, from_inventory, from_slot, to_inventory_id, to_slot, true));
+
+            // Check if player is processing
+            ensure_not_locked(@world, player);
+            let mut inventory: Inventory = world.read_model((player, from_inventory));
+            let mut to_inventory: Inventory = world.read_model((player, to_inventory_id));
+
+            if from_inventory == to_inventory_id {
+                inventory.move_item(from_slot, to_slot);
+            } else {
+                inventory.move_item_between_inventories(from_slot, ref to_inventory, to_slot);
+                world.write_model(@to_inventory);
+            }
+            world.write_model(@inventory);
         }
 
         fn generate_island_part(ref self: ContractState, x: u64, y: u64, z: u64, island_id: u16) {
@@ -477,7 +612,85 @@ mod actions {
         fn start_processing(ref self: ContractState, process_type: u8, input_amount: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            GameResultTrait::unwrap(start_processing_internal(ref world, player, process_type, input_amount, true));
+            let current_time = starknet::get_block_timestamp();
+
+            // Check if player is already locked
+            let processing_lock: ProcessingLock = world.read_model(player);
+            assert(processing_lock.unlock_time <= current_time, 'Already processing');
+
+            // Convert u8 to ProcessType
+            let process_type_enum = match process_type {
+                0 => ProcessType::None,
+                1 => ProcessType::GrindWheat,
+                2 => ProcessType::CutLogs,
+                3 => ProcessType::SmeltOre,
+                4 => ProcessType::CrushStone,
+                5 => ProcessType::ProcessClay,
+                _ => panic!("Invalid process type")
+            };
+
+            assert(process_type_enum != ProcessType::None, 'Invalid process type');
+            assert(input_amount > 0, 'Input amount must be positive');
+
+            // Get processing config
+            let config = get_processing_config(process_type_enum);
+
+            // Get player inventories (hotbar and main inventory)
+            let mut hotbar: Inventory = world.read_model((player, 0));
+            let mut inventory: Inventory = world.read_model((player, 1));
+
+            // Count available input items in both hotbar and inventory
+            let hotbar_items = hotbar.get_item_amount(config.input_item.try_into().unwrap());
+            let inventory_items = inventory.get_item_amount(config.input_item.try_into().unwrap());
+            let available_items = hotbar_items + inventory_items;
+            assert(available_items >= input_amount, 'Not enough input items');
+
+            // Calculate batches to process based on input amount
+            let batches_to_process = input_amount / config.input_amount;
+            assert(batches_to_process > 0, 'Not enough for one batch');
+
+            // Calculate processing time
+            let total_time = batches_to_process.into() * config.time_per_batch;
+
+            // Cap at max processing time
+            let capped_time = if total_time > MAX_PROCESSING_TIME {
+                MAX_PROCESSING_TIME
+            } else {
+                total_time
+            };
+            let actual_batches = (capped_time / config.time_per_batch).try_into().unwrap();
+
+            // Use the exact input amount requested (we already verified it's available)
+            let items_to_remove = input_amount;
+
+            // Remove input items from hotbar first, then inventory
+            let mut items_left_to_remove = items_to_remove;
+            if hotbar_items > 0 {
+                let remove_from_hotbar = if hotbar_items >= items_left_to_remove {
+                    items_left_to_remove
+                } else {
+                    hotbar_items
+                };
+                hotbar.remove_items(config.input_item.try_into().unwrap(), remove_from_hotbar);
+                items_left_to_remove -= remove_from_hotbar;
+            }
+
+            if items_left_to_remove > 0 {
+                inventory.remove_items(config.input_item.try_into().unwrap(), items_left_to_remove);
+            }
+
+            // Write updated inventories (only removed input items, no output added yet)
+            world.write_model(@hotbar);
+            world.write_model(@inventory);
+
+            // Set processing lock
+            let new_lock = ProcessingLock {
+                player,
+                unlock_time: current_time + capped_time,
+                process_type: process_type_enum,
+                batches_processed: actual_batches
+            };
+            world.write_model(@new_lock);
         }
 
         fn cancel_processing(ref self: ContractState) {
@@ -847,6 +1060,168 @@ mod actions {
     fn try_place_gatherable_resource(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64, resource_id: u16) -> bool {
         GameResultTrait::is_ok(@place_gatherable_resource_internal(ref world, player, x, y, z, resource_id))
     }
+        let player_data: PlayerData = world.read_model(player);
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        let position: u8 = (x % 4 + (y % 4) * 4 + (z % 4) * 16).try_into().unwrap();
+
+        // Check if there's already a resource at this position
+        let existing_resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
+        if existing_resource.resource_id != 0 && !existing_resource.destroyed {
+            return false; // Position already has a resource
+        }
+
+        // Check if it's a seed (special planting logic)
+        let is_seed = resource_id == 47 || resource_id == 51 || resource_id == 53; // Wheat, Carrot, Potato seeds
+
+        if is_seed {
+            // Seeds require dirt or farmland below
+            let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+            let block_below_pos: u8 = (x % 4 + (y % 4) * 4 + ((z - 1) % 4) * 16).try_into().unwrap();
+            let shift: u128 = fast_power_2((block_below_pos * 4).into()).into();
+            let blocks = if (z - 1) % 4 < 2 { chunk.blocks2 } else { chunk.blocks1 };
+            let block_below: u16 = ((blocks / shift) % 16).try_into().unwrap();
+
+            if block_below != 1 && block_below != 18 { // Must be dirt or farmland
+                return false;
+            }
+        } else {
+            // Other resources require no block at position
+            let chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+            let x_local = x % 4;
+            let y_local = y % 4;
+            let z_local = z % 2;
+            let lower_layer = z % 4 < 2;
+            let blocks = if lower_layer { chunk.blocks2 } else { chunk.blocks1 };
+            let shift: u128 = fast_power_2(((x_local + y_local * 4 + z_local * 16) * 4).into()).into();
+            let existing_block: u16 = ((blocks / shift) % 16).try_into().unwrap();
+
+            if existing_block != 0 {
+                return false; // Position already has a block
+            }
+        }
+
+        // Check inventory and remove item
+        let mut inventory: Inventory = world.read_model((player, 0));
+        let slot = inventory.hotbar_selected_slot;
+        let selected_item = inventory.get_hotbar_selected_item_type();
+
+        if selected_item != resource_id || selected_item == 0 {
+            return false; // Wrong item or no item
+        }
+
+        // Remove from inventory and place resource
+        if inventory.remove_item(slot, 1) {
+            let new_resource = if is_seed {
+                // Seeds use planting logic with growth time
+                let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
+                GatherableResource {
+                    island_owner: player_data.current_space_owner,
+                    island_id: player_data.current_space_id,
+                    chunk_id: chunk_id,
+                    position: position,
+                    resource_id: resource_id,
+                    planted_at: timestamp,
+                    next_harvest_at: GatherableResourceTrait::calculate_next_harvest_time(resource_id, timestamp),
+                    harvested_at: 0,
+                    max_harvest: GatherableResourceTrait::get_max_harvest(resource_id),
+                    remained_harvest: GatherableResourceTrait::get_max_harvest(resource_id),
+                    destroyed: false,
+                    tier: 0,
+                }
+            } else {
+                // Other resources are immediately ready
+                GatherableResourceTrait::new_ready(
+                    player_data.current_space_owner,
+                    player_data.current_space_id,
+                    chunk_id,
+                    position,
+                    resource_id
+                )
+            };
+
+            world.write_model(@inventory);
+            world.write_model(@new_resource);
+            return true;
+        }
+
+        false
+    }
+
+    // Safe version of remove_block that handles inventory full case
+    fn remove_block_safe(ref world: dojo::world::storage::WorldStorage, x: u64, y: u64, z: u64) -> bool {
+        let player = get_caller_address();
+        let player_data: PlayerData = world.read_model(player);
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+
+        let block_id = chunk.remove_block(x, y, z);
+        if block_id == 0 {
+            return false; // No block to remove
+        }
+
+        // Try to add to inventory
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let mut inventory: Inventory = world.read_model((player, 1));
+
+        let mut qty_left = hotbar.add_items(block_id, 1);
+        if qty_left == 0 {
+            world.write_model(@hotbar);
+            world.write_model(@chunk);
+            return true;
+        } else {
+            qty_left = inventory.add_items(block_id, qty_left);
+            if qty_left == 0 {
+                world.write_model(@hotbar);
+                world.write_model(@inventory);
+                world.write_model(@chunk);
+                return true;
+            } else {
+                // Inventory full - restore block
+                chunk.place_block(x, y, z, block_id);
+                return false;
+            }
+        }
+    }
+
+    // Safe version of place_block
+    fn place_block_safe(ref world: dojo::world::storage::WorldStorage, x: u64, y: u64, z: u64, block_id: u16) -> bool {
+        let player = get_caller_address();
+        let player_data: PlayerData = world.read_model(player);
+        let chunk_id: u128 = get_position_id(x / 4, y / 4, z / 4);
+        let mut chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id));
+
+        // Check if position is empty
+        let x_local = x % 4;
+        let y_local = y % 4;
+        let z_local = z % 2;
+        let lower_layer = z % 4 < 2;
+        let blocks = if lower_layer { chunk.blocks2 } else { chunk.blocks1 };
+        let shift: u128 = fast_power_2(((x_local + y_local * 4 + z_local * 16) * 4).into()).into();
+        let existing_block: u16 = ((blocks / shift) % 16).try_into().unwrap();
+
+        if existing_block != 0 {
+            return false; // Position already occupied
+        }
+
+        // Check inventory and remove item
+        let mut inventory: Inventory = world.read_model((player, 0));
+        let slot = inventory.hotbar_selected_slot;
+        let selected_item = inventory.get_hotbar_selected_item_type();
+
+        if selected_item != block_id || selected_item == 0 {
+            return false; // Wrong item or no item
+        }
+
+        // Remove from inventory and place block
+        if inventory.remove_item(slot, 1) {
+            chunk.place_block(x, y, z, block_id);
+            world.write_model(@inventory);
+            world.write_model(@chunk);
+            return true;
+        }
+
+        false
+    }
 
     fn try_harvest(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64) -> bool {
         GameResultTrait::is_ok(@harvest_internal(ref world, player, x, y, z))
@@ -856,7 +1231,16 @@ mod actions {
 
     // Safe version of move_item
     fn try_move_item(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, from_inv: u16, from_slot: u8, to_inv: u16, to_slot: u8) -> bool {
-        GameResultTrait::is_ok(@inventory_move_item_internal(ref world, player, from_inv, from_slot, to_inv, to_slot, false))
+        let mut from_inventory: Inventory = world.read_model((player, from_inv));
+        let mut to_inventory: Inventory = world.read_model((player, to_inv));
+
+        // Try to move the item
+        if from_inventory.move_item_between_inventories(from_slot, ref to_inventory, to_slot) {
+            world.write_model(@from_inventory);
+            world.write_model(@to_inventory);
+            return true;
+        }
+        false
     }
 
     // Safe version of select_hotbar
@@ -887,7 +1271,37 @@ mod actions {
 
     // Safe version of sell
     fn try_sell(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> bool {
-        GameResultTrait::is_ok(@sell_internal(ref world, player))
+        // Get sell inventory (id = 3)
+        let mut sell_inventory: Inventory = world.read_model((player, 3));
+        let mut player_data: PlayerData = world.read_model(player);
+
+        let mut total_coins: u32 = 0;
+
+        // Calculate total value
+        total_coins += sell_inventory.get_item_amount(52) * 2;    // Carrot
+        total_coins += sell_inventory.get_item_amount(54) * 8;    // Potato
+        total_coins += sell_inventory.get_item_amount(48) * 10;   // Wheat
+        total_coins += sell_inventory.get_item_amount(66) * 20;   // Golden Carrot
+        total_coins += sell_inventory.get_item_amount(67) * 80;   // Golden Potato
+        total_coins += sell_inventory.get_item_amount(65) * 100;  // Golden Wheat
+        total_coins += sell_inventory.get_item_amount(55) * 5;    // Bowl
+        total_coins += sell_inventory.get_item_amount(71) * 50;   // Bowl of Soup
+
+        if total_coins == 0 {
+            return false; // Nothing to sell
+        }
+
+        // Clear inventory and add coins
+        let mut i: u8 = 0;
+        while i < sell_inventory.inventory_size {
+            sell_inventory.clear_slot(i);
+            i += 1;
+        };
+
+        player_data.coins += total_coins;
+        world.write_model(@player_data);
+        world.write_model(@sell_inventory);
+        true
     }
 
     // Safe version of cancel_processing
@@ -1015,14 +1429,102 @@ mod actions {
 
     // Safe version of buy (single item)
     fn try_buy_single(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_id: u16, quantity: u32) -> bool {
-        let item_ids: Array<u16> = array![item_id];
-        let quantities: Array<u32> = array![quantity];
-        GameResultTrait::is_ok(@buy_internal(ref world, player, item_ids.span(), quantities.span(), true))
+        let mut player_data: PlayerData = world.read_model(player);
+
+        // Get price
+        let price_per_item = get_item_price(item_id);
+        if price_per_item == 0 {
+            return false; // Item not for sale
+        }
+
+        let total_cost = price_per_item * quantity;
+        if player_data.coins < total_cost {
+            return false; // Not enough coins
+        }
+
+        // Check inventory space (simplified)
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let mut inventory: Inventory = world.read_model((player, 1));
+
+        // Deduct coins and add items
+        player_data.coins -= total_cost;
+        let overflow = hotbar.add_items(item_id, quantity);
+        if overflow > 0 {
+            let remaining = inventory.add_items(item_id, overflow);
+            if remaining > 0 {
+                // Refund for items that couldn't fit
+                player_data.coins += price_per_item * remaining;
+            }
+        }
+
+        world.write_model(@player_data);
+        world.write_model(@hotbar);
+        world.write_model(@inventory);
+        true
     }
 
     // Safe version of start_processing
     fn try_start_processing(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, process_type: u8, amount: u32) -> bool {
-        GameResultTrait::is_ok(@start_processing_internal(ref world, player, process_type, amount, false))
+        // Check if already processing
+        let lock: ProcessingLock = world.read_model(player);
+        if lock.unlock_time > 0 {
+            return false; // Already processing
+        }
+
+        // Get processing config
+        let process_type_enum = match process_type {
+            0 => ProcessType::None,
+            1 => ProcessType::GrindWheat,
+            2 => ProcessType::CutLogs,
+            3 => ProcessType::SmeltOre,
+            4 => ProcessType::CrushStone,
+            5 => ProcessType::ProcessClay,
+            _ => ProcessType::None
+        };
+        let config = get_processing_config(process_type_enum);
+        if config.input_item == 0 {
+            return false; // Invalid process type
+        }
+
+        // Check inventory for input items
+        let mut hotbar: Inventory = world.read_model((player, 0));
+        let mut inventory: Inventory = world.read_model((player, 1));
+
+        let total_available = hotbar.get_item_amount(config.input_item.try_into().unwrap()) + inventory.get_item_amount(config.input_item.try_into().unwrap());
+        let actual_amount = if amount > total_available { total_available } else { amount };
+
+        if actual_amount == 0 {
+            return false; // No input items
+        }
+
+        // Remove input items
+        let mut remaining = actual_amount;
+        let hotbar_amount = hotbar.get_item_amount(config.input_item.try_into().unwrap());
+        let to_remove = if hotbar_amount >= remaining { remaining } else { hotbar_amount };
+        if to_remove > 0 {
+            hotbar.remove_items(config.input_item.try_into().unwrap(), to_remove);
+            remaining -= to_remove;
+        }
+        if remaining > 0 {
+            inventory.remove_items(config.input_item.try_into().unwrap(), remaining);
+        }
+
+        // Create processing lock
+        let timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let batches = actual_amount / config.input_amount;
+        let duration = batches * config.time_per_batch.try_into().unwrap();
+
+        let mut new_lock = ProcessingLock {
+            player: player.into(),
+            unlock_time: timestamp + duration.into(),
+            process_type: process_type_enum,
+            batches_processed: batches.into()
+        };
+
+        world.write_model(@new_lock);
+        world.write_model(@hotbar);
+        world.write_model(@inventory);
+        true
     }
 
     // Safe version of generate_island
@@ -1041,7 +1543,15 @@ mod actions {
 
     // Helper function to get item prices
     fn get_item_price(item_id: u16) -> u32 {
-        get_item_price_internal(item_id)
+        if item_id == 47 { 10 }       // Wheat seed
+        else if item_id == 53 { 5 }   // Potato seed
+        else if item_id == 51 { 2 }   // Carrot seed
+        else if item_id == 60 { 5 }   // Workshop Pattern
+        else if item_id == 61 { 100 } // Well Pattern
+        else if item_id == 62 { 3000 }// Kitchen Pattern
+        else if item_id == 63 { 500 } // Warehouse Pattern
+        else if item_id == 64 { 10000 }// Brewery Pattern
+        else { 0 }
     }
 
     fn spawn_random_resources(ref world: dojo::world::storage::WorldStorage, player: felt252, island_id: u16, shift: u128, island_type: u32) {
@@ -1176,23 +1686,21 @@ mod actions {
                     return GameResult::Err(GameError::InvalidPosition((x, y, z)));
                 }
                 place_block(ref world, x, y, z, item_type);
-                return GameResult::Ok(());
             } else if item_type == 50 || (item_type >= 60 && item_type <= 64) {
                 // World structures only in main island
                 if player_data.current_space_id != 1 {
                     return GameResult::Err(GameError::InvalidTarget);
                 }
                 WorldStructureTrait::place_structure(ref world, x, y, z, item_type);
-                return GameResult::Ok(());
             } else if item_type == 35 || item_type == 37 || item_type == 39 {
                 // Tools - do nothing when used on empty space
                 return GameResult::Ok(());
             } else {
                 // Other items (plants, seeds, etc.) - use plant logic
-                return match place_gatherable_resource_internal(ref world, player, x, y, z, item_type) {
+                match place_gatherable_resource_internal(ref world, player, x, y, z, item_type) {
                     GameResult::Ok(_) => GameResult::Ok(()),
                     GameResult::Err(err) => GameResult::Err(err),
-                };
+                }
             }
         }
 
@@ -1247,334 +1755,23 @@ mod actions {
 
         // Create the resource
         let new_resource = GatherableResource {
-            island_owner: player_data.current_space_owner,
-            island_id: player_data.current_space_id,
+            resource_id: resource_id,
+            player_data_owner: player,
+            player_data_space_owner: player_data.current_space_owner,
+            player_data_space_id: player_data.current_space_id,
             chunk_id: chunk_id,
             position: position,
-            resource_id: resource_id,
-            planted_at: starknet::get_block_info().unbox().block_timestamp,
-            next_harvest_at: if is_seed { starknet::get_block_info().unbox().block_timestamp + 30 } else { 0 },
-            harvested_at: 0,
-            max_harvest: if is_seed { 1 } else { 255 },
-            remained_harvest: if is_seed { 1 } else { 255 },
+            block_id: 0,
             destroyed: false,
             tier: 0,
+            harvested_at: 0,
+            next_harvest_at: if is_seed { starknet::get_block_info().unbox().block_timestamp + 30 } else { 0 },
+            max_harvest: if is_seed { 1 } else { 255 },
+            remained_harvest: if is_seed { 1 } else { 255 },
         };
 
         world.write_model(@inventory);
         world.write_model(@new_resource);
-        
-        GameResult::Ok(())
-    }
-
-    // Internal implementation of sell with GameResult - contains ALL original logic
-    fn sell_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> GameResult<u32> {
-        // Get sell inventory (id = 3)
-        let mut sell_inventory: Inventory = world.read_model((player, 3));
-        let mut player_data: PlayerData = world.read_model(player);
-
-        let mut total_coins: u32 = 0;
-
-        // Count coins for each item type (using same prices as original)
-        let carrot_amount = sell_inventory.get_item_amount(52);  // Carrot
-        let potato_amount = sell_inventory.get_item_amount(54);  // Potato  
-        let wheat_amount = sell_inventory.get_item_amount(48);   // Wheat
-        let golden_carrot_amount = sell_inventory.get_item_amount(66);  // Golden Carrot
-        let golden_potato_amount = sell_inventory.get_item_amount(67);  // Golden Potato
-        let golden_wheat_amount = sell_inventory.get_item_amount(65);   // Golden Wheat
-        let bowl_amount = sell_inventory.get_item_amount(55);   // Bowl
-        let bowl_soup_amount = sell_inventory.get_item_amount(71);   // Bowl of Soup
-
-        total_coins += carrot_amount * 2;   // 2 coins per carrot
-        total_coins += potato_amount * 8;   // 8 coins per potato
-        total_coins += wheat_amount * 10;   // 10 coins per wheat
-        total_coins += golden_carrot_amount * 20;   // 20 coins per golden carrot (10x)
-        total_coins += golden_potato_amount * 80;   // 80 coins per golden potato (10x)
-        total_coins += golden_wheat_amount * 100;   // 100 coins per golden wheat (10x)
-        total_coins += bowl_amount * 5;   // 5 coins per bowl
-        total_coins += bowl_soup_amount * 50;   // 50 coins per bowl of soup
-
-        if total_coins == 0 {
-            return GameResult::Err(GameError::InvalidInput("Nothing to sell"));
-        }
-
-        // Remove sold items (preserve original item-by-item logic)
-        if carrot_amount > 0 {
-            sell_inventory.remove_items(52, carrot_amount);
-        }
-        if potato_amount > 0 {
-            sell_inventory.remove_items(54, potato_amount);
-        }
-        if wheat_amount > 0 {
-            sell_inventory.remove_items(48, wheat_amount);
-        }
-        if golden_carrot_amount > 0 {
-            sell_inventory.remove_items(66, golden_carrot_amount);
-        }
-        if golden_potato_amount > 0 {
-            sell_inventory.remove_items(67, golden_potato_amount);
-        }
-        if golden_wheat_amount > 0 {
-            sell_inventory.remove_items(65, golden_wheat_amount);
-        }
-        if bowl_amount > 0 {
-            sell_inventory.remove_items(55, bowl_amount);
-        }
-        if bowl_soup_amount > 0 {
-            sell_inventory.remove_items(71, bowl_soup_amount);
-        }
-
-        // Update player coins
-        player_data.coins += total_coins;
-
-        // Save changes
-        world.write_model(@player_data);
-        world.write_model(@sell_inventory);
-        
-        GameResult::Ok(total_coins)
-    }
-
-    // Internal implementation of start_processing with GameResult - contains ALL original logic
-    fn start_processing_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, process_type: u8, input_amount: u32, strict_validation: bool) -> GameResult<()> {
-        let current_time = starknet::get_block_timestamp();
-
-        // Check if player is already locked
-        let processing_lock: ProcessingLock = world.read_model(player);
-        if processing_lock.unlock_time > current_time {
-            return GameResult::Err(GameError::ProcessingInProgress);
-        }
-
-        // Convert u8 to ProcessType
-        let process_type_enum = match process_type {
-            0 => ProcessType::None,
-            1 => ProcessType::GrindWheat,
-            2 => ProcessType::CutLogs,
-            3 => ProcessType::SmeltOre,
-            4 => ProcessType::CrushStone,
-            5 => ProcessType::ProcessClay,
-            _ => {
-                return if strict_validation {
-                    GameResult::Err(GameError::InvalidInput("Invalid process type"))
-                } else {
-                    GameResult::Err(GameError::InvalidInput("Invalid process type"))
-                };
-            }
-        };
-
-        if process_type_enum == ProcessType::None {
-            return GameResult::Err(GameError::InvalidInput("Invalid process type"));
-        }
-
-        if input_amount == 0 {
-            return GameResult::Err(GameError::InvalidQuantity(input_amount));
-        }
-
-        // Get processing config
-        let config = get_processing_config(process_type_enum);
-
-        // Get player inventories (hotbar and main inventory)
-        let mut hotbar: Inventory = world.read_model((player, 0));
-        let mut inventory: Inventory = world.read_model((player, 1));
-
-        // Count available input items in both hotbar and inventory
-        let hotbar_items = hotbar.get_item_amount(config.input_item.try_into().unwrap());
-        let inventory_items = inventory.get_item_amount(config.input_item.try_into().unwrap());
-        let available_items = hotbar_items + inventory_items;
-
-        if available_items == 0 {
-            return GameResult::Err(GameError::InsufficientItems((config.input_item.try_into().unwrap(), input_amount)));
-        }
-
-        // For strict mode: require exact amount, for lenient mode: use what's available
-        let actual_input_amount = if strict_validation {
-            if available_items < input_amount {
-                return GameResult::Err(GameError::InsufficientItems((config.input_item.try_into().unwrap(), input_amount)));
-            }
-            input_amount
-        } else {
-            if available_items < input_amount { available_items } else { input_amount }
-        };
-
-        // Calculate batches to process based on actual input amount
-        let batches_to_process = actual_input_amount / config.input_amount;
-        if batches_to_process == 0 {
-            return GameResult::Err(GameError::InsufficientItems((config.input_item.try_into().unwrap(), config.input_amount)));
-        }
-
-        // Calculate processing time
-        let total_time = batches_to_process.into() * config.time_per_batch;
-
-        // Cap at max processing time
-        let capped_time = if total_time > MAX_PROCESSING_TIME {
-            MAX_PROCESSING_TIME
-        } else {
-            total_time
-        };
-        let actual_batches = (capped_time / config.time_per_batch).try_into().unwrap();
-
-        // Calculate exact items to remove based on actual batches
-        let items_to_remove = actual_batches * config.input_amount;
-
-        // Remove input items from hotbar first, then inventory
-        let mut items_left_to_remove = items_to_remove;
-        if hotbar_items > 0 {
-            let remove_from_hotbar = if hotbar_items >= items_left_to_remove {
-                items_left_to_remove
-            } else {
-                hotbar_items
-            };
-            hotbar.remove_items(config.input_item.try_into().unwrap(), remove_from_hotbar);
-            items_left_to_remove -= remove_from_hotbar;
-        }
-
-        if items_left_to_remove > 0 {
-            inventory.remove_items(config.input_item.try_into().unwrap(), items_left_to_remove);
-        }
-
-        // Write updated inventories
-        world.write_model(@hotbar);
-        world.write_model(@inventory);
-
-        // Set processing lock
-        let new_lock = ProcessingLock {
-            player,
-            unlock_time: current_time + capped_time,
-            process_type: process_type_enum,
-            batches_processed: actual_batches
-        };
-        world.write_model(@new_lock);
-        
-        GameResult::Ok(())
-    }
-
-    // Internal helper function for item prices (eliminates duplication)
-    fn get_item_price_internal(item_id: u16) -> u32 {
-        if item_id == 47 { 10 }       // Wheat seed
-        else if item_id == 53 { 5 }   // Potato seed
-        else if item_id == 51 { 2 }   // Carrot seed
-        else if item_id == 60 { 5 }   // Workshop Pattern
-        else if item_id == 61 { 100 } // Well Pattern
-        else if item_id == 62 { 3000 }// Kitchen Pattern
-        else if item_id == 63 { 500 } // Warehouse Pattern
-        else if item_id == 64 { 10000 }// Brewery Pattern
-        else { 0 }
-    }
-
-    // Internal implementation of buy with GameResult - supports both single and batch purchases
-    fn buy_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_ids: Span<u16>, quantities: Span<u32>, check_inventory_space: bool) -> GameResult<u32> {
-        let mut player_data: PlayerData = world.read_model(player);
-
-        // Validate input arrays have same length
-        if item_ids.len() != quantities.len() {
-            return GameResult::Err(GameError::InvalidInput("Arrays must have same length"));
-        }
-        if item_ids.len() == 0 {
-            return GameResult::Err(GameError::InvalidInput("Must buy at least one item"));
-        }
-
-        // Calculate total cost and validate items
-        let mut total_cost: u32 = 0;
-        let mut i: u32 = 0;
-        loop {
-            if i >= item_ids.len() {
-                break;
-            }
-
-            let item_id = *item_ids.at(i);
-            let quantity = *quantities.at(i);
-
-            // Get price for each item using unified price logic
-            let price_per_item = get_item_price_internal(item_id);
-            if price_per_item == 0 {
-                return GameResult::Err(GameError::InvalidItem(item_id));
-            }
-
-            total_cost += price_per_item * quantity;
-            i += 1;
-        };
-
-        // Check if player has enough coins
-        if player_data.coins < total_cost {
-            return GameResult::Err(GameError::InsufficientFunds(total_cost));
-        }
-
-        // Deduct coins
-        player_data.coins -= total_cost;
-
-        // Add items to player inventory
-        let mut actual_cost = total_cost;
-        i = 0;
-        loop {
-            if i >= item_ids.len() {
-                break;
-            }
-
-            let item_id = *item_ids.at(i);
-            let quantity = *quantities.at(i);
-            let price_per_item = get_item_price_internal(item_id);
-
-            if check_inventory_space {
-                // For safe mode: try to add with overflow handling
-                let mut hotbar: Inventory = world.read_model((player, 0));
-                let mut inventory: Inventory = world.read_model((player, 1));
-                
-                let overflow = hotbar.add_items(item_id, quantity);
-                let remaining = if overflow > 0 {
-                    inventory.add_items(item_id, overflow)
-                } else {
-                    0
-                };
-
-                if remaining > 0 {
-                    // Refund for items that couldn't fit
-                    let refund = price_per_item * remaining;
-                    player_data.coins += refund;
-                    actual_cost -= refund;
-                }
-
-                world.write_model(@hotbar);
-                world.write_model(@inventory);
-            } else {
-                // For unsafe mode: force add items (may overflow inventory)
-                InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, quantity);
-            }
-
-            i += 1;
-        };
-
-        // Save player data
-        world.write_model(@player_data);
-        
-        GameResult::Ok(actual_cost)
-    }
-
-    // Internal implementation of inventory_move_item with GameResult
-    fn inventory_move_item_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, from_inventory: u16, from_slot: u8, to_inventory_id: u16, to_slot: u8, check_lock: bool) -> GameResult<()> {
-        if from_inventory == to_inventory_id && from_slot == to_slot {
-            return GameResult::Err(GameError::InvalidInput("Cannot move item to same slot"));
-        }
-
-        if check_lock {
-            ensure_not_locked(@world, player);
-        }
-
-        let mut inventory: Inventory = world.read_model((player, from_inventory));
-        let mut to_inventory: Inventory = world.read_model((player, to_inventory_id));
-
-        let success = if from_inventory == to_inventory_id {
-            inventory.move_item(from_slot, to_slot)
-        } else {
-            inventory.move_item_between_inventories(from_slot, ref to_inventory, to_slot)
-        };
-
-        if !success {
-            return GameResult::Err(GameError::InvalidSlot(from_slot));
-        }
-
-        world.write_model(@inventory);
-        if from_inventory != to_inventory_id {
-            world.write_model(@to_inventory);
-        }
         
         GameResult::Ok(())
     }
