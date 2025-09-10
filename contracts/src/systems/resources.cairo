@@ -104,30 +104,13 @@ pub fn harvest_internal(ref world: dojo::world::storage::WorldStorage, player: C
     // If crop is not ready yet, return the seed
     if resource.next_harvest_at > timestamp {
         if resource.resource_id == 47 || resource.resource_id == 51 || resource.resource_id == 53 {
-            // Try to return the seed
-            let mut hotbar: Inventory = world.read_model((player, 0));
-            let mut inventory: Inventory = world.read_model((player, 1));
-
-            let mut qty_left = hotbar.add_items(resource.resource_id, 1);
-            if qty_left == 0 {
-                resource.destroyed = true;
-                resource.resource_id = 0;
-                world.write_model(@resource);
-                world.write_model(@hotbar);
-                return GameResult::Ok(());
-            } else {
-                qty_left = inventory.add_items(resource.resource_id, qty_left);
-                if qty_left == 0 {
-                    resource.destroyed = true;
-                    resource.resource_id = 0;
-                    world.write_model(@resource);
-                    world.write_model(@hotbar);
-                    world.write_model(@inventory);
-                    return GameResult::Ok(());
-                } else {
-                    return GameResult::Err(GameError::InsufficientSpace);
-                }
-            }
+            // Return the seed (like original - never fails)
+            InventoryTrait::add_to_player_inventories(ref world, player.into(), resource.resource_id, 1);
+            // Destroy the resource
+            resource.destroyed = true;
+            resource.resource_id = 0;
+            world.write_model(@resource);
+            return GameResult::Ok(());
         }
         return GameResult::Err(GameError::CooldownActive(resource.next_harvest_at));
     }

@@ -150,7 +150,7 @@ pub fn buy_internal(ref world: dojo::world::storage::WorldStorage, player: Contr
         let price_per_item = get_item_price_internal(item_id);
         
         if check_inventory_space {
-            // Try to add items to inventories
+            // Try to add items to inventories with space checking
             let mut hotbar: Inventory = world.read_model((player, 0));
             let mut inventory: Inventory = world.read_model((player, 1));
             
@@ -174,7 +174,7 @@ pub fn buy_internal(ref world: dojo::world::storage::WorldStorage, player: Contr
             InventoryTrait::add_to_player_inventories(ref world, player.into(), item_id, quantity);
         }
         
-        actual_cost += price_per_item * (quantity - if check_inventory_space { 0 } else { 0 });
+        actual_cost += price_per_item * quantity;
         i += 1;
     };
 

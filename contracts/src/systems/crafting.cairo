@@ -15,7 +15,7 @@ use craft_island_pocket::helpers::{
 pub fn try_inventory_craft(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) {
     let mut craftinventory: Inventory = world.read_model((player, 2));
     // mask to remove quantity
-    let craft_matrix: u256 = (craftinventory.slots1.into() & 7229782938247303441);
+    let craft_matrix: u256 = (craftinventory.slots1.into() & 7229938216006767371223902296383078621116345691456360212366842288707796205568);
     let wanteditem = craftmatch(craft_matrix);
 
     assert!(wanteditem > 0, "Not a valid recipe");

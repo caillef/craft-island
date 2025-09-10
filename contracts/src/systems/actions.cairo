@@ -34,7 +34,7 @@ mod actions {
         Inventory, InventoryTrait
     };
     use craft_island_pocket::models::islandchunk::{
-        IslandChunk, place_block, remove_block, update_block, IslandChunkTrait
+        IslandChunk, place_block, remove_block, update_block
     };
     use craft_island_pocket::models::worldstructure::{WorldStructureTrait};
     use craft_island_pocket::models::processing::{
@@ -42,12 +42,10 @@ mod actions {
     };
     use craft_island_pocket::helpers::{
         utils::{get_position_id},
-        craft::{craftmatch},
         init::{init},
         math::{fast_power_2},
         processing_guard::{ensure_not_locked},
         position::{calculate_chunk_id, get_chunk_and_position},
-        inventory::{add_items_with_overflow},
         bitwise::{extract_u8, extract_u16, extract_u32, extract_u64},
     };
     use craft_island_pocket::common::errors::{
@@ -56,12 +54,15 @@ mod actions {
 
     use dojo::model::{ModelStorage};
 
-    // Import our action modules (for future use)
-    // use craft_island_pocket::systems::{
-    //     resources,
-    //     crafting, 
-    //     commerce,
-    // };
+    // Import our action modules
+    use craft_island_pocket::systems::{
+        resources,
+        crafting, 
+        commerce,
+        islands,
+        processing,
+        inventory,
+    };
 
     fn get_world(ref self: ContractState) -> dojo::world::storage::WorldStorage {
         self.world(@"craft_island_pocket")
@@ -70,71 +71,7 @@ mod actions {
     fn plant(ref self: ContractState, x: u64, y: u64, z: u64, item_id: u16) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        let player_data: PlayerData = world.read_model((player));
-        let (chunk_id, position) = get_chunk_and_position(x, y, z);
-        let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
-        assert!(resource.resource_id == 0, "Error: Resource exists");
-
-        // Check if the block below is suitable for planting
-        assert!(z > 0, "Error: Cannot plant at z=0");
-        let below_z = z - 1;
-        let below_chunk_id: u128 = get_position_id(x / 4, y / 4, below_z / 4);
-        let below_chunk: IslandChunk = world.read_model((player_data.current_space_owner, player_data.current_space_id, below_chunk_id));
-
-        // Calculate position of block below in its chunk
-        let below_x_local = x % 4;
-        let below_y_local = y % 4;
-        let below_z_local = below_z % 2;
-
-        // Determine which blocks storage to use based on z position (chunks store blocks in two 128-bit values)
-        let blocks = if (below_z % 4) < 2 { below_chunk.blocks2 } else { below_chunk.blocks1 };
-
-        // Extract block ID at position from packed storage (each block uses 4 bits)
-        let shift: u128 = fast_power_2(((below_x_local + below_y_local * 4 + below_z_local * 16) * 4).into()).into();
-        let block_below: u64 = ((blocks / shift) % 8).try_into().unwrap();
-
-        // For seeds (wheat seed id 47, carrot seed id 51, potato id 53), check if there's farmland (tilled dirt) below
-        if item_id == 47 || item_id == 51 || item_id == 53 {
-            assert!(block_below == 2, "Error: Seeds and potatoes need farmland (tilled dirt) below");
-        }
-
-        // For saplings (oak sapling id 46), check if there's dirt or grass below
-        if item_id == 46 {
-            assert!(block_below == 1 || block_below == 2, "Error: Saplings need dirt or grass below");
-        }
-
-        resource.resource_id = item_id;
-
-        let mut inventory: Inventory = world.read_model((player, 0));
-        inventory.remove_items(item_id, 1);
-        world.write_model(@inventory);
-
-        let timestamp: u64 = starknet::get_block_info().unbox().block_timestamp;
-        resource.planted_at = timestamp;
-        resource.next_harvest_at = GatherableResourceImpl::calculate_next_harvest_time(item_id, timestamp);
-        resource.harvested_at = 0;
-        resource.max_harvest = GatherableResourceImpl::get_max_harvest(item_id);
-        resource.remained_harvest = resource.max_harvest;
-        resource.destroyed = false;
-
-        // Simple 10% chance for golden tier (wheat, carrot, potato)
-        if item_id == 47 || item_id == 51 || item_id == 53 {
-            let mut player_data_mut: PlayerData = world.read_model((player));
-            // Simple random using timestamp, position, and nonce with 6-digit primes
-            let simple_random = (timestamp + x * 100003 + y * 100019 + z * 100043 + player_data_mut.random_nonce.into()) % 100;
-            if simple_random < 10 {
-                resource.tier = 1; // Golden (10% chance)
-            } else {
-                resource.tier = 0; // Normal
-            }
-            // Simple nonce increment
-            player_data_mut.random_nonce = (player_data_mut.random_nonce + 1) % 1000000;
-            world.write_model(@player_data_mut);
-        } else {
-            resource.tier = 0;
-        }
-
-        world.write_model(@resource);
+        resources::plant(ref world, player, x, y, z, item_id);
     }
 
     fn harvest_internal(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, x: u64, y: u64, z: u64) -> GameResult<()> {
@@ -230,7 +167,7 @@ mod actions {
     fn harvest(ref self: ContractState, x: u64, y: u64, z: u64) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        GameResultTrait::unwrap(harvest_internal(ref world, player, x, y, z));
+        GameResultTrait::unwrap(resources::harvest_internal(ref world, player, x, y, z));
     }
 
     fn buy(
@@ -238,63 +175,25 @@ mod actions {
     ) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        GameResultTrait::unwrap(buy_internal(ref world, player, item_ids.span(), quantities.span(), false));
+        GameResultTrait::unwrap(commerce::buy_internal(ref world, player, item_ids.span(), quantities.span(), false));
     }
 
     fn sell(ref self: ContractState) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-        GameResultTrait::unwrap(sell_internal(ref world, player));
+        GameResultTrait::unwrap(commerce::sell_internal(ref world, player));
     }
 
     fn try_inventory_craft(ref self: ContractState) {
         let mut world = get_world(ref self);
         let player = get_caller_address();
-
-        let mut craftinventory: Inventory = world.read_model((player, 2));
-        // mask to remove quantity
-        let craft_matrix: u256 = (craftinventory.slots1.into() & 7229938216006767371223902296383078621116345691456360212366842288707796205568);
-        let wanteditem = craftmatch(craft_matrix);
-
-        assert(wanteditem > 0, 'Not a valid recipe');
-        let mut k = 0;
-        loop {
-            if k >= 9 {
-                break;
-            }
-            craftinventory.remove_item(k, 1);
-            k += 1;
-        };
-
-        InventoryTrait::add_to_player_inventories(ref world, player.into(), wanteditem, 1);
-
-        world.write_model(@craftinventory);
+        crafting::try_inventory_craft(ref world, player);
     }
 
     fn try_craft(ref self: ContractState, item: u16, x: u64, y: u64, z: u64) {
-        if item == 0 {
-            return try_inventory_craft(ref self);
-        }
-
         let mut world = get_world(ref self);
         let player = get_caller_address();
-
-        // Stone Craft
-        if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
-            let player_data: PlayerData = world.read_model((player));
-            let (chunk_id, position) = get_chunk_and_position(x, y, z);
-            let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
-            assert!(resource.resource_id == 33 && !resource.destroyed, "Error: No rock");
-            resource.destroyed = true;
-            resource.resource_id = 0;
-            world.write_model(@resource);
-
-            let mut hotbar: Inventory = world.read_model((player, 0));
-            let selected_item = hotbar.get_hotbar_selected_item_type();
-            if selected_item == 33 {
-                InventoryTrait::add_to_player_inventories(ref world, player.into(), item, 1);
-            }
-        }
+        crafting::try_craft(ref world, player, item, x, y, z);
     }
 
     #[abi(embed_v0)]
@@ -316,13 +215,13 @@ mod actions {
         }
 
         fn buy(ref self: ContractState, item_ids: Array<u16>, quantities: Array<u32>) {
-            let world = get_world(ref self);
+            let mut world = get_world(ref self);
             let player = get_caller_address();
 
             // Check if player is processing
             ensure_not_locked(@world, player);
 
-            buy(ref self, item_ids, quantities);
+            GameResultTrait::unwrap(commerce::buy_internal(ref world, player, item_ids.span(), quantities.span(), false));
         }
 
         // TICKET #2: New hit_block implementation using GameResult (unsafe wrapper)
@@ -341,11 +240,8 @@ mod actions {
 
         fn select_hotbar_slot(ref self: ContractState, slot: u8) {
             let mut world = get_world(ref self);
-
             let player = get_caller_address();
-            let mut inventory: Inventory = world.read_model((player, 0));
-            inventory.select_hotbar_slot(slot);
-            world.write_model(@inventory);
+            inventory::select_hotbar_slot(ref world, player, slot);
         }
 
         fn craft(ref self: ContractState, item: u32, x: u64, y: u64, z: u64) {
@@ -367,166 +263,44 @@ mod actions {
         fn generate_island_part(ref self: ContractState, x: u64, y: u64, z: u64, island_id: u16) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-
-            assert!(island_id > 1, "Can't explore main island");
-
-            let shift: u128 = get_position_id(x, y, z);
-
-            let seed: u64 = starknet::get_block_info().unbox().block_timestamp;
-
-            let island_compositions: Array<u128> = array![1229782938247303441, 2459565876494606882, 3689348814741910323];
-
-            let island_type: u32 = ((seed * 7) % island_compositions.len().into()).try_into().unwrap();
-            let island_composition: u128 = *island_compositions.at(island_type);
-
-            // Generate 4x4 grid of chunks
-            let player_felt = player.into();
-            let mut x = 0;
-            loop {
-                if x >= 4 {
-                    break;
-                }
-                let mut y = 0;
-                loop {
-                    if y >= 4 {
-                        break;
-                    }
-                    let chunk_offset = x * 0x000000000100000000000000000000 + y * 0x000000000000000000010000000000;
-                    world.write_model(@IslandChunkTrait::new(player_felt, island_id, shift + chunk_offset, 0, island_composition));
-                    y += 1;
-                };
-                x += 1;
-            };
-
-            spawn_random_resources(ref world, player.into(), island_id, shift, island_type);
+            islands::generate_island_part(ref world, player, x, y, z, island_id);
         }
 
         fn visit(ref self: ContractState, space_id: u16) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            let mut player_data: PlayerData = world.read_model((player));
-            player_data.current_space_id  = space_id;
-            world.write_model(@player_data);
+            islands::visit(ref world, player, space_id);
         }
 
         fn visit_new_island(ref self: ContractState) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-
-            let mut player_data: PlayerData = world.read_model((player));
-            let island_id = player_data.last_space_created_id + 1;
-            player_data.last_space_created_id = island_id;
-            world.write_model(@player_data);
-
-            let seed: u64 = starknet::get_block_info().unbox().block_timestamp;
-
-            let island_compositions: Array<u128> = array![1229782938247303441, 2459565876494606882, 3689348814741910323];
-
-            let island_type = ((seed * 7) % island_compositions.len().into()).try_into().unwrap();
-            let island_composition: u128 = *island_compositions.at(island_type);
-
-            // Generate 4x4 grid of chunks for new island
-            let player_felt = player.into();
-            let base_shift: u128 = 0x000000080000000008000000000800;
-            let mut x = 0;
-            loop {
-                if x >= 4 {
-                    break;
-                }
-                let mut y = 0;
-                loop {
-                    if y >= 4 {
-                        break;
-                    }
-                    let chunk_offset = x * 0x000000000100000000000000000000 + y * 0x000000000000000000010000000000;
-                    world.write_model(@IslandChunkTrait::new(player_felt, island_id, base_shift + chunk_offset, 0, island_composition));
-                    y += 1;
-                };
-                x += 1;
-            };
-
-            // Generate 10 random gatherable resources
-            spawn_random_resources(ref world, player.into(), island_id, 0x000000080000000008000000000800, 0);
-
-            self.visit(island_id);
+            islands::visit_new_island(ref world, player);
+            // Automatically visit the new island
+            let player_data: PlayerData = world.read_model((player));
+            self.visit(player_data.last_space_created_id);
         }
 
         fn start_processing(ref self: ContractState, process_type: u8, input_amount: u32) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            GameResultTrait::unwrap(start_processing_internal(ref world, player, process_type, input_amount, true));
+            // Convert u8 to ProcessType and call module function
+            let process_enum = match process_type {
+                0 => ProcessType::None,
+                1 => ProcessType::GrindWheat,
+                2 => ProcessType::CutLogs,
+                3 => ProcessType::SmeltOre,
+                4 => ProcessType::CrushStone,
+                5 => ProcessType::ProcessClay,
+                _ => ProcessType::None,
+            };
+            GameResultTrait::unwrap(processing::start_processing_internal(ref world, player, process_enum, input_amount, true));
         }
 
         fn cancel_processing(ref self: ContractState) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            let current_time = starknet::get_block_timestamp();
-
-            // Get current lock
-            let processing_lock: ProcessingLock = world.read_model(player);
-            assert(processing_lock.unlock_time > 0, 'Not processing');
-
-            // Get processing config
-            let config = get_processing_config(processing_lock.process_type);
-
-            // Calculate completed and remaining batches
-            // Start time = unlock_time - (total_batches * time_per_batch)
-            let total_processing_time = config.time_per_batch * processing_lock.batches_processed.into();
-            let start_time = processing_lock.unlock_time - total_processing_time;
-            let elapsed_time = current_time - start_time;
-
-            // Calculate how many batches have been completed so far
-            let completed_batches = (elapsed_time / config.time_per_batch).try_into().unwrap();
-            let completed_batches = if completed_batches > processing_lock.batches_processed {
-                processing_lock.batches_processed
-            } else {
-                completed_batches
-            };
-
-            let remaining_batches = processing_lock.batches_processed - completed_batches;
-
-            // Get inventories
-            let mut hotbar: Inventory = world.read_model((player, 0));
-            let mut inventory: Inventory = world.read_model((player, 1));
-
-            // Add output items for completed batches
-            if completed_batches > 0 {
-                let items_to_add = completed_batches * config.output_amount;
-                // Try to add to hotbar first, then inventory
-                let remaining_in_hotbar = hotbar.add_items(config.output_item.try_into().unwrap(), items_to_add);
-                let remaining_in_inventory = if remaining_in_hotbar > 0 {
-                    inventory.add_items(config.output_item.try_into().unwrap(), remaining_in_hotbar)
-                } else {
-                    0
-                };
-                assert(remaining_in_inventory == 0, 'Not enough space for output');
-            }
-
-            // Return unprocessed input items
-            if remaining_batches > 0 {
-                let items_to_return = remaining_batches * config.input_amount;
-                // Try to add to hotbar first, then inventory
-                let remaining_in_hotbar = hotbar.add_items(config.input_item.try_into().unwrap(), items_to_return);
-                let remaining_in_inventory = if remaining_in_hotbar > 0 {
-                    inventory.add_items(config.input_item.try_into().unwrap(), remaining_in_hotbar)
-                } else {
-                    0
-                };
-                assert(remaining_in_inventory == 0, 'Cannot return all input items');
-            }
-
-            // Write updated inventories
-            world.write_model(@hotbar);
-            world.write_model(@inventory);
-
-            // Clear lock
-            let cleared_lock = ProcessingLock {
-                player,
-                unlock_time: 0,
-                process_type: ProcessType::None,
-                batches_processed: 0
-            };
-            world.write_model(@cleared_lock);
+            GameResultTrait::unwrap(processing::cancel_processing(ref world, player));
         }
 
         fn execute_compressed_actions(ref self: ContractState, packed_actions: felt252) -> u8 {
@@ -781,33 +555,14 @@ mod actions {
         fn debug_give_coins(ref self: ContractState) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            
-            // Get current player data
-            let mut player_data: PlayerData = world.read_model((player));
-            
-            // Add 50 coins
-            player_data.coins += 50;
-            
-            // Save updated player data
-            world.write_model(@player_data);
+            inventory::debug_give_coins(ref world, player);
         }
 
         // Set player name
         fn set_name(ref self: ContractState, name: ByteArray) {
             let mut world = get_world(ref self);
             let player = get_caller_address();
-            
-            // Log the set_name call
-            println!("set_name called by player: {:?}, name: {:?}", player, name);
-            
-            // Get current player data
-            let mut player_data: PlayerData = world.read_model((player));
-            
-            // Set the name
-            player_data.name = name;
-            
-            // Save updated player data
-            world.write_model(@player_data);
+            inventory::set_name(ref world, player, name);
         }
 
         // TICKET #2: Demo function showing GameResult pattern for hit_block migration
@@ -869,116 +624,24 @@ mod actions {
 
     // Safe version of cancel_processing
     fn try_cancel_processing(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> bool {
-        let mut lock: ProcessingLock = world.read_model(player);
-
-        if lock.unlock_time == 0 {
-            return false; // Not processing
-        }
-
-        // Clear the lock
-        lock.unlock_time = 0;
-        lock.process_type = ProcessType::None;
-        lock.batches_processed = 0;
-        world.write_model(@lock);
-        true
+        GameResultTrait::is_ok(@processing::cancel_processing(ref world, player))
     }
 
     // Safe version of visit
     fn try_visit(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, space_id: u16) -> bool {
-        let mut player_data: PlayerData = world.read_model(player);
-
-        // Check if space exists (simplified check)
-        let last_space_id = player_data.last_space_created_id;
-        if space_id == 0 || space_id > last_space_id {
-            return false;
-        }
-
-        player_data.current_space_owner = player.into();
-        player_data.current_space_id = space_id;
-        world.write_model(@player_data);
+        islands::visit(ref world, player, space_id);
         true
     }
 
     // Safe version of visit_new_island
     fn try_visit_new_island(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> bool {
-        let mut player_data: PlayerData = world.read_model(player);
-
-        // Create new space
-        player_data.last_space_created_id += 1;
-        player_data.current_space_owner = player.into();
-        player_data.current_space_id = player_data.last_space_created_id;
-
-        world.write_model(@player_data);
+        islands::visit_new_island(ref world, player);
         true
     }
 
     // Safe version of craft (helper function)
     fn try_craft_helper(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, item_id: u32, x: u64, y: u64, z: u64) -> bool {
-        let item: u16 = item_id.try_into().unwrap();
-
-        // For inventory craft
-        if item == 0 {
-            let mut craftinventory: Inventory = world.read_model((player, 2));
-            let craft_matrix: u256 = (craftinventory.slots1.into() & 7229938216006767371223902296383078621116345691456360212366842288707796205568);
-            let wanteditem = craftmatch(craft_matrix);
-
-            if wanteditem == 0 {
-                return false; // Not a valid recipe
-            }
-
-            let mut k = 0;
-            loop {
-                if k >= 9 {
-                    break;
-                }
-                craftinventory.remove_item(k, 1);
-                k += 1;
-            };
-
-            add_items_with_overflow(ref world, player, wanteditem, 1);
-            world.write_model(@craftinventory);
-            return true;
-        }
-
-        // Stone Craft
-        if item == 34 || item == 36 || item == 38 || item == 40 || item == 42 {
-            let player_data: PlayerData = world.read_model(player);
-            let (chunk_id, position) = get_chunk_and_position(x, y, z);
-            let mut resource: GatherableResource = world.read_model((player_data.current_space_owner, player_data.current_space_id, chunk_id, position));
-
-            if resource.resource_id != 33 || resource.destroyed {
-                return false; // No rock
-            }
-
-            resource.destroyed = true;
-            resource.resource_id = 0;
-            world.write_model(@resource);
-
-            let mut hotbar: Inventory = world.read_model((player, 0));
-            if hotbar.get_hotbar_selected_item_type() == 33 {
-                hotbar.remove_items(33, 1);
-            } else {
-                let mut inventory: Inventory = world.read_model((player, 1));
-                if hotbar.get_item_amount(33) > 0 {
-                    hotbar.remove_items(33, 1);
-                } else {
-                    inventory.remove_items(33, 1);
-                }
-                world.write_model(@inventory);
-            }
-
-            let overflow = hotbar.add_items(item, 1);
-            if overflow > 0 {
-                let mut inventory: Inventory = world.read_model((player, 1));
-                inventory.add_items(item, overflow);
-                world.write_model(@inventory);
-            }
-
-            world.write_model(@hotbar);
-            return true;
-        }
-
-        false
+        crafting::try_craft_helper(ref world, player, item_id, x, y, z)
     }
 
     // Safe version of buy (single item)
@@ -1157,10 +820,8 @@ mod actions {
                 return GameResult::Ok(());
             } else {
                 // Other items (plants, seeds, etc.) - use plant logic
-                return match place_gatherable_resource_internal(ref world, player, x, y, z, item_type) {
-                    GameResult::Ok(_) => GameResult::Ok(()),
-                    GameResult::Err(err) => GameResult::Err(err),
-                };
+                resources::plant(ref world, player, x, y, z, item_type);
+                return GameResult::Ok(());
             }
         }
 

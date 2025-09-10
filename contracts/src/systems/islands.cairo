@@ -64,9 +64,9 @@ pub fn visit_new_island(ref world: dojo::world::storage::WorldStorage, player: C
     let island_type = ((seed * 7) % island_compositions.len().into()).try_into().unwrap();
     let island_composition: u128 = *island_compositions.at(island_type);
 
-    // Generate 4x4 grid of chunks at origin (0, 0, 0)
-    let shift: u128 = get_position_id(0, 0, 0);
+    // Generate 4x4 grid of chunks for new island
     let player_felt = player.into();
+    let base_shift: u128 = 0x000000080000000008000000000800;
     let mut x = 0;
     loop {
         if x >= 4 {
@@ -78,13 +78,17 @@ pub fn visit_new_island(ref world: dojo::world::storage::WorldStorage, player: C
                 break;
             }
             let chunk_offset = x * 0x000000000100000000000000000000 + y * 0x000000000000000000010000000000;
-            world.write_model(@IslandChunkTrait::new(player_felt, island_id, shift + chunk_offset, 0, island_composition));
+            world.write_model(@IslandChunkTrait::new(player_felt, island_id, base_shift + chunk_offset, 0, island_composition));
             y += 1;
         };
         x += 1;
     };
 
-    spawn_random_resources(ref world, player.into(), island_id, shift, island_type);
+    // Generate 10 random gatherable resources
+    spawn_random_resources(ref world, player.into(), island_id, 0x000000080000000008000000000800, 0);
+    
+    // Visit the newly created island
+    visit(ref world, player, island_id);
 }
 
 pub fn spawn_random_resources(ref world: dojo::world::storage::WorldStorage, player: felt252, island_id: u16, shift: u128, island_type: u32) {

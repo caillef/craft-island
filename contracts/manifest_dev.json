@@ -1480,7 +1480,7 @@
   "contracts": [
     {
       "address": "0x42d220a4dc5fdca775ca7964400ea82b4200cfa8a78a1bb4d3edadb4c28a22",
-      "class_hash": "0xbcf99a4fd3b88ad4c19b9271ef8bb2ed0a4959f62415d33d8ee562908345ca",
+      "class_hash": "0x74cdc4f7c5ee5eb1a0f7238970afe19e54bbfb6c70a2fe4dcc9aa947b2f2899",
       "abi": [
         {
           "type": "impl",
@@ -1801,105 +1801,6 @@
               ],
               "outputs": [],
               "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_gameresult_success",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::integer::u32"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_gameresult_error_handling",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_hit_block_migration_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_use_item_migration_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_move_item_migration_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_world_actions_migration_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_economic_actions_migration_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_crafting_processing_migration_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "test_misc_actions_cleanup_demo",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
             }
           ]
         },
@@ -2039,15 +1940,6 @@
         "execute_packed_actions",
         "debug_give_coins",
         "set_name",
-        "test_gameresult_success",
-        "test_gameresult_error_handling",
-        "test_hit_block_migration_demo",
-        "test_use_item_migration_demo",
-        "test_move_item_migration_demo",
-        "test_world_actions_migration_demo",
-        "test_economic_actions_migration_demo",
-        "test_crafting_processing_migration_demo",
-        "test_misc_actions_cleanup_demo",
         "upgrade"
       ]
     },
