@@ -72,13 +72,13 @@ impl GameResultImpl<T, +Drop<T>, +Copy<T>> of GameResultTrait<T> {
 
 pub fn format_error(error: GameError) -> ByteArray {
     match error {
-        GameError::PlayerLocked(unlock_time) => {
+        GameError::PlayerLocked(_unlock_time) => {
             "Player locked until timestamp"
         },
-        GameError::InsufficientItems((item_id, needed)) => {
+        GameError::InsufficientItems((_item_id, _needed)) => {
             "Insufficient items for crafting"
         },
-        GameError::InvalidPosition((x, y, z)) => {
+        GameError::InvalidPosition((_x, _y, _z)) => {
             "Invalid position provided"
         },
         GameError::ResourceNotFound => "Resource not found",
@@ -91,26 +91,26 @@ pub fn format_error(error: GameError) -> ByteArray {
         GameError::ChunkNotFound => "Chunk not found",
         GameError::StructureNotFound => "Structure not found",
         GameError::ProcessingInProgress => "Processing already in progress",
-        GameError::InsufficientFunds(needed) => {
+        GameError::InsufficientFunds(_needed) => {
             "Insufficient funds"
         },
         GameError::ItemNotFound => "Item not found",
         GameError::InventoryFull => "Inventory is full",
-        GameError::InvalidItem(item_id) => {
+        GameError::InvalidItem(_item_id) => {
             "Invalid item ID"
         },
-        GameError::InvalidQuantity(qty) => {
+        GameError::InvalidQuantity(_qty) => {
             "Invalid quantity"
         },
-        GameError::CraftingFailed(reason) => {
+        GameError::CraftingFailed(_reason) => {
             "Crafting failed"
         },
-        GameError::InvalidSlot(slot) => {
+        GameError::InvalidSlot(_slot) => {
             "Invalid slot"
         },
         GameError::PermissionDenied => "Permission denied",
         GameError::InvalidTarget => "Invalid target",
-        GameError::CooldownActive(remaining) => {
+        GameError::CooldownActive(_remaining) => {
             "Cooldown active"
         },
     }
