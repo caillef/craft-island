@@ -3,6 +3,9 @@ pub mod systems {
     pub mod resources;
     pub mod crafting;
     pub mod commerce;
+    pub mod islands;
+    pub mod processing;
+    pub mod inventory;
     pub mod admin;
 }
 
