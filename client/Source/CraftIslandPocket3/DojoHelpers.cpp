@@ -565,14 +565,33 @@ public:
 template<typename T>
 static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) {
     if constexpr (std::is_same_v<T, FString>) {
-        if (strcmp(valueType, "i128") == 0 ||
-            strcmp(valueType, "u128") == 0 ||
-            strcmp(valueType, "u256") == 0 ||
-            strcmp(valueType, "felt252") == 0 ||
-            strcmp(valueType, "bytes31") == 0 ||
-            strcmp(valueType, "ClassHash") == 0 ||
-            strcmp(valueType, "ContractAddress") == 0 ||
-            strcmp(valueType, "ByteArray") == 0) {
+        if (strcmp(valueType, "ByteArray") == 0) {
+            // Handle ByteArray specially using Dojo's serialization
+            struct ResultCArrayFieldElement serializedResult = FDojoModule::SerializeByteArray(value);
+            
+            if (serializedResult.tag != OkCArrayFieldElement) {
+                UE_LOG(LogTemp, Error, TEXT("Failed to serialize ByteArray"));
+                return TArray<FString>{};
+            }
+            
+            TArray<FString> result;
+            for (size_t i = 0; i < serializedResult.ok.data_len; i++) {
+                FString feltHex = FDojoModule::bytes_to_fstring(serializedResult.ok.data[i].data, 32, true);
+                result.Add(feltHex);
+            }
+            
+            // Clean up the serialized byte array
+            FDojoModule::CArrayFree(serializedResult.ok.data, serializedResult.ok.data_len);
+            
+            return result;
+        }
+        else if (strcmp(valueType, "i128") == 0 ||
+                 strcmp(valueType, "u128") == 0 ||
+                 strcmp(valueType, "u256") == 0 ||
+                 strcmp(valueType, "felt252") == 0 ||
+                 strcmp(valueType, "bytes31") == 0 ||
+                 strcmp(valueType, "ClassHash") == 0 ||
+                 strcmp(valueType, "ContractAddress") == 0) {
 
             // Remove "0x" if present
             FString hexValue = value;
@@ -1274,50 +1293,16 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsCancelProcessing(const 
 }
 
 void ADojoHelpers::CallCraftIslandPocketActionsSetName(const FAccount& account, const FString& name) {
-    // Use dojo's bytearray_serialize function
-    struct ResultCArrayFieldElement serializedResult = FDojoModule::SerializeByteArray(name);
-    
-    if (serializedResult.tag != OkCArrayFieldElement) {
-        UE_LOG(LogTemp, Error, TEXT("Failed to serialize ByteArray"));
-        return;
-    }
-    
-    TArray<std::string> felts;
-    
-    // Convert the serialized felts to std::string array
-    for (size_t i = 0; i < serializedResult.ok.data_len; i++) {
-        FString feltHex = FDojoModule::bytes_to_fstring(serializedResult.ok.data[i].data, 32, true);
-        felts.Add(TCHAR_TO_UTF8(*feltHex));
-    }
-    
-    FString contractAddress = this->ContractsAddresses["craft_island_pocket-actions"];
-    FDojoModule::ExecuteRaw(account.account, TCHAR_TO_UTF8(*contractAddress), "set_name", felts);
-    
-    // Clean up the serialized byte array
-    FDojoModule::CArrayFree(serializedResult.ok.data, serializedResult.ok.data_len);
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<FString>(name, "ByteArray"));
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("set_name"), FString::Join(args, TEXT(",")));
 }
 
 void ADojoHelpers::CallControllerCraftIslandPocketActionsSetName(const FControllerAccount& \
                      account, const FString& name) {
-    // Use dojo's bytearray_serialize function
-    struct ResultCArrayFieldElement serializedResult = FDojoModule::SerializeByteArray(name);
-    
-    if (serializedResult.tag != OkCArrayFieldElement) {
-        UE_LOG(LogTemp, Error, TEXT("Failed to serialize ByteArray"));
-        return;
-    }
-    
-    TArray<std::string> felts;
-    
-    // Convert the serialized felts to std::string array
-    for (size_t i = 0; i < serializedResult.ok.data_len; i++) {
-        FString feltHex = FDojoModule::bytes_to_fstring(serializedResult.ok.data[i].data, 32, true);
-        felts.Add(TCHAR_TO_UTF8(*feltHex));
-    }
-    
-    FString contractAddress = this->ContractsAddresses["craft_island_pocket-actions"];
-    FDojoModule::ExecuteFromOutside(account.account, TCHAR_TO_UTF8(*contractAddress), "set_name", felts);
-    
-    // Clean up the serialized byte array
-    FDojoModule::CArrayFree(serializedResult.ok.data, serializedResult.ok.data_len);
+    TArray<FString> args;
+    args.Append(ConvertToFeltHexa<FString>(name, "ByteArray"));
+    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
+                     TEXT("set_name"), FString::Join(args, TEXT(",")));
 }
