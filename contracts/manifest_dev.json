@@ -1480,7 +1480,7 @@
   "contracts": [
     {
       "address": "0x42d220a4dc5fdca775ca7964400ea82b4200cfa8a78a1bb4d3edadb4c28a22",
-      "class_hash": "0xbf87ec1e78d33e7bba66baad0c3747b6db4f7f2b48a0905e93712c510fc20f",
+      "class_hash": "0x17afc2346000a25ec41f91bd2274b3b276b69890243a1c56ba3af562f146739",
       "abi": [
         {
           "type": "impl",
@@ -1801,6 +1801,39 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_gameresult_success",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_gameresult_error_handling",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_hit_block_migration_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1940,6 +1973,9 @@
         "execute_packed_actions",
         "debug_give_coins",
         "set_name",
+        "test_gameresult_success",
+        "test_gameresult_error_handling",
+        "test_hit_block_migration_demo",
         "upgrade"
       ]
     },
