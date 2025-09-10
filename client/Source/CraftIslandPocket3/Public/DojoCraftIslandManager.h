@@ -588,6 +588,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Processing")
     FString GetProcessingTypeName(uint8 ProcessType) const;
+    
+    UFUNCTION()
+    void HandleSetPlayerName(const FString& PlayerName);
 
     // Current processing lock state
     UPROPERTY()

@@ -1480,7 +1480,7 @@
   "contracts": [
     {
       "address": "0x42d220a4dc5fdca775ca7964400ea82b4200cfa8a78a1bb4d3edadb4c28a22",
-      "class_hash": "0x3eddabd14b8b43a621e8e91b2361b93f30971228da68c9ef80f9e7582ab7378",
+      "class_hash": "0xbf87ec1e78d33e7bba66baad0c3747b6db4f7f2b48a0905e93712c510fc20f",
       "abi": [
         {
           "type": "impl",
@@ -1789,6 +1789,18 @@
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "set_name",
+              "inputs": [
+                {
+                  "name": "name",
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1927,12 +1939,13 @@
         "execute_compressed_actions",
         "execute_packed_actions",
         "debug_give_coins",
+        "set_name",
         "upgrade"
       ]
     },
     {
       "address": "0x46b481a054c78c0ab095a64ea011fcb8af49ab020332cb970a48e73e1e032fa",
-      "class_hash": "0x6747d1ab1b36ee7567514a66db0d64dd7d71e0c7d6ba3339fe73a34723080ee",
+      "class_hash": "0x41ce91bcdd6daac3373b4c3d9c94bc0c66124ab1bfafefdf3ed8d6e7ba4a5ce",
       "abi": [
         {
           "type": "impl",
@@ -2170,7 +2183,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x644351355a5453e232996ceaf892d85b3420bf50768d3c2a221fec24d5cb7a5",
+      "class_hash": "0x1ad45268bd4ed7e7ef22903a5fb93792f6b91aa11295b055fe4095c430a9917",
       "tag": "craft_island_pocket-PlayerData",
       "selector": "0x69457a2da14ded71a2a4fb448d270a04a93dd3a351110b3d8dc0676e997bb15"
     },

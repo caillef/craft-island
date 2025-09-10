@@ -119,5 +119,7 @@ public:
     static FString bytes_to_fstring(const uint8_t* data, size_t length, bool addPrefix = true);
     
     static void string_to_bytes(const std::string& hex_str, uint8_t* out_bytes, size_t max_bytes);
+    
+    static struct ResultCArrayFieldElement SerializeByteArray(const FString& str);
 
 };

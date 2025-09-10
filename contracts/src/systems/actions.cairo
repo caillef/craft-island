@@ -1076,6 +1076,9 @@ mod actions {
             let mut world = get_world(ref self);
             let player = get_caller_address();
             
+            // Log the set_name call
+            println!("set_name called by player: {:?}, name: {:?}", player, name);
+            
             // Get current player data
             let mut player_data: PlayerData = world.read_model((player));
             

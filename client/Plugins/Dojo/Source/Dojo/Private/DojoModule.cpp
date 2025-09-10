@@ -240,6 +240,11 @@ Account *FDojoModule::CreateBurner(const char* rpc_url, Account *master_account)
 
 void FDojoModule::ExecuteRaw(Account *account, const char *to, const char *selector, const TArray<std::string>& feltsStr)
 {
+    if (!account) {
+        UE_LOG(LogTemp, Error, TEXT("FDojoModule::ExecuteRaw - Account is null!"));
+        return;
+    }
+
     struct FieldElement actions;
     FDojoModule::string_to_bytes(to, actions.data, 32);
 
@@ -354,4 +359,20 @@ void FDojoModule::TyFree(struct Ty *ty)
 void FDojoModule::CArrayFree(void *data, int len)
 {
     carray_free(data, len);
+}
+
+struct ResultCArrayFieldElement FDojoModule::SerializeByteArray(const FString& str)
+{
+    // Convert FString to const char*
+    std::string utf8_str = TCHAR_TO_UTF8(*str);
+    const char* c_str = utf8_str.c_str();
+    
+    // Use dojo's bytearray_serialize function
+    struct ResultCArrayFieldElement result = bytearray_serialize(c_str);
+    
+    if (result.tag != OkCArrayFieldElement) {
+        UE_LOG(LogTemp, Error, TEXT("SerializeByteArray failed"));
+    }
+    
+    return result;
 }

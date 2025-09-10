@@ -46,6 +46,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnOptimisticInventoryMove, int32,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnOptimisticCraft, int32, ItemId, bool, bSuccess);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOptimisticSell, bool, bSuccess);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionQueueUpdate, int32, PendingActionCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSetPlayerName, const FString&, PlayerName);
 
 /**
  *
@@ -161,6 +162,9 @@ public:
     
     UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Optimistic Updates")
     FOnActionQueueUpdate OnActionQueueUpdate;
+    
+    UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Player Actions")
+    FSetPlayerName SetPlayerName;
 
     // Debug function to log Dojo memory usage
     UFUNCTION(BlueprintCallable, Category = "Debug")
@@ -178,6 +182,13 @@ public:
     
     UFUNCTION(BlueprintCallable, Category = "UI")
     void HideProcessingUI(uint8 ProcessType) { ToggleLockUI.Broadcast(ProcessType, false); }
+    
+    // Player action functions
+    UFUNCTION(BlueprintCallable, Category = "Player Actions")
+    void RequestSetPlayerName(const FString& PlayerName) 
+    { 
+        SetPlayerName.Broadcast(PlayerName); 
+    }
     
     // Queue helper functions for Blueprints
     UFUNCTION(BlueprintCallable, Category = "Action Queue")

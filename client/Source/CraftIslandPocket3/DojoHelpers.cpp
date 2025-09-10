@@ -493,6 +493,16 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
 class TypeConverter {
 public:
     static FString ConvertToFString(const Member* member) {
+        // Handle ByteArray as a complex type, not primitive
+        if (member->ty->tag == Ty_Tag::ByteArray) {
+            // ByteArray is stored directly in the byte_array field
+            if (member->ty->byte_array && strlen(member->ty->byte_array) > 0) {
+                return FString(UTF8_TO_TCHAR(member->ty->byte_array));
+            }
+            // Return empty string if ByteArray is null or empty
+            return FString();
+        }
+        
         switch (member->ty->primitive.tag) {
             case Primitive_Tag::ContractAddress:
                 return FDojoModule::bytes_to_fstring(member->ty->primitive.contract_address.data, \
@@ -1264,32 +1274,50 @@ void ADojoHelpers::CallControllerCraftIslandPocketActionsCancelProcessing(const 
 }
 
 void ADojoHelpers::CallCraftIslandPocketActionsSetName(const FAccount& account, const FString& name) {
-    TArray<FString> args;
+    // Use dojo's bytearray_serialize function
+    struct ResultCArrayFieldElement serializedResult = FDojoModule::SerializeByteArray(name);
     
-    // Convert string to hex representation for ByteArray
-    FString hexString = TEXT("0x");
-    for (int32 i = 0; i < name.Len(); i++) {
-        hexString += FString::Printf(TEXT("%02x"), (uint8)name[i]);
+    if (serializedResult.tag != OkCArrayFieldElement) {
+        UE_LOG(LogTemp, Error, TEXT("Failed to serialize ByteArray"));
+        return;
     }
     
-    args.Append(ConvertToFeltHexa<FString>(hexString, \
-                                 "ByteArray"));
-    this->ExecuteRawDeprecated(account, this->ContractsAddresses["craft_island_pocket-actions"], \
-                     TEXT("set_name"), FString::Join(args, TEXT(",")));
+    TArray<std::string> felts;
+    
+    // Convert the serialized felts to std::string array
+    for (size_t i = 0; i < serializedResult.ok.data_len; i++) {
+        FString feltHex = FDojoModule::bytes_to_fstring(serializedResult.ok.data[i].data, 32, true);
+        felts.Add(TCHAR_TO_UTF8(*feltHex));
+    }
+    
+    FString contractAddress = this->ContractsAddresses["craft_island_pocket-actions"];
+    FDojoModule::ExecuteRaw(account.account, TCHAR_TO_UTF8(*contractAddress), "set_name", felts);
+    
+    // Clean up the serialized byte array
+    FDojoModule::CArrayFree(serializedResult.ok.data, serializedResult.ok.data_len);
 }
 
 void ADojoHelpers::CallControllerCraftIslandPocketActionsSetName(const FControllerAccount& \
                      account, const FString& name) {
-    TArray<FString> args;
+    // Use dojo's bytearray_serialize function
+    struct ResultCArrayFieldElement serializedResult = FDojoModule::SerializeByteArray(name);
     
-    // Convert string to hex representation for ByteArray
-    FString hexString = TEXT("0x");
-    for (int32 i = 0; i < name.Len(); i++) {
-        hexString += FString::Printf(TEXT("%02x"), (uint8)name[i]);
+    if (serializedResult.tag != OkCArrayFieldElement) {
+        UE_LOG(LogTemp, Error, TEXT("Failed to serialize ByteArray"));
+        return;
     }
     
-    args.Append(ConvertToFeltHexa<FString>(hexString, \
-                                 "ByteArray"));
-    this->ExecuteFromOutside(account, this->ContractsAddresses["craft_island_pocket-actions"], \
-                     TEXT("set_name"), FString::Join(args, TEXT(",")));
+    TArray<std::string> felts;
+    
+    // Convert the serialized felts to std::string array
+    for (size_t i = 0; i < serializedResult.ok.data_len; i++) {
+        FString feltHex = FDojoModule::bytes_to_fstring(serializedResult.ok.data[i].data, 32, true);
+        felts.Add(TCHAR_TO_UTF8(*feltHex));
+    }
+    
+    FString contractAddress = this->ContractsAddresses["craft_island_pocket-actions"];
+    FDojoModule::ExecuteFromOutside(account.account, TCHAR_TO_UTF8(*contractAddress), "set_name", felts);
+    
+    // Clean up the serialized byte array
+    FDojoModule::CArrayFree(serializedResult.ok.data, serializedResult.ok.data_len);
 }

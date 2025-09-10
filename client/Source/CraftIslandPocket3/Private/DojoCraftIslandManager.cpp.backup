@@ -3488,16 +3488,14 @@ void ADojoCraftIslandManager::QueuePendingHotbarSelection()
 
 void ADojoCraftIslandManager::HandleSetPlayerName(const FString& PlayerName)
 {
+    UE_LOG(LogTemp, Warning, TEXT("HandleSetPlayerName called with: %s"), *PlayerName);
+    
     if (!DojoHelpers)
     {
-        UE_LOG(LogTemp, Error, TEXT("DojoHelpers is null!"));
+        UE_LOG(LogTemp, Warning, TEXT("DojoHelpers not initialized, cannot set player name"));
         return;
     }
     
-    if (!IsCurrentPlayer())
-    {
-        return;
-    }
-    
+    // Call the contract to set the player name
     DojoHelpers->CallCraftIslandPocketActionsSetName(Account, PlayerName);
 }

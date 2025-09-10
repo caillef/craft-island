@@ -19,7 +19,7 @@ dojo_macros = { git = "https://github.com/dojoengine/dojo", tag = "v1.7.0-alpha.
 build-external-contracts = ["dojo::world::world_contract::world"]
 sierra = true
 casm = true
-#allowed-libfuncs-list.name = "experimental"
+allowed-libfuncs-list.name = "experimental"
 
 [dev-dependencies]
 cairo_test = "*"

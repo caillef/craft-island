@@ -44,7 +44,7 @@ fn init_island(ref world: WorldStorage, player: ContractAddress) {
 fn init_player(ref world: WorldStorage, player: ContractAddress) {
     let mut player_data: PlayerData = PlayerData {
         player: player,
-        name: ''.into(),
+        name: Default::default(),
         last_inventory_created_id: 3, // hotbar, inventory, craft, sell
         last_space_created_id: 1, // own island
         current_space_owner: player.into(),
