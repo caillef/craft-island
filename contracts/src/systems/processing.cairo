@@ -40,25 +40,38 @@ pub fn start_processing_internal(ref world: dojo::world::storage::WorldStorage, 
     let inventory_amount = inventory.get_item_amount(config.input_item.try_into().unwrap());
     let total_available = hotbar_amount + inventory_amount;
     
-    let actual_batches = if total_available < input_amount {
+    if total_available < input_amount {
         if strict_validation {
             return GameResult::Err(GameError::InsufficientItems((config.input_item.try_into().unwrap(), input_amount)));
-        } else {
-            total_available / config.input_amount
         }
+    }
+    
+    // Calculate batches to process based on input amount (like original)
+    let batches_to_process = input_amount / config.input_amount;
+    if batches_to_process == 0 {
+        return GameResult::Err(GameError::InsufficientItems((config.input_item.try_into().unwrap(), config.input_amount)));
+    }
+
+    // Calculate processing time
+    let total_time = batches_to_process.into() * config.time_per_batch;
+
+    // Cap at max processing time
+    let capped_time = if total_time > MAX_PROCESSING_TIME {
+        MAX_PROCESSING_TIME
     } else {
-        max_batches
+        total_time
     };
+    let actual_batches = (capped_time / config.time_per_batch).try_into().unwrap();
 
     if actual_batches == 0 {
         return GameResult::Err(GameError::InsufficientItems((config.input_item.try_into().unwrap(), config.input_amount)));
     }
 
-    // Calculate actual input needed
-    let total_input_needed = actual_batches * config.input_amount;
+    // Use the exact input amount requested (we already verified it's available)
+    let items_to_remove = input_amount;
     
-    // Remove input items (hotbar first, then inventory)
-    let mut remaining_to_remove = total_input_needed;
+    // Remove input items (hotbar first, then inventory) 
+    let mut remaining_to_remove = items_to_remove;
     if hotbar_amount > 0 {
         let to_remove_hotbar = if hotbar_amount >= remaining_to_remove { remaining_to_remove } else { hotbar_amount };
         hotbar.remove_items(config.input_item.try_into().unwrap(), to_remove_hotbar);
@@ -69,24 +82,17 @@ pub fn start_processing_internal(ref world: dojo::world::storage::WorldStorage, 
         inventory.remove_items(config.input_item.try_into().unwrap(), remaining_to_remove);
     }
 
-    // Create processing lock
-    let timestamp = starknet::get_block_info().unbox().block_timestamp;
-    let processing_duration = actual_batches.into() * config.time_per_batch;
-    let capped_duration = if processing_duration > MAX_PROCESSING_TIME {
-        MAX_PROCESSING_TIME
-    } else {
-        processing_duration
-    };
-
+    // Set processing lock
+    let current_time = starknet::get_block_info().unbox().block_timestamp;
     let new_lock = ProcessingLock {
-        player: player,
+        player,
+        unlock_time: current_time + capped_time,
         process_type: process_type,
-        batches_processed: actual_batches,
-        unlock_time: timestamp + capped_duration,
+        batches_processed: actual_batches
     };
 
     // If processing finishes instantly (duration = 0), give items immediately
-    if capped_duration == 0 {
+    if capped_time == 0 {
         let remaining = add_items_with_overflow(ref world, player, config.output_item.try_into().unwrap(), actual_batches);
         
         if remaining > 0 {
@@ -123,22 +129,74 @@ pub fn start_processing_internal(ref world: dojo::world::storage::WorldStorage, 
 }
 
 pub fn cancel_processing(ref world: dojo::world::storage::WorldStorage, player: ContractAddress) -> GameResult<()> {
-    let mut processing_lock: ProcessingLock = world.read_model(player);
-    let timestamp = starknet::get_block_info().unbox().block_timestamp;
+    let processing_lock: ProcessingLock = world.read_model(player);
+    let current_time = starknet::get_block_info().unbox().block_timestamp;
 
-    if processing_lock.unlock_time <= timestamp {
+    if processing_lock.unlock_time == 0 {
         return GameResult::Err(GameError::InvalidInput("No active processing to cancel"));
     }
 
-    // Return the input items based on batches processed
+    // Get processing config
     let config = get_processing_config(processing_lock.process_type);
-    let items_to_return = processing_lock.batches_processed * config.input_amount;
-    add_items_with_overflow(ref world, player, config.input_item.try_into().unwrap(), items_to_return);
 
-    // Clear the lock
-    processing_lock.unlock_time = 0;
-    processing_lock.batches_processed = 0;
-    world.write_model(@processing_lock);
+    // Calculate completed and remaining batches
+    // Start time = unlock_time - (total_batches * time_per_batch)
+    let total_processing_time = config.time_per_batch * processing_lock.batches_processed.into();
+    let start_time = processing_lock.unlock_time - total_processing_time;
+    let elapsed_time = current_time - start_time;
+
+    // Calculate how many batches have been completed so far
+    let completed_batches = (elapsed_time / config.time_per_batch).try_into().unwrap();
+    let completed_batches = if completed_batches > processing_lock.batches_processed {
+        processing_lock.batches_processed
+    } else {
+        completed_batches
+    };
+
+    let remaining_batches = processing_lock.batches_processed - completed_batches;
+
+    // Get inventories
+    let mut hotbar: Inventory = world.read_model((player, 0));
+    let mut inventory: Inventory = world.read_model((player, 1));
+
+    // Add output items for completed batches
+    if completed_batches > 0 {
+        let items_to_add = completed_batches * config.output_amount;
+        // Try to add to hotbar first, then inventory
+        let remaining_in_hotbar = hotbar.add_items(config.output_item.try_into().unwrap(), items_to_add);
+        let remaining_in_inventory = if remaining_in_hotbar > 0 {
+            inventory.add_items(config.output_item.try_into().unwrap(), remaining_in_hotbar)
+        } else {
+            0
+        };
+        assert!(remaining_in_inventory == 0, "Not enough space for output");
+    }
+
+    // Return unprocessed input items
+    if remaining_batches > 0 {
+        let items_to_return = remaining_batches * config.input_amount;
+        // Try to add to hotbar first, then inventory
+        let remaining_in_hotbar = hotbar.add_items(config.input_item.try_into().unwrap(), items_to_return);
+        let remaining_in_inventory = if remaining_in_hotbar > 0 {
+            inventory.add_items(config.input_item.try_into().unwrap(), remaining_in_hotbar)
+        } else {
+            0
+        };
+        assert!(remaining_in_inventory == 0, "Cannot return all input items");
+    }
+
+    // Write updated inventories
+    world.write_model(@hotbar);
+    world.write_model(@inventory);
+
+    // Clear lock
+    let cleared_lock = ProcessingLock {
+        player,
+        unlock_time: 0,
+        process_type: ProcessType::None,
+        batches_processed: 0
+    };
+    world.write_model(@cleared_lock);
 
     GameResult::Ok(())
 }

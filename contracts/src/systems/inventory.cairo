@@ -54,7 +54,7 @@ pub fn try_move_item(ref world: dojo::world::storage::WorldStorage, player: Cont
 }
 
 pub fn try_select_hotbar(ref world: dojo::world::storage::WorldStorage, player: ContractAddress, slot: u8) -> bool {
-    if slot >= 10 { // Hotbar has 10 slots (0-9)
+    if slot >= 9 { // Hotbar has 9 slots (0-8)
         return false;
     }
     select_hotbar_slot(ref world, player, slot);
