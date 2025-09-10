@@ -1480,7 +1480,7 @@
   "contracts": [
     {
       "address": "0x42d220a4dc5fdca775ca7964400ea82b4200cfa8a78a1bb4d3edadb4c28a22",
-      "class_hash": "0x17afc2346000a25ec41f91bd2274b3b276b69890243a1c56ba3af562f146739",
+      "class_hash": "0xbcf99a4fd3b88ad4c19b9271ef8bb2ed0a4959f62415d33d8ee562908345ca",
       "abi": [
         {
           "type": "impl",
@@ -1834,6 +1834,72 @@
                 }
               ],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_use_item_migration_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_move_item_migration_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_world_actions_migration_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_economic_actions_migration_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_crafting_processing_migration_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "test_misc_actions_cleanup_demo",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::bool"
+                }
+              ],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1976,6 +2042,12 @@
         "test_gameresult_success",
         "test_gameresult_error_handling",
         "test_hit_block_migration_demo",
+        "test_use_item_migration_demo",
+        "test_move_item_migration_demo",
+        "test_world_actions_migration_demo",
+        "test_economic_actions_migration_demo",
+        "test_crafting_processing_migration_demo",
+        "test_misc_actions_cleanup_demo",
         "upgrade"
       ]
     },
